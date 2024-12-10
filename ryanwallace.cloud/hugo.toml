@@ -1,0 +1,21 @@
+baseURL = 'https://ryanwallace.cloud'
+languageCode = 'en-us'
+title = 'ryanwallace.cloud'
+theme = "poison"
+pygmentsCodefences  = true
+pygmentsUseClasses  = true
+copyright = "Ryan Wallace"
+pluralizelisttitles = false 
+
+
+[params.author]
+  about = "Greater Boston SRE"
+
+[params]
+  footerCopyright = "Ryan Wallace"
+  brand_image = "/images/brand-image.jpeg"
+  description = "🏳️‍🌈 fella who enjoys building cool, reliable services as an SRE"
+
+  brand = "Ryan Wallace"
+  github_url = "https://github.com/cubismod"
+  linkedin_url = "https://www.linkedin.com/in/ryanswallace/"
