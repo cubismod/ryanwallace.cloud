@@ -14,8 +14,30 @@ pluralizelisttitles = false
 [params]
   footerCopyright = "Ryan Wallace"
   brand_image = "/images/brand-image.jpeg"
-  description = "🏳️‍🌈 fella who enjoys building cool, reliable services as an SRE"
+  description = "(he/him) 🏳️‍🌈 fella who enjoys building cool, reliable services as an SRE"
 
   brand = "Ryan Wallace"
   github_url = "https://github.com/cubismod"
   linkedin_url = "https://www.linkedin.com/in/ryanswallace/"
+
+  link_color_dark = "#c79673" 
+  link_color ="#784520"
+
+  menu = [
+    {Name = "About", URL = "/about/"},
+    {Name = "Posts", URL = "/posts/", Pre = "Recent", HasChildren = true, Limit = 5},
+  ]
+
+[privacy]
+  [privacy.disqus]
+    disable = true
+  [privacy.googleAnalytics]
+    disable = true
+  [privacy.instagram]
+    simple = true
+
+[markup]
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel = 5
+    ordered = false
