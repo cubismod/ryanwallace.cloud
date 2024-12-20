@@ -1,0 +1,14 @@
+flowchart TD
+    subgraph inky-mbta-tracker
+    B(schedule and prediction workers)
+    D{{queue}}
+    C(queue processor)
+    end
+    B --> D
+    C --> D
+
+    C -->E@{ shape: cyl, label: "Redis"}
+    C -->F@{ shape: bow-rect, label: "MQTT" }
+
+    G@{ shape: curv-trap, label: "inky-display" } -->|reads| E
+    H[/Home Assistant/] -->|reads| F
