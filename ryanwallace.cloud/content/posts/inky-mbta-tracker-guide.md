@@ -4,7 +4,11 @@ draft = true
 title = 'Inky MBTA Tracker Guide'
 +++
 
-Here is my step by step guide of how to setup the inky-mbta-tracker.
+Here is my step by step guide of how to setup the inky-mbta-tracker. This is a real time [e-ink](https://shop.pimoroni.com/products/inky-what?variant=21441988558931) transit
+departure board for the MBTA (Massachusetts Bay Transit Authority). It supports tracking multiple
+stations and lines and displays departures based on if you can actually reach them.
+
+Please check [Required Components](#required-components) to learn what you will need to buy for this project.
 
 ![Image of the tracker display showing a few departures](/images/IMG_0818.jpg)
 
@@ -46,6 +50,9 @@ services:
 
 
   inky-mbta-tracker:
+    # releases are available at https://github.com/cubismod/inky-mbta-tracker/pkgs/container/inky-mbta-tracker%2Finky-mbta-tracker
+    # I would recommend pinning to a specific tag as I will likely update this
+    # service over time and may introduce schema changes to Redis
     image: ghcr.io/cubismod/inky-mbta-tracker/inky-mbta-tracker:latest
     restart: unless-stopped
     container_name: inky-mbta-tracker
@@ -148,10 +155,13 @@ From, the [inky-display Git](https://github.com/cubismod/inky-display/blob/main/
 ### Required Components
 
 * [Yellow Inky wHAT Display](https://shop.pimoroni.com/products/inky-what?variant=21441988558931).
+  * [Microcenter link to display](https://www.microcenter.com/product/631583/pimoroni-inky-what-(epaper-eink-epd)-yellow-black-white)
   * Note: this is only yellow right now because I would have to change the colors otherwise to get red
   working. Black and white will not work.
 * Compatible Raspberry Pi.
+  * [Microcenter link to Pi Zero W2 w/ Headers](https://www.microcenter.com/product/683270/raspberry-pi-raspberry-pi-zero-w-2-with-headers)
 * Configured inky-mbta-tracker Redis accessible over the network.
+  * May I recommend [Tailscale](https://tailscale.com/) to bridge those gaps.
 
 ### Setup
 
@@ -169,3 +179,13 @@ REDIS_PASS=<password>
 * Install [Taskfile](https://taskfile.dev/installation/) which is used in lieu of a Makefile.
 * Run `task install-fonts` to install the required fonts to the `fonts/` directory.
 * Run `task run` to watch the display.
+
+## Conclusion
+
+You can add a systemd service if you prefer for the display. The Docker services should run quietly
+although I may update the services over time with new functionality so keep an eye on the GitHub and
+consider pinning the tags.
+
+If you have any feedback, questions, or suggestions then let me know in the comments.
+
+![Image of the tracker display showing a few departures](/images/IMG_0820.jpg)

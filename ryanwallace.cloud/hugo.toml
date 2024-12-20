@@ -14,14 +14,21 @@ pluralizelisttitles = false
 [params]
   footerCopyright = "Ryan Wallace"
   brand_image = "/images/brand-image.jpeg"
-  description = "(he/him) 🏳️‍🌈 fella who enjoys building cool, reliable services as an SRE"
+  description = "🏳️‍🌈 fella who builds reliable stuff by day and cursed things after hours"
 
   brand = "Ryan Wallace"
   github_url = "https://github.com/cubismod"
   linkedin_url = "https://www.linkedin.com/in/ryanswallace/"
+  bluesky_url = "https://bsky.app/profile/cubis.bsky.social"
 
-  link_color_dark = "#c79673" 
-  link_color ="#784520"
+  link_color_dark = "#00c0a3" 
+  link_color = "#00896f"
+  sidebar_bg_color = "#2f0d38"
+  content_bg_color_dark = "#1e0624"
+  
+  remark42 = true
+  remark42_host = "https://remark42.ryanwallace.cloud"
+  remark42_site_id = "ryanwallace.cloud"
 
   menu = [
     {Name = "About", URL = "/about/"},
