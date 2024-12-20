@@ -1,6 +1,6 @@
 +++
 date = '2024-12-10T17:31:58-05:00'
-draft = true
+draft = false
 title = 'Day in the Life of an SRE'
 +++
 
