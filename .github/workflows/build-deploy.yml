@@ -11,30 +11,15 @@ on:
     branches:
       - main
 jobs:
-  build-main:
+  deploy:
+    name: Deploy app
     runs-on: ubuntu-latest
+    concurrency: deploy-group    # optional: ensure only one action runs at a time
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
-          submodules: true
-      - name: Kaniko build Dockerfile
-        uses: aevea/action-kaniko@master
-        with:
-          registry: ghcr.io
-          password: ${{ secrets.GITHUB_TOKEN }}
-          image: rwcloud
-          cache: true
-          build_file: Dockerfile
-          cache_registry: cache
-          tag: ${{ github.sha }}
-          tag_with_latest: true
-  # deploy:
-  #   name: Deploy app
-  #   runs-on: ubuntu-latest
-  #   concurrency: deploy-group    # optional: ensure only one action runs at a time
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: superfly/flyctl-actions/setup-flyctl@master
-  #     - run: flyctl deploy --remote-only --no-cache
-  #       env:
-  #         FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+            submodules: true
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
