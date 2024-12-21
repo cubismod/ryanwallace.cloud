@@ -23,5 +23,8 @@ primary_region = 'bos'
   timeout = "5s"
   path = "/status"
 
+[deploy]
+  strategy = "bluegreen"
+
 [[vm]]
   size = 'shared-cpu-1x'
