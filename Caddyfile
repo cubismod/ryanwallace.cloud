@@ -7,7 +7,7 @@
     cache
     root * /var/www/html
     respond /status "ok"
-    file_server browse
+    file_server
 }
 
 
