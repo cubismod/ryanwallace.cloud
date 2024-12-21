@@ -25,4 +25,6 @@
 # env file
 **/.env
 
+public/
+
 fly.toml

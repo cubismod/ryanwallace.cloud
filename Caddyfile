@@ -1,10 +1,11 @@
-# {
-#     cache
-# }
+{
+    cache
+}
 
 # SSL will be served up with Fly not by Caddy
 :8080 {
-    # cache
+    cache
+    log
     root * /var/www/html
     respond /status "ok"
     file_server
