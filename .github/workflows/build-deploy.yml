@@ -15,7 +15,7 @@ jobs:
         with:
           registry: ghcr.io
           password: ${{ secrets.GITHUB_TOKEN }}
-          image: ryanwallace.cloud
+          image: rwcloud
           cache: true
           build_file: Dockerfile
           cache_registry: cache
