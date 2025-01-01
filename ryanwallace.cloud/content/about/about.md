@@ -17,5 +17,3 @@ Welcome to my little slice of internet cherry pie.
 This site uses the following fonts from Google Fonts:
 - [Fjalla One](/fonts/OFL_fjalla.txt)
 - [JetBrains Mono](/fonts/OFL_jetbrains.txt)
-
-[Site source code](https://github.com/cubismod/ryanwallace.cloud)
