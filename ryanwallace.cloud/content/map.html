@@ -46,7 +46,7 @@ draft: false
         style: (feature) => {
           if (feature.geometry.type === "LineString") {
             return {
-              color: "#2F5DA6",
+              color: "#3b4384",
               weight: 2,
             };
           }
@@ -55,6 +55,10 @@ draft: false
           icon_size = 22;
           icon = "bus-yellow.svg";
           opacity = 1.0;
+          if (feature.properties["marker-symbol"] === "bus") {
+            opacity = 0.8
+            icon_size = 15
+          }
           if (feature.properties["marker-size"] === "small") {
             icon_size = 15;
           }
@@ -74,8 +78,8 @@ draft: false
             icon = "rail.svg";
           }
           if (feature.properties["marker-symbol"] === "building") {
-            icon = "building.svg";
-            opacity = 0.8;
+            icon = "entrance-alt1.svg";
+            opacity = 0.6;
           }
           if (
             feature.properties.route &&
@@ -102,7 +106,7 @@ draft: false
               layer.bindPopup(`<b>${feature.properties.name} Stop</b>`);
             } else {
               layer.bindPopup(
-                `<b>${feature.properties.route} Vehicle</b> <br />ID: ${
+                `<b>Route: ${feature.properties.route}</b> <br />ID: ${
                   feature.id
                 }<br />Status: ${feature.properties.status}<br />Stop: ${
                   feature.properties.stop
