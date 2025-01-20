@@ -27,6 +27,7 @@ draft: false
 
 <script>
   var map = L.map("map").setView([42.36565, -71.05236], 13);
+  map.locate({ setView: true, maxZoom: 16 });
 
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -34,14 +35,14 @@ draft: false
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
 
-  var geoJsonLayer = null
+  var geoJsonLayer = null;
 
   function annotate_map() {
     $.getJSON("https://vehicles.ryanwallace.cloud/", function (data) {
-       if (geoJsonLayer) {
-          map.removeLayer(geoJsonLayer)
-       }
-       geoJsonLayer = L.geoJSON(data, {
+      if (geoJsonLayer) {
+        map.removeLayer(geoJsonLayer);
+      }
+      geoJsonLayer = L.geoJSON(data, {
         style: (feature) => {
           if (feature.geometry.type === "LineString") {
             return {
@@ -95,7 +96,13 @@ draft: false
               layer.bindPopup(`<b>${feature.properties.name} Stop</b>`);
             } else {
               layer.bindPopup(
-                `<b>${feature.properties.route} Vehicle</b> <br />ID: ${feature.id}<br />Status: ${feature.properties.status}<br />Stop: ${feature.properties.stop} <br />Speed: ${feature.properties.speed}<br /><i>Update Time: ${update_time.toTimeString()}</i>`
+                `<b>${feature.properties.route} Vehicle</b> <br />ID: ${
+                  feature.id
+                }<br />Status: ${feature.properties.status}<br />Stop: ${
+                  feature.properties.stop
+                } <br />Speed: ${
+                  feature.properties.speed
+                }<br /><i>Update Time: ${update_time.toTimeString()}</i>`
               );
             }
           }
@@ -109,4 +116,7 @@ draft: false
   window.setInterval(annotate_map, 60000);
 </script>
 
-<p> This map live updates using the <a href="/posts/inky-mbta-tracker-guide/">Inky MBTA Tracker</a></p>
+<p>
+  This map live updates using the
+  <a href="/posts/inky-mbta-tracker-guide/">Inky MBTA Tracker</a>
+</p>
