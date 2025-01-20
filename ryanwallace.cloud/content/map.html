@@ -53,7 +53,7 @@ draft: false
         },
         pointToLayer: (feature, latlng) => {
           icon_size = 22;
-          icon = "bus.svg";
+          icon = "bus-yellow.svg";
           opacity = 1.0;
           if (feature.properties["marker-size"] === "small") {
             icon_size = 15;
@@ -76,6 +76,12 @@ draft: false
           if (feature.properties["marker-symbol"] === "building") {
             icon = "building.svg";
             opacity = 0.8;
+          }
+          if (
+            feature.properties.route &&
+            feature.properties.route.startsWith("SL")
+          ) {
+            icon = "bus-silver.svg";
           }
 
           icon = L.icon({
