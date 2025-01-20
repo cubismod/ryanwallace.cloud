@@ -28,3 +28,7 @@ pre {
 .sidebar-about h1 {
     font-family: Fjalla One, sans-serif;
 }
+
+.content div {
+    color: #1e0624;
+}

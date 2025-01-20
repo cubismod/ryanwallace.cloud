@@ -1,0 +1,112 @@
+---
+title: "MBTA Rapid/Rail Transit Map"
+date: 2025-01-19T17:32:38-05:00
+draft: false
+---
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+/>
+
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+
+<script
+  src="https://code.jquery.com/jquery-3.7.1.min.js"
+  integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+  crossorigin="anonymous"
+></script>
+
+<div id="map" style="height: 600px"></div>
+
+<script>
+  var map = L.map("map").setView([42.36565, -71.05236], 13);
+
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+
+  var geoJsonLayer = null
+
+  function annotate_map() {
+    $.getJSON("https://vehicles.ryanwallace.cloud/", function (data) {
+       if (geoJsonLayer) {
+          map.removeLayer(geoJsonLayer)
+       }
+       geoJsonLayer = L.geoJSON(data, {
+        style: (feature) => {
+          if (feature.geometry.type === "LineString") {
+            return {
+              color: "#2F5DA6",
+              weight: 2,
+            };
+          }
+        },
+        pointToLayer: (feature, latlng) => {
+          icon_size = 22;
+          icon = "bus.svg";
+          opacity = 1.0;
+          if (feature.properties["marker-size"] === "small") {
+            icon_size = 15;
+          }
+          if (feature.properties["marker-color"] === "#008150") {
+            icon = "rail-light.svg";
+          }
+          if (feature.properties["marker-color"] === "#2F5DA6") {
+            icon = "rail-metro-blue.svg";
+          }
+          if (feature.properties["marker-color"] === "#FA2D27") {
+            icon = "rail-metro-red.svg";
+          }
+          if (feature.properties["marker-color"] === "#FD8A03") {
+            icon = "rail-metro-orange.svg";
+          }
+          if (feature.properties["marker-color"] === "#7B388C") {
+            icon = "rail.svg";
+          }
+          if (feature.properties["marker-symbol"] === "building") {
+            icon = "building.svg";
+            opacity = 0.8;
+          }
+
+          icon = L.icon({
+            iconUrl: `/images/icons/${icon}`,
+            iconSize: L.point(icon_size, icon_size),
+          });
+
+          return L.marker(latlng, {
+            icon: icon,
+            title: feature.id,
+            opacity: opacity,
+          });
+        },
+        onEachFeature: (feature, layer) => {
+          update_time = new Date();
+          if (feature.geometry.type === "Point") {
+            if (feature.properties["marker-symbol"] === "building") {
+              layer.bindPopup(`<b>${feature.properties.name} Stop</b>`);
+            } else {
+              layer.bindPopup(
+                `<b>${feature.properties.route} Vehicle</b> <br />ID: ${feature.id}<br />Status: ${feature.properties.status}<br />Stop: ${feature.properties.stop} <br />Speed: ${feature.properties.speed}<br /><i>Update Time: ${update_time.toTimeString()}</i>`
+              );
+            }
+          }
+        },
+      }).addTo(map);
+      console.log("Map loaded");
+    });
+  }
+
+  annotate_map();
+  window.setInterval(annotate_map, 60000);
+</script>
+
+<p> This map live updates using the <a href="/posts/inky-mbta-tracker-guide/">Inky MBTA Tracker</a></p>
