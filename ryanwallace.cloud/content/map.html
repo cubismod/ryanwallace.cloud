@@ -37,6 +37,28 @@ draft: false
 
   var geoJsonLayer = null;
 
+  function return_colors(route) {
+    if (route.startsWith("Green")) {
+      return "#008150";
+    }
+    if (route.startsWith("Blue")) {
+      return "#2F5DA6";
+    }
+    if (route.startsWith("CR")) {
+      return "#7B388C";
+    }
+    if (route.startsWith("Red") || route.startsWith("Mattapan")) {
+      return "#FA2D27";
+    }
+    if (route.startsWith("Orange")) {
+      return "#FD8A03";
+    }
+    if (route.startsWith("74") || route.startsWith("75")) {
+      return "#9A9C9D";
+    }
+    return "#FFFF00";
+  }
+
   function annotate_map() {
     $.getJSON("https://vehicles.ryanwallace.cloud/", function (data) {
       if (geoJsonLayer) {
@@ -45,9 +67,19 @@ draft: false
       geoJsonLayer = L.geoJSON(data, {
         style: (feature) => {
           if (feature.geometry.type === "LineString") {
+            weight = 4;
+            if (feature.properties.route.startsWith("CR")) {
+              weight = 3;
+            }
+            if (
+              Number.parseInt(feature.properties.route) ==
+              feature.properties.route
+            ) {
+              weight = 1;
+            }
             return {
-              color: "#3b4384",
-              weight: 2,
+              color: return_colors(feature.properties.route),
+              weight: weight,
             };
           }
         },
@@ -56,8 +88,8 @@ draft: false
           icon = "bus-yellow.svg";
           opacity = 1.0;
           if (feature.properties["marker-symbol"] === "bus") {
-            opacity = 0.8
-            icon_size = 15
+            opacity = 0.8;
+            icon_size = 15;
           }
           if (feature.properties["marker-size"] === "small") {
             icon_size = 15;
@@ -101,6 +133,12 @@ draft: false
         },
         onEachFeature: (feature, layer) => {
           update_time = new Date();
+          if (
+            feature.geometry.type === "LineString" &&
+            feature.properties.route
+          ) {
+            layer.bindPopup(`<b>${feature.properties.route}</b>`);
+          }
           if (feature.geometry.type === "Point") {
             if (feature.properties["marker-symbol"] === "building") {
               layer.bindPopup(`<b>${feature.properties.name} Stop</b>`);
@@ -123,7 +161,7 @@ draft: false
   }
 
   annotate_map();
-  window.setInterval(annotate_map, 60000);
+  window.setInterval(annotate_map, 45000);
 </script>
 
 <p>
