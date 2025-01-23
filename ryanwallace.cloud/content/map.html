@@ -29,8 +29,11 @@ draft: false
   var map = L.map("map").setView([42.36565, -71.05236], 13);
   map.locate({ setView: true, maxZoom: 16 });
 
+  document.getElementById("map").scrollIntoView({ behavior: "smooth" });
+
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
+    detectRetina: true,
     attribution:
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
@@ -93,7 +96,7 @@ draft: false
             icon_size = 15;
           }
           if (feature.properties["marker-size"] === "small") {
-            icon_size = 15;
+            icon_size = 17;
           }
           if (feature.properties["marker-color"] === "#008150") {
             icon = "rail-light.svg";
@@ -119,6 +122,7 @@ draft: false
             feature.properties.route.startsWith("SL")
           ) {
             icon = "bus-silver.svg";
+            opacity = 0.9
           }
           if (icon != "entrance-alt1.svg") {
             z_index = 1000;

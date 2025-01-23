@@ -2,48 +2,48 @@ baseURL = 'https://ryanwallace.cloud'
 languageCode = 'en-us'
 title = 'ryanwallace.cloud'
 theme = "poison"
-pygmentsCodefences  = true
-pygmentsUseClasses  = true
+pygmentsCodefences = true
+pygmentsUseClasses = true
 copyright = "Ryan Wallace"
-pluralizelisttitles = false 
+pluralizelisttitles = false
 
 
 [params.author]
-  about = "Greater Boston SRE"
+about = "Greater Boston SRE"
 
 [params]
-  footerCopyright = "Ryan Wallace"
-  brand_image = "/images/brand-image.jpeg"
-  description = "🏳️‍🌈 fella who builds reliable stuff by day and cursed things after hours"
+footerCopyright = "Ryan Wallace"
+brand_image = "/images/brand-image.jpeg"
+description = "🏳️‍🌈 fella who builds reliable stuff by day and cursed things after hours"
 
-  brand = "Ryan Wallace"
-  github_url = "https://github.com/cubismod"
-  linkedin_url = "https://www.linkedin.com/in/ryanswallace/"
+brand = "Ryan Wallace"
+github_url = "https://github.com/cubismod"
+linkedin_url = "https://www.linkedin.com/in/ryanswallace/"
 
-  link_color_dark = "#00c0a3" 
-  link_color = "#00896f"
-  sidebar_bg_color = "#2f0d38"
-  content_bg_color_dark = "#1e0624"
-  
-  remark42 = true
-  remark42_host = "https://remark42.ryanwallace.cloud"
-  remark42_site_id = "ryanwallace.cloud"
+link_color_dark = "#00c0a3"
+link_color = "#00896f"
+sidebar_bg_color = "#2f0d38"
+content_bg_color_dark = "#1e0624"
 
-  menu = [
-    {Name = "About", URL = "/about/"},
-    {Name = "Posts", URL = "/posts/", Pre = "Recent", HasChildren = true, Limit = 5},
-  ]
+remark42 = true
+remark42_host = "https://remark42.ryanwallace.cloud"
+remark42_site_id = "ryanwallace.cloud"
+
+menu = [
+  { Name = "About", URL = "/about/" },
+  { Name = "Posts", URL = "/posts/", Pre = "Recent", HasChildren = true, Limit = 5 },
+]
 
 [privacy]
-  [privacy.disqus]
-    disable = true
-  [privacy.googleAnalytics]
-    disable = true
-  [privacy.instagram]
-    simple = true
+[privacy.disqus]
+disable = true
+[privacy.googleAnalytics]
+disable = true
+[privacy.instagram]
+simple = true
 
 [markup]
-  [markup.tableOfContents]
-    startLevel = 2
-    endLevel = 5
-    ordered = false
+[markup.tableOfContents]
+startLevel = 2
+endLevel = 5
+ordered = false

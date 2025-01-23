@@ -5,7 +5,7 @@
    viewBox="0 0 15 15"
    id="bus"
    version="1.1"
-   sodipodi:docname="bus.svg"
+   sodipodi:docname="bus-silver.svg"
    inkscape:version="1.4 (e7c3feb1, 2024-10-09)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -23,24 +23,24 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="23.782358"
-     inkscape:cx="7.5055635"
-     inkscape:cy="7.5055635"
-     inkscape:window-width="2560"
-     inkscape:window-height="1308"
+     inkscape:cx="7.5055636"
+     inkscape:cy="7.5055636"
+     inkscape:window-width="1328"
+     inkscape:window-height="676"
      inkscape:window-x="0"
-     inkscape:window-y="505"
-     inkscape:window-maximized="1"
+     inkscape:window-y="44"
+     inkscape:window-maximized="0"
      inkscape:current-layer="bus" />
   <rect
-     style="fill:#ececec;fill-opacity:1;stroke:none;stroke-width:4"
+     style="fill:#ececec;fill-opacity:1;stroke:#4d4d4d;stroke-width:0.9375;stroke-dasharray:none"
      id="rect2"
-     width="15"
-     height="15"
-     x="0"
-     y="0"
-     ry="3.1535981" />
+     width="14.0625"
+     height="14.0625"
+     x="0.46875"
+     y="0.46875"
+     ry="2.9564981" />
   <path
-     d="M2 3C2 1.9 2.9 1 4 1H11C12.1 1 13 1.9 13 3V11C13 12 12 12 12 12V13C12 13.55 11.55 14 11 14C10.45 14 10 13.55 10 13V12H5V13C5 13.55 4.55 14 4 14C3.45 14 3 13.55 3 13V12C2 12 2 11 2 11V3ZM3.5 4C3.22 4 3 4.22 3 4.5V7.5C3 7.78 3.22 8 3.5 8H11.5C11.78 8 12 7.78 12 7.5V4.5C12 4.22 11.78 4 11.5 4H3.5ZM4 9C3.45 9 3 9.45 3 10C3 10.55 3.45 11 4 11C4.55 11 5 10.55 5 10C5 9.45 4.55 9 4 9ZM11 9C10.45 9 10 9.45 10 10C10 10.55 10.45 11 11 11C11.55 11 12 10.55 12 10C12 9.45 11.55 9 11 9ZM4 2.5C4 2.78 4.22 3 4.5 3H10.5C10.78 3 11 2.78 11 2.5C11 2.22 10.78 2 10.5 2H4.5C4.22 2 4 2.22 4 2.5Z"
+     d="M 2,3 C 2,1.9 2.9,1 4,1 h 7 c 1.1,0 2,0.9 2,2 v 8 c 0,1 -1,1 -1,1 v 1 c 0,0.55 -0.45,1 -1,1 -0.55,0 -1,-0.45 -1,-1 V 12 H 5 v 1 C 5,13.55 4.55,14 4,14 3.45,14 3,13.55 3,13 V 12 C 2,12 2,11 2,11 Z M 3.5,4 C 3.22,4 3,4.22 3,4.5 v 3 C 3,7.78 3.22,8 3.5,8 h 8 C 11.78,8 12,7.78 12,7.5 v -3 C 12,4.22 11.78,4 11.5,4 Z M 4,9 C 3.45,9 3,9.45 3,10 3,10.55 3.45,11 4,11 4.55,11 5,10.55 5,10 5,9.45 4.55,9 4,9 Z m 7,0 c -0.55,0 -1,0.45 -1,1 0,0.55 0.45,1 1,1 0.55,0 1,-0.45 1,-1 C 12,9.45 11.55,9 11,9 Z M 4,2.5 C 4,2.78 4.22,3 4.5,3 h 6 C 10.78,3 11,2.78 11,2.5 11,2.22 10.78,2 10.5,2 h -6 C 4.22,2 4,2.22 4,2.5 Z"
      id="path1"
      style="fill:#9a9c9d;fill-opacity:1" />
 </svg>
