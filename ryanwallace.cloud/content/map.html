@@ -87,6 +87,7 @@ draft: false
           icon_size = 22;
           icon = "bus-yellow.svg";
           opacity = 1.0;
+          z_index = 0;
           if (feature.properties["marker-symbol"] === "bus") {
             opacity = 0.8;
             icon_size = 15;
@@ -119,6 +120,9 @@ draft: false
           ) {
             icon = "bus-silver.svg";
           }
+          if (icon != "entrance-alt1.svg") {
+            z_index = 1000;
+          }
 
           icon = L.icon({
             iconUrl: `/images/icons/${icon}`,
@@ -129,6 +133,9 @@ draft: false
             icon: icon,
             title: feature.id,
             opacity: opacity,
+            zIndexOffset: z_index,
+            riseOnHover: true,
+            riseOffset: 2000,
           });
         },
         onEachFeature: (feature, layer) => {
