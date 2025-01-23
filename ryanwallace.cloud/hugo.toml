@@ -19,7 +19,6 @@ pluralizelisttitles = false
   brand = "Ryan Wallace"
   github_url = "https://github.com/cubismod"
   linkedin_url = "https://www.linkedin.com/in/ryanswallace/"
-  bluesky_url = "https://bsky.app/profile/cubis.bsky.social"
 
   link_color_dark = "#00c0a3" 
   link_color = "#00896f"
