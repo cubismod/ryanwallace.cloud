@@ -185,12 +185,11 @@ draft: false
 
   document.addEventListener("visibilitychange", (event) => {
     if (document.visibilityState === "visible") {
-        annotate_map();
+      annotate_map();
     }
-});
+  });
 
-window.addEventListener("focus", annotate_map);
-
+  window.addEventListener("focus", annotate_map);
 </script>
 
 <p>

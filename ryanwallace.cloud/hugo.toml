@@ -14,7 +14,7 @@ about = "Greater Boston SRE"
 [params]
 footerCopyright = "Ryan Wallace"
 brand_image = "/images/brand-image.jpeg"
-description = "🏳️‍🌈 fella who builds reliable stuff by day and cursed things after hours"
+description = "SRE, transit advocate, 🏳️‍🌈 based out of Boston, Massachusetts"
 
 brand = "Ryan Wallace"
 github_url = "https://github.com/cubismod"
