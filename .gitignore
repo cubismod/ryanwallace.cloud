@@ -25,3 +25,11 @@ go.work.sum
 .env
 
 public/
+node_modules/
+.parcel-cache/
+
+ryanwallace.cloud/content/map/
+dist/
+**/assets/css/map/*
+**/assets/js/map/*
+**/static/map/*

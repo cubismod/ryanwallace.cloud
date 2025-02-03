@@ -1,0 +1,24 @@
+{
+  "name": "mbta-rt-map",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "author": "Ryan Wallace",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@petoc/leaflet-double-touch-drag-zoom": "^1.0.3",
+    "leaflet": "^1.9.4",
+    "leaflet-easybutton": "^2.4.0",
+    "leaflet.fullscreen": "^3.0.2",
+    "yarn": "^1.22.22"
+  },
+  "devDependencies": {
+    "parcel": "^2.13.3"
+  },
+  "scripts": {
+    "build": "parcel build src/index.html --public-url /map/",
+    "move-files": "mkdir -p ../static/map; mkdir -p ../content/map; mv dist/*.css* ../static/map/; mv dist/*.js* ../static/map/; mv dist/*.html ../content/map/ ",
+    "add-title": "cat head.md ../content/map/index.html >  temp; mv temp ../content/map/index.html",
+    "cleanup": "rm ../content/map/*; rm ../static/map/*"
+  }
+}
