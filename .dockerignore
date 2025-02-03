@@ -26,3 +26,12 @@
 **/.env
 
 fly.toml
+
+node_modules/
+.parcel-cache/
+
+ryanwallace.cloud/content/map/
+dist/
+**/assets/css/map/*
+**/assets/js/map/*
+**/static/map/*
