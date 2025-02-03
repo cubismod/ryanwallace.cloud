@@ -57,6 +57,8 @@ function pointToLayer(feature, latlng) {
   var icon = "bus-yellow.svg";
   var opacity = 1.0;
   var z_index = 0;
+  var status = ""
+  var station = ""
   if (feature.properties["marker-symbol"] === "bus") {
     opacity = 0.8;
     icon_size = 15;
@@ -91,6 +93,11 @@ function pointToLayer(feature, latlng) {
     z_index = 1000;
   }
 
+  if (feature.geometry.type === "Point" && feature.properties["marker-symbol"] !== "building") {
+    status = feature.properties.status
+    station = feature.properties.stop
+  }
+
   var icon = L.icon({
     iconUrl: `/images/icons/${icon}`,
     iconSize: L.point(icon_size, icon_size),
@@ -98,7 +105,7 @@ function pointToLayer(feature, latlng) {
 
   return L.marker(latlng, {
     icon: icon,
-    title: feature.id,
+    title: `${feature.id} ${status} ${station}`,
     opacity: opacity,
     zIndexOffset: z_index,
     riseOnHover: true,
@@ -170,7 +177,7 @@ function annotate_map() {
 }
 
 annotate_map();
-window.setInterval(annotate_map, 15000);
+var intervalID = window.setInterval(annotate_map, 15000);
 
 L.easyButton({
   position: "topright",
@@ -205,3 +212,11 @@ document.addEventListener("visibilitychange", (event) => {
 });
 
 window.addEventListener("focus", annotate_map);
+
+document.getElementById("refresh-rate").addEventListener("change", (event) => {
+  window.clearInterval(intervalID);
+  var newVal = parseInt(event.target.value);
+  if (newVal) {
+    intervalID = window.setInterval(annotate_map, event.target.value * 1000);
+  }
+});

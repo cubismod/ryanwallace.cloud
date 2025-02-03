@@ -4,7 +4,16 @@
   crossorigin="anonymous"
 ></script>
 
+<label for="refresh-rate">Refresh rate</label>
+
 <div id="map" style="height: 600px" class="noselect"></div>
+<select name="refresh-rate" id="refresh-rate">
+  <option value="1">1 second</option>
+  <option value="5">5 seconds</option>
+  <option value="10">10 seconds</option>
+  <option value="30" selected="true">30 seconds</option>
+  <option value="60">60 seconds</option>
+</select>
 
 <script type="module" src="map.js"></script>
 
