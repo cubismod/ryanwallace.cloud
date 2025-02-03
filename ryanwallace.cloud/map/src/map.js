@@ -191,7 +191,7 @@ L.easyButton({
     {
       stateName: "locate",
       onClick: (btn, map) => {
-        map.locate({ watch: true, enableHighAccuracy: true, setView: true });
+        map.locate({ enableHighAccuracy: true, setView: true });
       },
       icon: "<span class='odot'>&odot;</span>",
     },
