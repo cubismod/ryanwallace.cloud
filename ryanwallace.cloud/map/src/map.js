@@ -90,7 +90,8 @@ function pointToLayer(feature, latlng) {
   }
   if (feature.properties["marker-symbol"] === "building") {
     icon = "entrance-alt1";
-    opacity = 0.6;
+    icon_size = 18;
+    opacity = 1;
   }
   if (feature.properties.route && feature.properties.route.startsWith("SL")) {
     icon = "bus-silver";
