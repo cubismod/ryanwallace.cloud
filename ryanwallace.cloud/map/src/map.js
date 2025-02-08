@@ -57,9 +57,9 @@ function pointToLayer(feature, latlng) {
   var icon = "bus-yellow.svg";
   var opacity = 1.0;
   var z_index = 0;
-  var status = ""
-  var station = ""
-  var stopOrGo = ""
+  var status = "";
+  var station = "";
+  var stopOrGo = "";
   // will enable this at a later point once i work out the UI
   // if (feature.properties["status"] === "STOPPED_AT") {
   //   stopOrGo = "-stop"
@@ -100,9 +100,12 @@ function pointToLayer(feature, latlng) {
     z_index = 1000;
   }
 
-  if (feature.geometry.type === "Point" && feature.properties["marker-symbol"] !== "building") {
-    status = feature.properties.status
-    station = feature.properties.stop
+  if (
+    feature.geometry.type === "Point" &&
+    feature.properties["marker-symbol"] !== "building"
+  ) {
+    status = feature.properties.status;
+    station = feature.properties.stop;
   }
 
   var icon = L.icon({
@@ -129,9 +132,9 @@ function onEachFeature(feature, layer) {
       layer.bindPopup(`<b>${feature.properties.name} Stop</b>`);
     } else {
       const update_time = new Date(feature.properties["update_time"]);
-      let speed = ""
-      if (feature.properties.speed) {
-        speed = `<br />Speed: ${feature.properties.speed} mph`
+      let speed = "";
+      if (feature.properties["speed"] && feature.properties["status"] != "STOPPED_AT") {
+        speed = `<br />Speed: ${feature.properties.speed} mph`;
       }
       layer.bindPopup(
         `<b>Route: ${feature.properties.route}</b> <br />ID: ${
