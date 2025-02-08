@@ -133,7 +133,10 @@ function onEachFeature(feature, layer) {
     } else {
       const update_time = new Date(feature.properties["update_time"]);
       let speed = "";
-      if (feature.properties["speed"] && feature.properties["status"] != "STOPPED_AT") {
+      if (
+        feature.properties["speed"] &&
+        feature.properties["status"] != "STOPPED_AT"
+      ) {
         speed = `<br />Speed: ${feature.properties.speed} mph`;
       }
       layer.bindPopup(
@@ -155,7 +158,10 @@ function annotate_map() {
         style: (feature) => {
           if (feature.geometry.type === "LineString") {
             var weight = 4;
-            if (feature.properties.route.startsWith("CR")) {
+            if (
+              feature.properties.route.startsWith("CR") ||
+              feature.properties.route.startsWith("SL")
+            ) {
               weight = 3;
             }
             if (
