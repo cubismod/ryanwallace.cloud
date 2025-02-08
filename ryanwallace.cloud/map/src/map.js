@@ -53,43 +53,50 @@ function return_colors(route) {
 }
 
 function pointToLayer(feature, latlng) {
-  var icon_size = 22;
+  var icon_size = 28;
   var icon = "bus-yellow.svg";
   var opacity = 1.0;
   var z_index = 0;
   var status = ""
   var station = ""
+  var stopOrGo = ""
+  // will enable this at a later point once i work out the UI
+  // if (feature.properties["status"] === "STOPPED_AT") {
+  //   stopOrGo = "-stop"
+  // } else if (feature.properties["status"] === "INCOMING_AT" || feature.properties["status"] === "IN_TRANSIT_TO") {
+  //   stopOrGo = "-go"
+  // }
   if (feature.properties["marker-symbol"] === "bus") {
     opacity = 0.8;
-    icon_size = 15;
+    icon_size = 25;
   }
   if (feature.properties["marker-size"] === "small") {
-    icon_size = 17;
+    icon_size = 27;
   }
   if (feature.properties["marker-color"] === "#008150") {
-    icon = "rail-light.svg";
+    icon = "rail-light";
   }
   if (feature.properties["marker-color"] === "#2F5DA6") {
-    icon = "rail-metro-blue.svg";
+    icon = "rail-metro-blue";
   }
   if (feature.properties["marker-color"] === "#FA2D27") {
-    icon = "rail-metro-red.svg";
+    icon = "rail-metro-red";
   }
   if (feature.properties["marker-color"] === "#FD8A03") {
-    icon = "rail-metro-orange.svg";
+    icon = "rail-metro-orange";
   }
   if (feature.properties["marker-color"] === "#7B388C") {
-    icon = "rail.svg";
+    icon = "rail";
   }
   if (feature.properties["marker-symbol"] === "building") {
-    icon = "entrance-alt1.svg";
+    icon = "entrance-alt1";
     opacity = 0.6;
   }
   if (feature.properties.route && feature.properties.route.startsWith("SL")) {
-    icon = "bus-silver.svg";
+    icon = "bus-silver";
     opacity = 0.9;
   }
-  if (icon != "entrance-alt1.svg") {
+  if (icon != "entrance-alt1") {
     z_index = 1000;
   }
 
@@ -99,7 +106,7 @@ function pointToLayer(feature, latlng) {
   }
 
   var icon = L.icon({
-    iconUrl: `/images/icons/${icon}`,
+    iconUrl: `/images/icons/${icon}${stopOrGo}.svg`,
     iconSize: L.point(icon_size, icon_size),
   });
 
@@ -114,7 +121,6 @@ function pointToLayer(feature, latlng) {
 }
 
 function onEachFeature(feature, layer) {
-  var update_time = new Date();
   if (feature.geometry.type === "LineString" && feature.properties.route) {
     layer.bindPopup(`<b>${feature.properties.route}</b>`);
   }
@@ -122,16 +128,20 @@ function onEachFeature(feature, layer) {
     if (feature.properties["marker-symbol"] === "building") {
       layer.bindPopup(`<b>${feature.properties.name} Stop</b>`);
     } else {
+      const update_time = new Date(feature.properties["update_time"]);
+      let speed = ""
+      if (feature.properties.speed) {
+        speed = `<br />Speed: ${feature.properties.speed} mph`
+      }
       layer.bindPopup(
         `<b>Route: ${feature.properties.route}</b> <br />ID: ${
           feature.id
         }<br />Status: ${feature.properties.status}<br />Stop: ${
           feature.properties.stop
-        } <br />Speed: ${
-          feature.properties.speed
-        }<br /><i>Update Time: ${update_time.toTimeString()}</i>`
+        }${speed}<br /><i>Update Time: ${update_time.toLocaleTimeString()}</i>`
       );
     }
+    update_time: "2025-02-08T05:08:07.201235+00:00";
   }
 }
 
