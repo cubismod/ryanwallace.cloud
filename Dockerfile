@@ -7,7 +7,7 @@ WORKDIR /build
 ADD ryanwallace.cloud .
 WORKDIR /build/map
 RUN yarn
-RUN yarn build && yarn move-files && yarn add-title
+RUN yarn build && yarn move && yarn title
 
 # hugo build
 FROM hugomods/hugo:0.140.0 AS builder
