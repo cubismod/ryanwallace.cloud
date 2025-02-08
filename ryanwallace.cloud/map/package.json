@@ -17,8 +17,8 @@
   },
   "scripts": {
     "build": "parcel build src/index.html --public-url /map/",
-    "move-files": "mkdir -p ../static/map; mkdir -p ../content/map; mv dist/*.css* ../static/map/; mv dist/*.js* ../static/map/; mv dist/*.html ../content/map/ ",
-    "add-title": "cat head.md ../content/map/index.html >  temp; mv temp ../content/map/index.html",
-    "cleanup": "rm ../content/map/*; rm ../static/map/*"
+    "move": "mkdir -p ../static/map; mkdir -p ../content/map; mv dist/*.css* ../static/map/; mv dist/*.js* ../static/map/; mv dist/*.html ../content/map/ ",
+    "title": "cat head.md ../content/map/index.html >  temp; mv temp ../content/map/index.html",
+    "clean": "rm ../content/map/*; rm ../static/map/*"
   }
 }
