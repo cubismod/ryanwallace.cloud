@@ -1187,6 +1187,14 @@ json5@^2.2.0, json5@^2.2.1:
   resolved "https://registry.yarnpkg.com/json5/-/json5-2.2.3.tgz#78cd6f1a19bdc12b73db5ad0c61efd66c1e29283"
   integrity sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==
 
+leaflet-arrowheads@^1.4.0:
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/leaflet-arrowheads/-/leaflet-arrowheads-1.4.0.tgz#2a92711c4ca89e6a63014f552cc0d6c67653a773"
+  integrity sha512-aIjsmoWe1VJXaGOpKpS6E8EzN2vpx3GGCNP/FxQteLVzAg5xMID7elf9hj/1CWLJo8FuGRjSvKkUQDj7mocrYA==
+  dependencies:
+    leaflet "^1.7.1"
+    leaflet-geometryutil "^0.10.0"
+
 leaflet-easybutton@^2.4.0:
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/leaflet-easybutton/-/leaflet-easybutton-2.4.0.tgz#3ad8ad31c9cf6d5ca7a6a1988f82eed13ff2c1af"
@@ -1194,12 +1202,19 @@ leaflet-easybutton@^2.4.0:
   dependencies:
     leaflet "^1.0.1"
 
+leaflet-geometryutil@^0.10.0:
+  version "0.10.3"
+  resolved "https://registry.yarnpkg.com/leaflet-geometryutil/-/leaflet-geometryutil-0.10.3.tgz#dda78546abc58723a46b47fd6ffb081f5b63cec4"
+  integrity sha512-Qeas+KsnenE0Km/ydt8km3AqFe7kJhVwuLdbCYM2xe2epsxv5UFEaVJiagvP9fnxS8QvBNbm7DJlDA0tkKo9VA==
+  dependencies:
+    leaflet "^1.6.0"
+
 leaflet.fullscreen@^3.0.2:
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/leaflet.fullscreen/-/leaflet.fullscreen-3.0.2.tgz#b37e66ae0d16a139a98a1641bec4a9403915fe2d"
   integrity sha512-m27waFVmwdrLGXjZw2L8b7w/W28EY+u7IGzK2x8K99XaPuzKbjI+/H1j0OMawLcRPZyDRh+39XpyLsvDwHUEoA==
 
-leaflet@^1.0.1, leaflet@^1.9.4:
+leaflet@^1.0.1, leaflet@^1.6.0, leaflet@^1.7.1, leaflet@^1.9.4:
   version "1.9.4"
   resolved "https://registry.yarnpkg.com/leaflet/-/leaflet-1.9.4.tgz#23fae724e282fa25745aff82ca4d394748db7d8d"
   integrity sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA==

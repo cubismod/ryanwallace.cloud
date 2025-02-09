@@ -8,6 +8,7 @@
   "dependencies": {
     "@petoc/leaflet-double-touch-drag-zoom": "^1.0.3",
     "leaflet": "^1.9.4",
+    "leaflet-arrowheads": "^1.4.0",
     "leaflet-easybutton": "^2.4.0",
     "leaflet.fullscreen": "^3.0.2",
     "yarn": "^1.22.22"

@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import "@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom.css";
 import "leaflet.fullscreen";
 import "leaflet-easybutton";
+import "leaflet-arrowheads";
 
 var map = L.map("map", {
   doubleTouchDragZoom: true,
@@ -140,15 +141,17 @@ function onEachFeature(feature, layer) {
       ) {
         speed = `<br />Speed: ${feature.properties.speed} mph`;
       }
+      if (feature.properties["approximate_speed"]) {
+        speed += "* <small>approximate</small>";
+      }
       layer.bindPopup(
         `<b>Route: ${feature.properties.route}</b> <br />ID: ${
           feature.id
         }<br />Status: ${feature.properties.status}<br />Stop: ${
           feature.properties.stop
-        }${speed}<br /><i>Update Time: ${update_time.toLocaleTimeString()}</i>`
+        }${speed}<br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`
       );
     }
-    update_time: "2025-02-08T05:08:07.201235+00:00";
   }
 }
 
