@@ -5,6 +5,8 @@ import "@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom
 import "leaflet.fullscreen";
 import "leaflet-easybutton";
 import "leaflet-arrowheads";
+import "invert-color";
+import invert from "invert-color";
 
 var map = L.map("map", {
   doubleTouchDragZoom: true,
@@ -144,18 +146,68 @@ function onEachFeature(feature, layer) {
       if (feature.properties["approximate_speed"]) {
         speed += "* <small>approximate</small>";
       }
-      layer.bindPopup(
-        `<b>Route: ${feature.properties.route}</b> <br />ID: ${
+      let occupancy = "";
+      if (feature.properties["occupancy_status"]) {
+        occupancy = `<br />Occupancy: ${feature.properties["occupancy_status"]}`;
+      }
+      const popup = L.popup({
+        content: `<b>Route: ${feature.properties.route}</b> <br />ID: ${
           feature.id
         }<br />Status: ${feature.properties.status}<br />Stop: ${
           feature.properties.stop
-        }${speed}<br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`
-      );
+        }${speed}${occupancy}<br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
+        keepInView: true,
+      });
+
+      if (
+        feature.properties["stop-coordinates"] &&
+        feature.properties["status"] != "STOPPED_AT"
+      ) {
+        const coords = [
+          [feature.geometry.coordinates[1], feature.geometry.coordinates[0]],
+          [
+            feature.properties["stop-coordinates"][1],
+            feature.properties["stop-coordinates"][0],
+          ],
+        ];
+        const line1 = L.polyline(coords, {
+          color: invert(feature.properties["marker-color"], true),
+          weight: 15,
+        });
+        const line2 = L.polyline(coords, {
+          color: feature.properties["marker-color"],
+          weight: 7,
+        });
+        line1.arrowheads();
+        line2.arrowheads();
+
+        layer.addEventListener("click", () => {
+          line1.addTo(map);
+          line2.addTo(map);
+          map.panInsideBounds(line1.getBounds());
+          window.setTimeout(() => {
+            line1.removeFrom(map);
+            line2.removeFrom(map);
+          }, 10000);
+        });
+      }
+
+      layer.bindPopup(popup);
     }
   }
 }
 
 function annotate_map() {
+  $.getJSON("https://vehicles.ryanwallace.cloud/", function (data) {
+    if (geoJsonLayer) {
+      map.removeLayer(geoJsonLayer);
+    }
+    geoJsonLayer = L.geoJSON(data, {
+      pointToLayer: pointToLayer,
+      onEachFeature: onEachFeature,
+    }).addTo(map);
+    console.log("Map loaded");
+  });
   if (!baseLayerLoaded) {
     $.getJSON("https://vehicles.ryanwallace.cloud/shapes", function (data) {
       var baseLayer = L.geoJSON(data, {
@@ -186,17 +238,6 @@ function annotate_map() {
     });
     baseLayerLoaded = true;
   }
-
-  $.getJSON("https://vehicles.ryanwallace.cloud/", function (data) {
-    if (geoJsonLayer) {
-      map.removeLayer(geoJsonLayer);
-    }
-    geoJsonLayer = L.geoJSON(data, {
-      pointToLayer: pointToLayer,
-      onEachFeature: onEachFeature,
-    }).addTo(map);
-    console.log("Map loaded");
-  });
 }
 
 annotate_map();
