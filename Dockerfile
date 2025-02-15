@@ -10,7 +10,7 @@ RUN yarn
 RUN yarn build && yarn move && yarn title
 
 # hugo build
-FROM hugomods/hugo:0.140.0 AS builder
+FROM hugomods/hugo:0.143.1 AS builder
 WORKDIR /build
 
 COPY --from=node /build .
