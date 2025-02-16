@@ -1,7 +1,7 @@
 ARG caddy_version=2.9
 
 # node bundling
-FROM node:23.8.0 as node
+FROM node:23.8.0@sha256:a182b9b37154a3e11e5c1d15145470ceb22069646d0b7390de226da2548aa2a7 as node
 
 WORKDIR /build
 ADD ryanwallace.cloud .
