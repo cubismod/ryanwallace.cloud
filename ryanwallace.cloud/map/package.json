@@ -15,7 +15,7 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
-    "parcel": "^2.13.3"
+    "parcel": "2.13.3"
   },
   "scripts": {
     "build": "parcel build src/index.html --public-url /map/",
