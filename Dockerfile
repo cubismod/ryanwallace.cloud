@@ -11,7 +11,7 @@ RUN yarn
 RUN yarn build && yarn move && yarn title
 
 # hugo build
-FROM hugomods/hugo:0.144.1@sha256:5815f011a72586d0738e6a66b107080787f52720fe10da76636729aadfb16df7 AS builder
+FROM hugomods/hugo:0.144.2@sha256:179958387a1d3bd2260cf9bb434cc069f7eca8d20a10cda79cda792ab65ad830 AS builder
 WORKDIR /build
 
 COPY --from=node /build .
