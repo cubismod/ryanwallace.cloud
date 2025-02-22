@@ -17,6 +17,10 @@ var map = L.map("map", {
   },
 }).setView([42.36565, -71.05236], 13);
 
+const lines = ["rl", "gl", "bl", "ol", "sl", "cr"];
+const vehicleTypes = ["light", "heavy", "regional", "bus"];
+const vehicleCountMap = createVehicleCountMap();
+
 var baseLayerLoaded = false;
 
 document.getElementById("map").scrollIntoView({ behavior: "smooth" });
@@ -55,11 +59,87 @@ function return_colors(route) {
   return "#3e2426";
 }
 
+function createVehicleCountMap() {
+  const vehicleCountMap = new Map();
+  for (const line of lines) {
+    vehicleCountMap.set(line, new Map());
+  }
+  return vehicleCountMap;
+}
+
+function clearMap() {
+  for (const line of lines) {
+    for (const vehicleType of vehicleTypes) {
+      vehicleCountMap.get(line)?.set(vehicleType, 0);
+    }
+  }
+}
+
+function incrementMapItem(route, vehicleType) {
+  const existing = vehicleCountMap.get(route)?.get(vehicleType);
+  if (existing !== undefined) {
+    vehicleCountMap.get(route).set(vehicleType, existing + 1);
+  } else {
+    vehicleCountMap.get(route).set(vehicleType, 1);
+  }
+}
+
+function calculateTotal(dimension) {
+  var total = 0;
+  if (lines.includes(dimension)) {
+    // we are retrieving the total for a line
+    for (const vehicleType of vehicleTypes) {
+      total += vehicleCountMap.get(dimension)?.get(vehicleType) || 0;
+    }
+    return total;
+  } else if (vehicleTypes.includes(dimension)) {
+    // we are retrieving the total for a vehicle type
+    for (const line of lines) {
+      total += vehicleCountMap.get(line)?.get(dimension) || 0;
+    }
+    return total;
+  } else if (dimension === "all") {
+    // we are retrieving the total for all dimensions
+    for (const line of lines) {
+      for (const vehicleType of vehicleTypes) {
+        total += vehicleCountMap.get(line)?.get(vehicleType) || 0;
+      }
+    }
+    return total;
+  }
+}
+
+function updateTable() {
+  for (const line of lines) {
+    for (const vehicleType of vehicleTypes) {
+      const id = `${line}-${vehicleType}`;
+      const element = document.getElementById(id);
+      if (element) {
+        element.innerHTML = vehicleCountMap.get(line)?.get(vehicleType) || 0;
+      }
+    }
+    const totalElement = document.getElementById(`${line}-total`);
+    if (totalElement) {
+      totalElement.innerHTML = calculateTotal(line);
+    }
+  }
+  for (const vehicleType of vehicleTypes) {
+    const element = document.getElementById(`${vehicleType}-total`);
+    if (element) {
+      element.innerHTML = calculateTotal(vehicleType);
+    }
+  }
+  const element = document.getElementById("total");
+  if (element) {
+    element.innerHTML = calculateTotal("all");
+  }
+}
+
 function pointToLayer(feature, latlng) {
   var icon_size = 28;
   var icon = "bus-yellow.svg";
   var opacity = 1.0;
-  var z_index = 0;
+  var zIndex = 0;
   var status = "";
   var station = "";
   var stopOrGo = "";
@@ -69,39 +149,48 @@ function pointToLayer(feature, latlng) {
   // } else if (feature.properties["status"] === "INCOMING_AT" || feature.properties["status"] === "IN_TRANSIT_TO") {
   //   stopOrGo = "-go"
   // }
-  if (feature.properties["marker-symbol"] === "bus") {
-    opacity = 0.8;
-    icon_size = 25;
-  }
-  if (feature.properties["marker-size"] === "small") {
-    icon_size = 27;
-  }
-  if (feature.properties["marker-color"] === "#008150") {
-    icon = "rail-light";
-  }
-  if (feature.properties["marker-color"] === "#2F5DA6") {
-    icon = "rail-metro-blue";
-  }
-  if (feature.properties["marker-color"] === "#FA2D27") {
-    icon = "rail-metro-red";
-  }
-  if (feature.properties["marker-color"] === "#FD8A03") {
-    icon = "rail-metro-orange";
-  }
-  if (feature.properties["marker-color"] === "#7B388C") {
-    icon = "rail";
-  }
   if (feature.properties["marker-symbol"] === "building") {
     icon = "entrance-alt1";
     icon_size = 18;
     opacity = 1;
-  }
-  if (feature.properties.route && feature.properties.route.startsWith("SL")) {
-    icon = "bus-silver";
-    opacity = 0.9;
-  }
-  if (icon != "entrance-alt1") {
-    z_index = 1000;
+  } else {
+    if (feature.properties["marker-symbol"] === "bus") {
+      opacity = 0.8;
+      icon_size = 25;
+    }
+    if (feature.properties["marker-size"] === "small") {
+      icon_size = 27;
+    }
+    if (feature.properties["marker-color"] === "#008150") {
+      icon = "rail-light";
+      incrementMapItem("gl", "light");
+    }
+    if (feature.properties["marker-color"] === "#2F5DA6") {
+      icon = "rail-metro-blue";
+      incrementMapItem("bl", "heavy");
+    }
+    if (feature.properties["marker-color"] === "#FA2D27") {
+      icon = "rail-metro-red";
+      if (feature.properties["route"] === "Mattapan") {
+        incrementMapItem("rl", "light");
+      } else {
+        incrementMapItem("rl", "heavy");
+      }
+    }
+    if (feature.properties["marker-color"] === "#FD8A03") {
+      icon = "rail-metro-orange";
+      incrementMapItem("ol", "heavy");
+    }
+    if (feature.properties["marker-color"] === "#7B388C") {
+      icon = "rail";
+      incrementMapItem("cr", "regional");
+    }
+    if (feature.properties.route && feature.properties.route.startsWith("SL")) {
+      incrementMapItem("sl", "bus");
+      icon = "bus-silver";
+      opacity = 0.9;
+    }
+    zIndex = 1000;
   }
 
   if (
@@ -121,7 +210,7 @@ function pointToLayer(feature, latlng) {
     icon: icon,
     title: `${feature.id} ${status} ${station}`,
     opacity: opacity,
-    zIndexOffset: z_index,
+    zIndexOffset: zIndex,
     riseOnHover: true,
     riseOffset: 2000,
   });
@@ -237,6 +326,10 @@ function annotate_map() {
       }).addTo(map);
     });
     baseLayerLoaded = true;
+    window.setTimeout(() => {
+      updateTable();
+      clearMap();
+    }, 5000);
   }
 }
 
