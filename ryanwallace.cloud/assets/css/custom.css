@@ -89,3 +89,37 @@ pre {
   -ms-user-select: none;
   user-select: none;
 }
+
+.bl {
+  background-color: #2f5da6 !important;
+  color: white;
+}
+
+.gl {
+  background-color: #008150 !important;
+  color: white;
+}
+
+.rl {
+  background-color: #fa2d27 !important;
+  color: white;
+}
+
+.ol {
+  background-color: #fd8a03 !important;
+  color: white;
+}
+
+.cr {
+  background-color: #7b388c !important;
+  color: white;
+}
+
+.sl {
+  background-color: #9a9c9d !important;
+  color: black;
+}
+
+td {
+  text-align: center;
+}
