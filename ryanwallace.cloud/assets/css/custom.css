@@ -93,31 +93,37 @@ pre {
 .bl {
   background-color: #2f5da6 !important;
   color: white;
+  font-weight: bold;
 }
 
 .gl {
   background-color: #008150 !important;
   color: white;
+  font-weight: bold;
 }
 
 .rl {
   background-color: #fa2d27 !important;
-  color: white;
+  color: black;
+  font-weight: bold;
 }
 
 .ol {
   background-color: #fd8a03 !important;
-  color: white;
+  color: black;
+  font-weight: bold;
 }
 
 .cr {
   background-color: #7b388c !important;
   color: white;
+  font-weight: bold;
 }
 
 .sl {
   background-color: #9a9c9d !important;
   color: black;
+  font-weight: bold;
 }
 
 td {
