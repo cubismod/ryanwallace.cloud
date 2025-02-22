@@ -4,7 +4,6 @@
   crossorigin="anonymous"
 ></script>
 
-
 <div id="map" style="height: 600px" class="noselect"></div>
 <p>
   <label for="refresh-rate">Refresh rate:</label>
@@ -18,8 +17,77 @@
   </select>
 </p>
 
-
 <script type="module" src="map.js"></script>
+
+<h4>Currently Operating Vehicles</h4>
+<table id="vehicle-table">
+  <tr>
+    <td><i>Vehicle Type</i></td>
+    <td class="rl"><b>RL</b></td>
+    <td class="gl"><b>GL</b></td>
+    <td class="bl"><b>BL</b></td>
+    <td class="ol"><b>OL</b></td>
+    <td class="sl"><b>SL</b></td>
+    <td class="cr"><b>CR</b></td>
+    <td><i>Totals</i></td>
+  </tr>
+  <tr>
+    <td><small>Light Rail</small></td>
+    <td id="rl-light">0</td>
+    <td id="gl-light">0</td>
+    <td id="bl-light">0</td>
+    <td id="ol-light">0</td>
+    <td id="sl-light">0</td>
+    <td id="cr-light">0</td>
+    <td id="light-total">0</td>
+  </tr>
+  <tr>
+    <td><small>Heavy Rail</small></td>
+    <td id="rl-heavy">0</td>
+    <td id="gl-heavy">0</td>
+    <td id="bl-heavy">0</td>
+    <td id="ol-heavy">0</td>
+    <td id="sl-heavy">0</td>
+    <td id="cr-heavy">0</td>
+    <td id="heavy-total">0</td>
+  </tr>
+  <tr>
+    <td><small>Regional Rail</small></td>
+    <td id="rl-regional">0</td>
+    <td id="gl-regional">0</td>
+    <td id="bl-regional">0</td>
+    <td id="ol-regional">0</td>
+    <td id="sl-regional">0</td>
+    <td id="cr-regional">0</td>
+    <td id="regional-total">0</td>
+  </tr>
+  <tr>
+    <td><small>Bus</small></td>
+    <td id="rl-bus">0</td>
+    <td id="gl-bus">0</td>
+    <td id="bl-bus">0</td>
+    <td id="ol-bus">0</td>
+    <td id="sl-bus">0</td>
+    <td id="cr-bus">0</td>
+    <td id="bus-total">0</td>
+  </tr>
+  <tr>
+    <td><i>Totals</i></td>
+    <td id="rl-total" class="rl">0</td>
+    <td id="gl-total" class="gl">0</td>
+    <td id="bl-total" class="bl">0</td>
+    <td id="ol-total" class="ol">0</td>
+    <td id="sl-total" class="sl">0</td>
+    <td id="cr-total" class="cr">0</td>
+    <td id="total"><b>0</b></td>
+  </tr>
+</table>
+
+<p>
+  <a href="http://roster.transithistory.org/" target="_blank"
+    >Full MBTA Vehicle Inventory</a
+  >
+</p>
 
 <p>
   This map live updates using the
