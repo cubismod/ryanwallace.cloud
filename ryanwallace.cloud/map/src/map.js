@@ -297,6 +297,10 @@ function annotate_map() {
     }).addTo(map);
     console.log("Map loaded");
   });
+  window.setTimeout(() => {
+      updateTable();
+      clearMap();
+    }, 5000);
   if (!baseLayerLoaded) {
     $.getJSON("https://vehicles.ryanwallace.cloud/shapes", function (data) {
       var baseLayer = L.geoJSON(data, {
@@ -326,10 +330,6 @@ function annotate_map() {
       }).addTo(map);
     });
     baseLayerLoaded = true;
-    window.setTimeout(() => {
-      updateTable();
-      clearMap();
-    }, 5000);
   }
 }
 
