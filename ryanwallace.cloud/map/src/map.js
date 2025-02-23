@@ -287,6 +287,7 @@ function onEachFeature(feature, layer) {
 }
 
 function annotate_map() {
+  clearMap();
   $.getJSON("https://vehicles.ryanwallace.cloud/", function (data) {
     if (geoJsonLayer) {
       map.removeLayer(geoJsonLayer);
@@ -299,8 +300,7 @@ function annotate_map() {
   });
   window.setTimeout(() => {
       updateTable();
-      clearMap();
-    }, 5000);
+    }, 700);
   if (!baseLayerLoaded) {
     $.getJSON("https://vehicles.ryanwallace.cloud/shapes", function (data) {
       var baseLayer = L.geoJSON(data, {
