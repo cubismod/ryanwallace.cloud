@@ -8,6 +8,8 @@
     log
     root * /var/www/html
     respond /status "ok"
+
+    encode zstd gzip
     file_server
 }
 
