@@ -297,10 +297,10 @@ function annotate_map() {
       onEachFeature: onEachFeature,
     }).addTo(map);
     console.log("Map loaded");
-  });
-  window.setTimeout(() => {
+    window.setTimeout(() => {
       updateTable();
-    }, 700);
+    }, 100);
+  });
   if (!baseLayerLoaded) {
     $.getJSON("https://vehicles.ryanwallace.cloud/shapes", function (data) {
       var baseLayer = L.geoJSON(data, {
