@@ -11,7 +11,7 @@
     "leaflet": "^1.9.4",
     "leaflet-arrowheads": "^1.4.0",
     "leaflet-easybutton": "^2.4.0",
-    "leaflet.fullscreen": "^3.0.2",
+    "leaflet.fullscreen": "^4.0.0",
     "yarn": "^1.22.22"
   },
   "devDependencies": {
