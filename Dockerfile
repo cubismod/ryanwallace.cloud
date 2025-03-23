@@ -4,13 +4,13 @@ ARG caddy_builder_version=2.9-builder@sha256:c1e258b449a2deaab94f90330450fcfe8c3
 # node bundling
 FROM node:23.10.0@sha256:990d0ab35ae15d8a322ee1eeaf4f7cf14e367d3d0ee2f472704b7b3df4c9e7c1 as node
 
-ENV MT_KEY
-
 WORKDIR /build
 ADD ryanwallace.cloud .
 WORKDIR /build/map
 RUN yarn
-RUN yarn build && yarn move && yarn title
+# https://fly.io/docs/apps/build-secrets/
+RUN --mount=type=secret,id=MT_KEY \
+     MT_KEY="$(cat /run/secrets/MT_KEY)" yarn build && yarn move && yarn title
 
 # hugo build
 FROM hugomods/hugo:0.145.0@sha256:879cf9ff9c411cf9a2904d466bedcac1f26a8c09fcdb663ca90dcf94a47f49cb AS builder
