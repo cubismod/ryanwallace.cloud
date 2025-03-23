@@ -1,5 +1,8 @@
 version: '3'
 
+dotenv:
+- ryanwallace.cloud/map/.env
+
 tasks:
   dev:
     dir: ryanwallace.cloud
