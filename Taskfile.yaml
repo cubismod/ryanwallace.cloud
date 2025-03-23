@@ -1,0 +1,13 @@
+version: '3'
+
+tasks:
+  dev:
+    dir: ryanwallace.cloud
+    cmds:
+    - hugo server -D
+  map_build:
+    dir: ryanwallace.cloud/map
+    cmds:
+    - yarn build
+    - yarn clean
+    - yarn move
