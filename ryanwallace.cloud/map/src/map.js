@@ -7,6 +7,7 @@ import "leaflet-easybutton";
 import "leaflet-arrowheads";
 import "invert-color";
 import invert from "invert-color";
+import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 
 var map = L.map("map", {
   doubleTouchDragZoom: true,
@@ -14,6 +15,7 @@ var map = L.map("map", {
   fullscreenControlOptions: {
     position: "topleft",
     title: "Fullscreen",
+    forcePseudoFullscreen: true,
   },
 }).setView([42.36565, -71.05236], 13);
 
@@ -25,10 +27,9 @@ var baseLayerLoaded = false;
 
 document.getElementById("map").scrollIntoView({ behavior: "smooth" });
 
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution:
-    '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+const mtLayer = new MaptilerLayer({
+  apiKey: process.env.MT_KEY,
+  style: "streets-v2",
 }).addTo(map);
 
 var geoJsonLayer = null;

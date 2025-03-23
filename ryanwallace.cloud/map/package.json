@@ -6,6 +6,7 @@
   "author": "Ryan Wallace",
   "license": "Apache-2.0",
   "dependencies": {
+    "@maptiler/leaflet-maptilersdk": "^4.0.2",
     "@petoc/leaflet-double-touch-drag-zoom": "^1.0.3",
     "invert-color": "^2.0.0",
     "leaflet": "^1.9.4",
@@ -15,6 +16,7 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
+    "buffer": "^5.5.0||^6.0.0",
     "parcel": "2.14.1"
   },
   "scripts": {
