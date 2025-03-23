@@ -16,7 +16,7 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
-    "buffer": "^5.5.0||^6.0.0",
+    "buffer": "6.0.3",
     "parcel": "2.14.1"
   },
   "scripts": {
