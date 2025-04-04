@@ -8,7 +8,9 @@ import "leaflet-arrowheads";
 import "invert-color";
 import DOMPurify from "dompurify";
 import invert from "invert-color";
+import DataTable from "datatables.net-dt";
 import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
+import { formatDistance } from "date-fns";
 
 var map = L.map("map", {
   doubleTouchDragZoom: true,
@@ -303,7 +305,7 @@ function calculateAffectedLines(data) {
   for (const entity of data) {
     for (const check of checks) {
       if (check.test(entity.route)) {
-        afLines.add(`<small class="${check.class}">${entity.route}</small>`);
+        afLines.add(entity.route);
       }
     }
   }
@@ -312,34 +314,47 @@ function calculateAffectedLines(data) {
 
 function alerts() {
   $.getJSON("https://vehicles.ryanwallace.cloud/alerts", function (data) {
-    // Columns: header, lines affected, updated_at, severity
-    const table = document.getElementById("alerts");
     const msgs = new Set();
+    const dataSet = [];
 
     for (const alert of data.data) {
       if (alert.attributes && !msgs.has(alert.attributes.header)) {
-        const row = document.createElement("tr");
-        const header = document.createElement("td");
-        header.innerHTML = `<small>${DOMPurify.sanitize(
-          alert.attributes.header
-        )}</small>`;
-        row.appendChild(header);
-        msgs.add(alert.attributes.header);
-
-        const linesAffected = document.createElement("td");
-        linesAffected.innerHTML = DOMPurify.sanitize(
+        if (
+          alert.attributes.active_period.length > 0 &&
+          alert.attributes.active_period[0].end
+        ) {
+          // skip alert if end time already passed
+          const end_time = alert.attributes.active_period[0].end;
+          if (Date.parse(end_time) < Date.now()) {
+            continue;
+          }
+        }
+        const rowData = [
+          alert.attributes.severity,
+          formatDistance(
+            new Date(
+              alert.attributes.updated_at || alert.attributes.created_at
+            ),
+            new Date(),
+            { addSuffix: true }
+          ),
+          alert.attributes.header,
           calculateAffectedLines(alert.attributes.informed_entity),
-          { ALLOWED_TAGS: ["small"] }
-        );
-        row.appendChild(linesAffected);
-
-        const severity = document.createElement("td");
-        severity.textContent = alert.attributes.severity;
-        row.appendChild(severity);
-
-        table.appendChild(row);
+        ];
+        dataSet.push(rowData);
       }
     }
+    new DataTable("#alerts", {
+      columns: [
+        { title: "Severity", className: "dt-body-center" },
+        { title: "Updated" },
+        { title: "Alert", className: "alert-body" },
+        { title: "Lines Affected" },
+      ],
+      data: dataSet,
+      ordering: false,
+      paging: false,
+    });
   });
 }
 
