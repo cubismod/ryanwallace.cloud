@@ -6,8 +6,11 @@ import "leaflet.fullscreen";
 import "leaflet-easybutton";
 import "leaflet-arrowheads";
 import "invert-color";
+import DOMPurify from "dompurify";
 import invert from "invert-color";
+import DataTable from "datatables.net-dt";
 import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
+import { formatDistance } from "date-fns";
 
 var map = L.map("map", {
   doubleTouchDragZoom: true,
@@ -22,6 +25,8 @@ var map = L.map("map", {
 const lines = ["rl", "gl", "bl", "ol", "sl", "cr"];
 const vehicleTypes = ["light", "heavy", "regional", "bus"];
 const vehicleCountMap = createVehicleCountMap();
+const vehicles_url =
+  process.env.VEHICLES_URL || "https://vehicles.ryanwallace.cloud";
 
 var baseLayerLoaded = false;
 
@@ -116,23 +121,24 @@ function updateTable() {
       const id = `${line}-${vehicleType}`;
       const element = document.getElementById(id);
       if (element) {
-        element.innerHTML = vehicleCountMap.get(line)?.get(vehicleType) || 0;
+        element.innerHTML =
+          DOMPurify.sanitize(vehicleCountMap.get(line)?.get(vehicleType)) || 0;
       }
     }
     const totalElement = document.getElementById(`${line}-total`);
     if (totalElement) {
-      totalElement.innerHTML = calculateTotal(line);
+      totalElement.innerHTML = DOMPurify.sanitize(calculateTotal(line));
     }
   }
   for (const vehicleType of vehicleTypes) {
     const element = document.getElementById(`${vehicleType}-total`);
     if (element) {
-      element.innerHTML = calculateTotal(vehicleType);
+      element.innerHTML = DOMPurify.sanitize(calculateTotal(vehicleType));
     }
   }
   const element = document.getElementById("total");
   if (element) {
-    element.innerHTML = calculateTotal("all");
+    element.innerHTML = DOMPurify.sanitize(calculateTotal("all"));
   }
 }
 
@@ -287,9 +293,76 @@ function onEachFeature(feature, layer) {
   }
 }
 
+function calculateAffectedLines(data) {
+  const checks = [
+    { test: (route) => route.startsWith("CR"), class: "cr" },
+    { test: (route) => route.startsWith("7"), class: "sl" },
+    { test: (route) => route === "Blue", class: "bl" },
+    { test: (route) => route === "Red", class: "rl" },
+    { test: (route) => route === "Green", class: "gl" },
+    { test: (route) => route === "Orange", class: "ol" },
+  ];
+
+  const afLines = new Set();
+  for (const entity of data) {
+    for (const check of checks) {
+      if (check.test(entity.route)) {
+        afLines.add(entity.route);
+      }
+    }
+  }
+  return [...afLines].join(", ");
+}
+
+function alerts() {
+  $.getJSON(`${vehicles_url}/alerts`, function (data) {
+    const msgs = new Set();
+    const dataSet = [];
+
+    for (const alert of data.data) {
+      if (alert.attributes && !msgs.has(alert.attributes.header)) {
+        if (
+          alert.attributes.active_period.length > 0 &&
+          alert.attributes.active_period[0].end
+        ) {
+          // skip alert if end time already passed
+          const end_time = alert.attributes.active_period[0].end;
+          if (Date.parse(end_time) < Date.now()) {
+            continue;
+          }
+        }
+        const rowData = [
+          alert.attributes.severity,
+          formatDistance(
+            new Date(
+              alert.attributes.updated_at || alert.attributes.created_at
+            ),
+            new Date(),
+            { addSuffix: true }
+          ),
+          alert.attributes.header,
+          calculateAffectedLines(alert.attributes.informed_entity),
+        ];
+        dataSet.push(rowData);
+      }
+    }
+    new DataTable("#alerts", {
+      columns: [
+        { title: "Severity", className: "dt-body-center" },
+        { title: "Updated" },
+        { title: "Alert", className: "alert-body" },
+        { title: "Lines Affected" },
+      ],
+      data: dataSet,
+      ordering: false,
+      paging: false,
+    });
+  });
+}
+
 function annotate_map() {
   clearMap();
-  $.getJSON("https://vehicles.ryanwallace.cloud/", function (data) {
+  $.getJSON(vehicles_url, function (data) {
     if (geoJsonLayer) {
       map.removeLayer(geoJsonLayer);
     }
@@ -303,7 +376,7 @@ function annotate_map() {
     }, 100);
   });
   if (!baseLayerLoaded) {
-    $.getJSON("https://vehicles.ryanwallace.cloud/shapes", function (data) {
+    $.getJSON(`${vehicles_url}/shapes`, function (data) {
       var baseLayer = L.geoJSON(data, {
         style: (feature) => {
           if (feature.geometry.type === "LineString") {
@@ -378,3 +451,5 @@ document.getElementById("refresh-rate").addEventListener("change", (event) => {
     intervalID = window.setInterval(annotate_map, event.target.value * 1000);
   }
 });
+
+alerts();

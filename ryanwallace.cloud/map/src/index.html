@@ -3,6 +3,7 @@
   integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
   crossorigin="anonymous"
 ></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css" />
 
 <style>
   .content.container {
@@ -19,8 +20,8 @@
   <select name="refresh-rate" id="refresh-rate">
     <option value="5">5 seconds</option>
     <option value="10">10 seconds</option>
-    <option value="15">15 seconds</option>
-    <option value="30" selected="true">30 seconds</option>
+    <option value="15" selected>15 seconds</option>
+    <option value="30">30 seconds</option>
     <option value="60">60 seconds</option>
     <option value="99999">Off</option>
   </select>
@@ -114,3 +115,8 @@
     >Mapbox Maki Icons</a
   >
 </p>
+
+<table id="alerts" class="display compact">
+</table>
+
+</div>

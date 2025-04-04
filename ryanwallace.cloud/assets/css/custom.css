@@ -94,38 +94,53 @@ pre {
   background-color: #2f5da6 !important;
   color: white;
   font-weight: bold;
+  padding: 5px;
 }
 
 .gl {
   background-color: #008150 !important;
   color: white;
   font-weight: bold;
+  padding: 5px;
 }
 
 .rl {
   background-color: #fa2d27 !important;
   color: black;
   font-weight: bold;
+  padding: 5px;
 }
 
 .ol {
   background-color: #fd8a03 !important;
   color: black;
   font-weight: bold;
+  padding: 5px;
 }
 
 .cr {
   background-color: #7b388c !important;
   color: white;
   font-weight: bold;
+  padding: 5px;
 }
 
 .sl {
   background-color: #9a9c9d !important;
   color: black;
   font-weight: bold;
+  padding: 5px;
 }
 
 td {
   text-align: center;
+  padding: 5px;
+}
+
+.content div {
+  color: inherit !important;
+}
+
+.alert-body {
+  font-size: 16px;
 }

@@ -8,7 +8,11 @@
   "dependencies": {
     "@maptiler/leaflet-maptilersdk": "^4.0.2",
     "@petoc/leaflet-double-touch-drag-zoom": "^1.0.3",
+    "datatables.net-dt": "^2.2.2",
+    "date-fns": "^4.1.0",
+    "dompurify": "^3.2.5",
     "invert-color": "^2.0.0",
+    "jquery": "^3.7.1",
     "leaflet": "^1.9.4",
     "leaflet-arrowheads": "^1.4.0",
     "leaflet-easybutton": "^2.4.0",
@@ -23,6 +27,6 @@
     "build": "parcel build src/index.html --public-url /map/",
     "move": "mkdir -p ../static/map; mkdir -p ../content/map; mv dist/*.css* ../static/map/; mv dist/*.js* ../static/map/; mv dist/*.html ../content/map/ ",
     "title": "cat head.md ../content/map/index.html >  temp; mv temp ../content/map/index.html",
-    "clean": "rm ../content/map/*; rm ../static/map/*"
+    "clean": "rm -f ../content/map/*; rm -f ../static/map/*"
   }
 }
