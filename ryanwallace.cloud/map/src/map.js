@@ -6,6 +6,7 @@ import "leaflet.fullscreen";
 import "leaflet-easybutton";
 import "leaflet-arrowheads";
 import "invert-color";
+import DOMPurify from "dompurify";
 import invert from "invert-color";
 import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 
@@ -116,23 +117,24 @@ function updateTable() {
       const id = `${line}-${vehicleType}`;
       const element = document.getElementById(id);
       if (element) {
-        element.innerHTML = vehicleCountMap.get(line)?.get(vehicleType) || 0;
+        element.innerHTML =
+          DOMPurify.sanitize(vehicleCountMap.get(line)?.get(vehicleType)) || 0;
       }
     }
     const totalElement = document.getElementById(`${line}-total`);
     if (totalElement) {
-      totalElement.innerHTML = calculateTotal(line);
+      totalElement.innerHTML = DOMPurify.sanitize(calculateTotal(line));
     }
   }
   for (const vehicleType of vehicleTypes) {
     const element = document.getElementById(`${vehicleType}-total`);
     if (element) {
-      element.innerHTML = calculateTotal(vehicleType);
+      element.innerHTML = DOMPurify.sanitize(calculateTotal(vehicleType));
     }
   }
   const element = document.getElementById("total");
   if (element) {
-    element.innerHTML = calculateTotal("all");
+    element.innerHTML = DOMPurify.sanitize(calculateTotal("all"));
   }
 }
 
@@ -319,16 +321,19 @@ function alerts() {
     const msgs = new Set();
 
     for (const alert of data.data) {
-      if (!msgs.has(alert.attributes.header)) {
+      if (alert.attributes && !msgs.has(alert.attributes.header)) {
         const row = document.createElement("tr");
         const header = document.createElement("td");
-        header.innerHTML = `<small>${alert.attributes.header}</small>`;
+        header.innerHTML = `<small>${DOMPurify.sanitize(
+          alert.attributes.header
+        )}</small>`;
         row.appendChild(header);
         msgs.add(alert.attributes.header);
 
         const linesAffected = document.createElement("td");
-        linesAffected.innerHTML = calculateAffectedLines(
-          alert.attributes.informed_entity
+        linesAffected.innerHTML = DOMPurify.sanitize(
+          calculateAffectedLines(alert.attributes.informed_entity),
+          { ALLOWED_TAGS: ["small"] }
         );
         row.appendChild(linesAffected);
 
