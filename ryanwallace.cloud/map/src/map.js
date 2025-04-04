@@ -436,14 +436,6 @@ L.easyButton({
   ],
 }).addTo(map);
 
-document.addEventListener("visibilitychange", (event) => {
-  if (document.visibilityState === "visible") {
-    annotate_map();
-  }
-});
-
-window.addEventListener("focus", annotate_map);
-
 document.getElementById("refresh-rate").addEventListener("change", (event) => {
   window.clearInterval(intervalID);
   var newVal = parseInt(event.target.value);
