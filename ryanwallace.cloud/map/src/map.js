@@ -290,25 +290,21 @@ function onEachFeature(feature, layer) {
 }
 
 function calculateAffectedLines(data) {
+  const checks = [
+    { test: (route) => route.startsWith("CR"), class: "cr" },
+    { test: (route) => route.startsWith("7"), class: "sl" },
+    { test: (route) => route === "Blue", class: "bl" },
+    { test: (route) => route === "Red", class: "rl" },
+    { test: (route) => route === "Green", class: "gl" },
+    { test: (route) => route === "Orange", class: "ol" },
+  ];
+
   const afLines = new Set();
   for (const entity of data) {
-    if (entity.route.startsWith("CR")) {
-      afLines.add(`<small class="cr">${entity.route}</small>`);
-    }
-    if (entity.route.startsWith("7")) {
-      afLines.add(`<small class="sl">${entity.route}</small>`);
-    }
-    if (entity.route === "Blue") {
-      afLines.add(`<small class="bl">${entity.route}</small>`);
-    }
-    if (entity.route === "Red") {
-      afLines.add(`<small class="rl">${entity.route}</small>`);
-    }
-    if (entity.route === "Green") {
-      afLines.add(`<small class="gl">${entity.route}</small>`);
-    }
-    if (entity.route === "Orange") {
-      afLines.add(`<small class="ol">${entity.route}</small>`);
+    for (const check of checks) {
+      if (check.test(entity.route)) {
+        afLines.add(`<small class="${check.class}">${entity.route}</small>`);
+      }
     }
   }
   return [...afLines].join(", ");
