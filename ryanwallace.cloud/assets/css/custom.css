@@ -136,3 +136,11 @@ td {
   text-align: center;
   padding: 5px;
 }
+
+.content div {
+  color: inherit !important;
+}
+
+.alert-body {
+  font-size: 16px;
+}
