@@ -287,6 +287,61 @@ function onEachFeature(feature, layer) {
   }
 }
 
+function calculateAffectedLines(data) {
+  const afLines = new Set();
+  for (const entity of data) {
+    if (entity.route.startsWith("CR")) {
+      afLines.add(`<small class="cr">${entity.route}</small>`);
+    }
+    if (entity.route.startsWith("7")) {
+      afLines.add(`<small class="sl">${entity.route}</small>`);
+    }
+    if (entity.route === "Blue") {
+      afLines.add(`<small class="bl">${entity.route}</small>`);
+    }
+    if (entity.route === "Red") {
+      afLines.add(`<small class="rl">${entity.route}</small>`);
+    }
+    if (entity.route === "Green") {
+      afLines.add(`<small class="gl">${entity.route}</small>`);
+    }
+    if (entity.route === "Orange") {
+      afLines.add(`<small class="ol">${entity.route}</small>`);
+    }
+  }
+  return [...afLines].join(", ");
+}
+
+function alerts() {
+  $.getJSON("https://vehicles.ryanwallace.cloud/alerts", function (data) {
+    // Columns: header, lines affected, updated_at, severity
+    const table = document.getElementById("alerts");
+    const msgs = new Set();
+
+    for (const alert of data.data) {
+      if (!msgs.has(alert.attributes.header)) {
+        const row = document.createElement("tr");
+        const header = document.createElement("td");
+        header.innerHTML = `<small>${alert.attributes.header}</small>`;
+        row.appendChild(header);
+        msgs.add(alert.attributes.header);
+
+        const linesAffected = document.createElement("td");
+        linesAffected.innerHTML = calculateAffectedLines(
+          alert.attributes.informed_entity
+        );
+        row.appendChild(linesAffected);
+
+        const severity = document.createElement("td");
+        severity.textContent = alert.attributes.severity;
+        row.appendChild(severity);
+
+        table.appendChild(row);
+      }
+    }
+  });
+}
+
 function annotate_map() {
   clearMap();
   $.getJSON("https://vehicles.ryanwallace.cloud/", function (data) {
@@ -378,3 +433,5 @@ document.getElementById("refresh-rate").addEventListener("change", (event) => {
     intervalID = window.setInterval(annotate_map, event.target.value * 1000);
   }
 });
+
+alerts();

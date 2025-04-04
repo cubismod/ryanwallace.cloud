@@ -9,6 +9,7 @@
     "@maptiler/leaflet-maptilersdk": "^4.0.2",
     "@petoc/leaflet-double-touch-drag-zoom": "^1.0.3",
     "invert-color": "^2.0.0",
+    "jquery": "^3.7.1",
     "leaflet": "^1.9.4",
     "leaflet-arrowheads": "^1.4.0",
     "leaflet-easybutton": "^2.4.0",
