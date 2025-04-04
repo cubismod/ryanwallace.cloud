@@ -25,6 +25,8 @@ var map = L.map("map", {
 const lines = ["rl", "gl", "bl", "ol", "sl", "cr"];
 const vehicleTypes = ["light", "heavy", "regional", "bus"];
 const vehicleCountMap = createVehicleCountMap();
+const vehicles_url =
+  process.env.VEHICLES_URL || "https://vehicles.ryanwallace.cloud";
 
 var baseLayerLoaded = false;
 
@@ -313,7 +315,7 @@ function calculateAffectedLines(data) {
 }
 
 function alerts() {
-  $.getJSON("https://vehicles.ryanwallace.cloud/alerts", function (data) {
+  $.getJSON(`${vehicles_url}/alerts`, function (data) {
     const msgs = new Set();
     const dataSet = [];
 
@@ -360,7 +362,7 @@ function alerts() {
 
 function annotate_map() {
   clearMap();
-  $.getJSON("https://vehicles.ryanwallace.cloud/", function (data) {
+  $.getJSON(vehicles_url, function (data) {
     if (geoJsonLayer) {
       map.removeLayer(geoJsonLayer);
     }
@@ -374,7 +376,7 @@ function annotate_map() {
     }, 100);
   });
   if (!baseLayerLoaded) {
-    $.getJSON("https://vehicles.ryanwallace.cloud/shapes", function (data) {
+    $.getJSON(`${vehicles_url}/shapes`, function (data) {
       var baseLayer = L.geoJSON(data, {
         style: (feature) => {
           if (feature.geometry.type === "LineString") {
