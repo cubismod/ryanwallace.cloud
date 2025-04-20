@@ -13,7 +13,7 @@ RUN --mount=type=secret,id=MT_KEY \
      MT_KEY="$(cat /run/secrets/MT_KEY)" yarn build && yarn move && yarn title
 
 # hugo build
-FROM hugomods/hugo:0.146.5@sha256:b94021030ccb01c67485c0ffa7fd6077777d2155c07b9277c3658a5ff5046d80 AS builder
+FROM hugomods/hugo:0.146.6@sha256:b456d1feaee9a01f4840beddfbfdd88c8ff454f5ac9ba44873968b7157f5fca3 AS builder
 WORKDIR /build
 
 COPY --from=node /build .
