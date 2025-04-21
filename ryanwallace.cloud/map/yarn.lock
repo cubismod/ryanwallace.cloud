@@ -111,10 +111,10 @@
     rw "^1.3.3"
     tinyqueue "^3.0.0"
 
-"@maptiler/client@^2.2.0":
-  version "2.2.0"
-  resolved "https://registry.yarnpkg.com/@maptiler/client/-/client-2.2.0.tgz#026e0014d92011b5d5cb17c5a87a40e0e92f0022"
-  integrity sha512-kV4dSJK2PLfRLnl437CQgDJBboHcf+Z7FWkSoPW3ANca/csoYQQOwz42BPNkda/98OT+CviIueeQdNUyeEL1OQ==
+"@maptiler/client@^2.3.1":
+  version "2.3.1"
+  resolved "https://registry.yarnpkg.com/@maptiler/client/-/client-2.3.1.tgz#f3542a3f91757d25bdef615c062007c0d81dcedd"
+  integrity sha512-N22XVWdc4BFcXSjGO7cEy4Zb92IlGbvAzv9dp3AMRh1q7nfGwwslFf79cX8+u/Dlw/vpXa6wyi4+RwtazcQkwQ==
   dependencies:
     quick-lru "^7.0.0"
 
@@ -128,12 +128,12 @@
     leaflet "^1.9.4"
 
 "@maptiler/sdk@^3.0.0":
-  version "3.0.3"
-  resolved "https://registry.yarnpkg.com/@maptiler/sdk/-/sdk-3.0.3.tgz#c0c349109fab17f30b1b05bd9c22929abf806639"
-  integrity sha512-KfftWDDSz/OsJoUYd0sRrJmW9YexvOK2S4yQujfmypcgmsWL2g0kWDxr6YnGv8+5Ph1WVH6mfO9j+ne4Oq44fw==
+  version "3.1.1"
+  resolved "https://registry.yarnpkg.com/@maptiler/sdk/-/sdk-3.1.1.tgz#43b116a53fe95a120e5eac5690f8027b12a7d7f8"
+  integrity sha512-zuKPowFg4kFVIox9y4GDQPSLtEJpYYbCpqUkJFQa/x4ZHJt1Mk2tyrox8hR7mQaC0YOxyI+m8MuSmgXVosS14Q==
   dependencies:
     "@maplibre/maplibre-gl-style-spec" "^23.0.0"
-    "@maptiler/client" "^2.2.0"
+    "@maptiler/client" "^2.3.1"
     events "^3.3.0"
     js-base64 "^3.7.7"
     maplibre-gl "^5.0.1"
@@ -1074,9 +1074,9 @@ callsites@^3.0.0:
   integrity sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==
 
 caniuse-lite@^1.0.30001688:
-  version "1.0.30001713"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001713.tgz#6b33a8857e6c7dcb41a0caa2dd0f0489c823a52d"
-  integrity sha512-wCIWIg+A4Xr7NfhTuHdX+/FKh3+Op3LBbSp2N5Pfx6T/LhdQy3GTyoTg48BReaW/MyMNZAkTadsBtai3ldWK0Q==
+  version "1.0.30001715"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001715.tgz#bd325a37ad366e3fe90827d74062807a34fbaeb2"
+  integrity sha512-7ptkFGMm2OAOgvZpwgA4yjQ5SQbrNVGdRjzH0pBdy1Fasvcr+KAeECmbCAECzTuDuoX0FCY8KzUxjf9+9kfZEw==
 
 chalk@^4.1.2:
   version "4.1.2"
@@ -1233,9 +1233,9 @@ earcut@^3.0.1:
   integrity sha512-0l1/0gOjESMeQyYaK5IDiPNvFeu93Z/cO0TjZh9eZ1vyCtZnA7KMZ8rQggpsJHIbGSdrqYq9OhuveadOVHCshw==
 
 electron-to-chromium@^1.5.73:
-  version "1.5.136"
-  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.5.136.tgz#854b45e6a892137762cb026ed6ec77391fc5c07b"
-  integrity sha512-kL4+wUTD7RSA5FHx5YwWtjDnEEkIIikFgWHR4P6fqjw1PPLlqYkxeOb++wAauAssat0YClCy8Y3C5SxgSkjibQ==
+  version "1.5.139"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.5.139.tgz#56ae7d42439e2967a54badbadaeb12f748987f37"
+  integrity sha512-GGnRYOTdN5LYpwbIr0rwP/ZHOQSvAF6TG0LSzp28uCBb9JiXHJGmaaKw29qjNJc5bGnnp6kXJqRnGMQoELwi5w==
 
 entities@^2.0.0:
   version "2.2.0"
@@ -1577,9 +1577,9 @@ lmdb@2.8.5:
     "@lmdb/lmdb-win32-x64" "2.8.5"
 
 maplibre-gl@^5.0.1:
-  version "5.3.0"
-  resolved "https://registry.yarnpkg.com/maplibre-gl/-/maplibre-gl-5.3.0.tgz#31fcc6f689dd0d342446a2baa29bbb8015f9f3dc"
-  integrity sha512-qru6B6jHlDPR4Q9/P4W1zEPbPofR4wwYbrrjiHKWI7yLtyXmpJ1/G1KaIYDr5uNdFbPZ7uiZAWdqtfdNLmIhGg==
+  version "5.3.1"
+  resolved "https://registry.yarnpkg.com/maplibre-gl/-/maplibre-gl-5.3.1.tgz#bae6408da2d708ee20aa2d8b44f8e39de8c7cd93"
+  integrity sha512-Ihx+oUUSsZkjMou1Cw5J6silE+5OtFFQSPslWF9+7v4yFC/XDHrpsORYO9lWE4KZI0djCEUpZQJpkpnMArAbeA==
   dependencies:
     "@mapbox/geojson-rewind" "^0.5.2"
     "@mapbox/jsonlint-lines-primitives" "^2.0.2"
