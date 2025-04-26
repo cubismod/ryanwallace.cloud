@@ -10,6 +10,8 @@
     root * /var/www/html
     respond /status "ok"
 
+    metrics /metrics
+
     encode zstd gzip
     file_server
 }
