@@ -24,10 +24,6 @@ link_color = "#00896f"
 sidebar_bg_color = "#2f0d38"
 content_bg_color_dark = "#1e0624"
 
-remark42 = true
-remark42_host = "https://remark42.ryanwallace.cloud"
-remark42_site_id = "ryanwallace.cloud"
-
 menu = [
   { Name = "About", URL = "/about/" },
   { Name = "Posts", URL = "/posts/", Pre = "Recent", HasChildren = true, Limit = 5 },
