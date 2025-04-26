@@ -1,5 +1,6 @@
 {
     cache
+    metrics
 }
 
 # SSL will be served up with Fly not by Caddy
