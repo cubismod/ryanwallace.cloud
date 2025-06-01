@@ -29,6 +29,7 @@ const vehicles_url =
   process.env.VEHICLES_URL || "https://vehicles.ryanwallace.cloud";
 
 var baseLayerLoaded = false;
+var showAmtrak = false;
 
 document.getElementById("map").scrollIntoView({ behavior: "smooth" });
 
@@ -40,6 +41,9 @@ const mtLayer = new MaptilerLayer({
 var geoJsonLayer = null;
 
 function return_colors(route) {
+  if (route.startsWith("Amtrak")) {
+    return "#18567D";
+  }
   if (route.startsWith("Green")) {
     return "#008150";
   }
@@ -192,6 +196,13 @@ function pointToLayer(feature, latlng) {
       icon = "rail";
       incrementMapItem("cr", "regional");
     }
+    if (feature.properties["marker-color"] === "#18567D") {
+      if (!showAmtrak) {
+        // don't create amtrak icons if not being displayed
+        return;
+      }
+      icon = "rail-amtrak";
+    }
     if (feature.properties.route && feature.properties.route.startsWith("SL")) {
       incrementMapItem("sl", "bus");
       icon = "bus-silver";
@@ -252,11 +263,12 @@ function onEachFeature(feature, layer) {
         }<br />Status: ${feature.properties.status}<br />Stop: ${
           feature.properties.stop
         }${speed}${occupancy}<br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
-        keepInView: true,
       });
 
       if (
         feature.properties["stop-coordinates"] &&
+        feature.properties["stop-coordinates"][0] &&
+        feature.properties["stop-coordinates"][1] &&
         feature.properties["status"] != "STOPPED_AT"
       ) {
         const coords = [
@@ -436,12 +448,30 @@ L.easyButton({
   ],
 }).addTo(map);
 
-document.getElementById("refresh-rate").addEventListener("change", (event) => {
-  window.clearInterval(intervalID);
-  var newVal = parseInt(event.target.value);
-  if (newVal) {
-    intervalID = window.setInterval(annotate_map, event.target.value * 1000);
-  }
-});
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .getElementById("refresh-rate")
+    .addEventListener("change", (event) => {
+      window.clearInterval(intervalID);
+      var newVal = parseInt(event.target.value);
+      if (newVal) {
+        intervalID = window.setInterval(
+          annotate_map,
+          event.target.value * 1000
+        );
+      }
+    });
 
-alerts();
+  const amtrakTrains = document.getElementById("amtrak-trains");
+  if (amtrakTrains) {
+    amtrakTrains.addEventListener("change", () => {
+      if (amtrakTrains.checked) {
+        showAmtrak = true;
+      } else {
+        showAmtrak = false;
+      }
+      annotate_map();
+    });
+  }
+  alerts();
+});
