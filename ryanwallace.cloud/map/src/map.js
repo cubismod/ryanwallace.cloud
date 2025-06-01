@@ -197,7 +197,14 @@ function pointToLayer(feature, latlng) {
       icon = "bus-silver";
       opacity = 0.9;
     }
-    zIndex = 1000;
+    if (
+      process.env.PRIDE_TRAIN_ID &&
+      feature.properties.carriages &&
+      feature.properties.carriages.includes(process.env.PRIDE_TRAIN_ID)
+    ) {
+      icon = "rail-light-pride";
+      icon_size = 35;
+    }
   }
 
   if (
@@ -246,12 +253,21 @@ function onEachFeature(feature, layer) {
       if (feature.properties["occupancy_status"]) {
         occupancy = `<br />Occupancy: ${feature.properties["occupancy_status"]}`;
       }
+      let carriages = "";
+      if (feature.properties["carriages"]) {
+        carriages += "Cars:<br /><ul>";
+        for (const carriage of feature.properties["carriages"]) {
+          carriages += `<li>${carriage}</li>`;
+        }
+        carriages += "</ul>";
+      }
       const popup = L.popup({
         content: `<b>Route: ${feature.properties.route}</b> <br />ID: ${
           feature.id
         }<br />Status: ${feature.properties.status}<br />Stop: ${
           feature.properties.stop
-        }${speed}${occupancy}<br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
+        }${speed}${occupancy}<br />${carriages}
+        <small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
         keepInView: true,
       });
 
