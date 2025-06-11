@@ -141,6 +141,12 @@ td {
   color: inherit !important;
 }
 
+.ci {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 20px;
+}
+
 .alert-body {
   font-size: 16px;
 }
