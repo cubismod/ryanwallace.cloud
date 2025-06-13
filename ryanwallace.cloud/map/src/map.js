@@ -160,6 +160,7 @@ function pointToLayer(feature, latlng) {
     icon = "entrance-alt1";
     icon_size = 18;
     opacity = 1;
+    zIndex = -10;
   } else {
     if (feature.properties["marker-symbol"] === "bus") {
       opacity = 0.8;
