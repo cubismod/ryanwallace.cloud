@@ -349,7 +349,7 @@ function calculateAffectedLines(data) {
       ) {
         const { svg, alt } = routeMap[routePattern];
         afLines.add(embedSVG(svg, alt));
-        break
+        break;
       }
     }
   }
