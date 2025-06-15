@@ -311,39 +311,42 @@ function onEachFeature(feature, layer) {
 }
 
 function embedSVG(line, alt) {
-  return `<img src="/images/icons/lines/${line}.svg" alt="${alt}" class="line">`
+  return `<img src="/images/icons/lines/${line}.svg" alt="${alt}" class="line">`;
 }
 
 function calculateAffectedLines(data) {
   const routeMap = {
-    "Red":       { svg: "rl",             alt: "Red Line" },
-    "Blue":      { svg: "bl",             alt: "Blue Line" },
-    "Green":     { svg: "gl",             alt: "Green Line" },
-    "Orange":    { svg: "ol",             alt: "Orange Line" },
-    "749":       { svg: "sl5",            alt: "Silver Line 5" },
-    "751":       { svg: "sl4",            alt: "Silver Line 4" },
-    "746":       { svg: "slw",            alt: "Silver Line Way" },
-    "743":       { svg: "sl3",            alt: "Silver Line 3" },
-    "741":       { svg: "sl1",            alt: "Silver Line 1 (Airport)" },
-    "742":       { svg: "sl2",            alt: "Silver Line 2" },
-    "Fitchburg": { svg: "cr-fitchburg",   alt: "Fitchburg Line" },
-    "Fairmont":  { svg: "cr-fairmont",    alt: "Fairmont Line" },
-    "Fall River":{ svg: "cr-fall-river",  alt: "Fall River/New Bedford Line" },
-    "Franklin":  { svg: "cr-franklin",    alt: "Franklin/Foxboro Line" },
-    "Greenbush": { svg: "cr-greenbush",   alt: "Greenbush Line" },
-    "Haverhill": { svg: "cr-haverhill",   alt: "Haverhill Line" },
-    "Kingston":  { svg: "cr-kingston",    alt: "Kingston Line" },
-    "Lowell":    { svg: "cr-lowell",      alt: "Lowell Line" },
-    "Needham":   { svg: "cr-needham",     alt: "Needham Line" },
-    "Newburyport":{ svg: "cr-newburyport", alt: "Newburyport/Rockport Line" },
-    "Providence":{ svg: "cr-providence",  alt: "Providence Line" },
-    "Worcester": { svg: "cr-worcester",   alt: "Worcester Line" },
+    Red: { svg: "rl", alt: "Red Line" },
+    Blue: { svg: "bl", alt: "Blue Line" },
+    Green: { svg: "gl", alt: "Green Line" },
+    Orange: { svg: "ol", alt: "Orange Line" },
+    749: { svg: "sl5", alt: "Silver Line 5" },
+    751: { svg: "sl4", alt: "Silver Line 4" },
+    746: { svg: "slw", alt: "Silver Line Way" },
+    743: { svg: "sl3", alt: "Silver Line 3" },
+    741: { svg: "sl1", alt: "Silver Line 1 (Airport)" },
+    742: { svg: "sl2", alt: "Silver Line 2" },
+    Fitchburg: { svg: "cr-fitchburg", alt: "Fitchburg Line" },
+    Fairmont: { svg: "cr-fairmont", alt: "Fairmont Line" },
+    "Fall River": { svg: "cr-fall-river", alt: "Fall River/New Bedford Line" },
+    Franklin: { svg: "cr-franklin", alt: "Franklin/Foxboro Line" },
+    Greenbush: { svg: "cr-greenbush", alt: "Greenbush Line" },
+    Haverhill: { svg: "cr-haverhill", alt: "Haverhill Line" },
+    Kingston: { svg: "cr-kingston", alt: "Kingston Line" },
+    Lowell: { svg: "cr-lowell", alt: "Lowell Line" },
+    Needham: { svg: "cr-needham", alt: "Needham Line" },
+    Newburyport: { svg: "cr-newburyport", alt: "Newburyport/Rockport Line" },
+    Providence: { svg: "cr-providence", alt: "Providence Line" },
+    Worcester: { svg: "cr-worcester", alt: "Worcester Line" },
   };
 
   const afLines = new Set();
   for (const entity of data) {
     for (const routePattern in routeMap) {
-      if (entity.route === routePattern || entity.route.includes(routePattern)) {
+      if (
+        entity.route === routePattern ||
+        entity.route.includes(routePattern)
+      ) {
         const { svg, alt } = routeMap[routePattern];
         afLines.add(embedSVG(svg, alt));
       }
@@ -379,7 +382,7 @@ function alerts() {
               new Date(),
               { addSuffix: true }
             ),
-            "timestamp": new Date(
+            timestamp: new Date(
               alert.attributes.updated_at || alert.attributes.created_at
             ).getTime(),
           },
@@ -391,16 +394,20 @@ function alerts() {
     }
     new DataTable("#alerts", {
       columns: [
-        { title: "Severity", className: "dt-body-center" },
+        { title: "Sev", className: "dt-body-center" },
         {
-          title: "Updated",
+          title: "Upd",
           render: {
             _: "display",
             sort: "timestamp",
           },
         },
         { title: "Alert", className: "alert-body" },
-        { title: "Lines Affected" },
+        { title: "Lines" },
+      ],
+      order: [
+        [0, "dsc"],
+        [1, "dsc"],
       ],
       data: dataSet,
       ordering: true,
