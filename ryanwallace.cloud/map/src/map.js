@@ -315,74 +315,38 @@ function embedSVG(line, alt) {
 }
 
 function calculateAffectedLines(data) {
+  const routeMap = {
+    "Red":       { svg: "rl",             alt: "Red Line" },
+    "Blue":      { svg: "bl",             alt: "Blue Line" },
+    "Green":     { svg: "gl",             alt: "Green Line" },
+    "Orange":    { svg: "ol",             alt: "Orange Line" },
+    "749":       { svg: "sl5",            alt: "Silver Line 5" },
+    "751":       { svg: "sl4",            alt: "Silver Line 4" },
+    "746":       { svg: "slw",            alt: "Silver Line Way" },
+    "743":       { svg: "sl3",            alt: "Silver Line 3" },
+    "741":       { svg: "sl1",            alt: "Silver Line 1 (Airport)" },
+    "742":       { svg: "sl2",            alt: "Silver Line 2" },
+    "Fitchburg": { svg: "cr-fitchburg",   alt: "Fitchburg Line" },
+    "Fairmont":  { svg: "cr-fairmont",    alt: "Fairmont Line" },
+    "Fall River":{ svg: "cr-fall-river",  alt: "Fall River/New Bedford Line" },
+    "Franklin":  { svg: "cr-franklin",    alt: "Franklin/Foxboro Line" },
+    "Greenbush": { svg: "cr-greenbush",   alt: "Greenbush Line" },
+    "Haverhill": { svg: "cr-haverhill",   alt: "Haverhill Line" },
+    "Kingston":  { svg: "cr-kingston",    alt: "Kingston Line" },
+    "Lowell":    { svg: "cr-lowell",      alt: "Lowell Line" },
+    "Needham":   { svg: "cr-needham",     alt: "Needham Line" },
+    "Newburyport":{ svg: "cr-newburyport", alt: "Newburyport/Rockport Line" },
+    "Providence":{ svg: "cr-providence",  alt: "Providence Line" },
+    "Worcester": { svg: "cr-worcester",   alt: "Worcester Line" },
+  };
 
   const afLines = new Set();
   for (const entity of data) {
-    if (entity.route === "Red") {
-      afLines.add(embedSVG("rl", "Red Line"))
-    }
-    if (entity.route === "Blue") {
-      afLines.add(embedSVG("bl", "Blue Line"));
-    }
-    if (entity.route === "Green") {
-      afLines.add(embedSVG("gl", "Green Line"));
-    }
-    if (entity.route === "Orange") {
-      afLines.add(embedSVG("ol", "Orange Line"));
-    }
-    if (entity.route.includes("Fitchburg")) {
-      afLines.add(embedSVG("cr-fitchburg", "Fitchburg Line"));
-    }
-    if (entity.route.includes("Fairmont")) {
-      afLines.add(embedSVG("cr-fairmont", "Fairmont Line"));
-    }
-    if (entity.route.includes("Fall River")) {
-      afLines.add(embedSVG("cr-fall-river", "Fall River/New Bedford Line"));
-    }
-    if (entity.route.includes("Franklin")) {
-      afLines.add(embedSVG("cr-franklin", "Franklin/Foxboro Line"));
-    }
-    if (entity.route.includes("Greenbush")) {
-      afLines.add(embedSVG("cr-greenbush", "Greenbush Line"));
-    }
-    if (entity.route.includes("Haverhill")) {
-      afLines.add(embedSVG("cr-haverhill", "Haverhill Line"));
-    }
-    if (entity.route.includes("Kingston")) {
-      afLines.add(embedSVG("cr-kingston", "Kingston Line"));
-    }
-    if (entity.route.includes("Lowell")) {
-      afLines.add(embedSVG("cr-lowell", "Lowell Line"));
-    }
-    if (entity.route.includes("Needham")) {
-      afLines.add(embedSVG("cr-needham", "Needham Line"));
-    }
-    if (entity.route.includes("Newburyport")) {
-      afLines.add(embedSVG("cr-newburyport", "Newburyport/Rockport Line"));
-    }
-    if (entity.route.includes("Providence")) {
-      afLines.add(embedSVG("cr-providence", "Providence Line"));
-    }
-    if (entity.route.includes("Worcester")) {
-      afLines.add(embedSVG("cr-worcester", "Worcester Line"));
-    }
-    if (entity.route === "749") {
-      afLines.add(embedSVG("sl5", "Silver Line 5"))
-    }
-    if (entity.route === "751") {
-      afLines.add(embedSVG("sl4", "Silver Line 4"));
-    }
-    if (entity.route === "746") {
-      afLines.add(embedSVG("slw", "Silver Line Way"));
-    }
-    if (entity.route === "743") {
-      afLines.add(embedSVG("sl3", "Silver Line 3"));
-    }
-    if (entity.route === "741") {
-      afLines.add(embedSVG("sl1", "Silver Line 1 (Airport)"));
-    }
-    if (entity.route === "742") {
-      afLines.add(embedSVG("sl2", "Silver Line 2"));
+    for (const routePattern in routeMap) {
+      if (entity.route === routePattern || entity.route.includes(routePattern)) {
+        const { svg, alt } = routeMap[routePattern];
+        afLines.add(embedSVG(svg, alt));
+      }
     }
   }
   return [...afLines].join("");
