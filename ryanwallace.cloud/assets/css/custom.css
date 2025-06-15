@@ -150,3 +150,10 @@ td {
 .alert-body {
   font-size: 16px;
 }
+
+.line {
+  width: auto;
+  height: 50px;
+  margin: auto;
+  display: block;
+}

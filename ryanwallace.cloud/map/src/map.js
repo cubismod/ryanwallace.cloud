@@ -310,25 +310,82 @@ function onEachFeature(feature, layer) {
   }
 }
 
+function embedSVG(line, alt) {
+  return `<img src="/images/icons/lines/${line}.svg" alt="${alt}" class="line">`
+}
+
 function calculateAffectedLines(data) {
-  const checks = [
-    { test: (route) => route.startsWith("CR"), class: "cr" },
-    { test: (route) => route.startsWith("7"), class: "sl" },
-    { test: (route) => route === "Blue", class: "bl" },
-    { test: (route) => route === "Red", class: "rl" },
-    { test: (route) => route === "Green", class: "gl" },
-    { test: (route) => route === "Orange", class: "ol" },
-  ];
 
   const afLines = new Set();
   for (const entity of data) {
-    for (const check of checks) {
-      if (check.test(entity.route)) {
-        afLines.add(entity.route);
-      }
+    if (entity.route === "Red") {
+      afLines.add(embedSVG("rl", "Red Line"))
+    }
+    if (entity.route === "Blue") {
+      afLines.add(embedSVG("bl", "Blue Line"));
+    }
+    if (entity.route === "Green") {
+      afLines.add(embedSVG("gl", "Green Line"));
+    }
+    if (entity.route === "Orange") {
+      afLines.add(embedSVG("ol", "Orange Line"));
+    }
+    if (entity.route.includes("Fitchburg")) {
+      afLines.add(embedSVG("cr-fitchburg", "Fitchburg Line"));
+    }
+    if (entity.route.includes("Fairmont")) {
+      afLines.add(embedSVG("cr-fairmont", "Fairmont Line"));
+    }
+    if (entity.route.includes("Fall River")) {
+      afLines.add(embedSVG("cr-fall-river", "Fall River/New Bedford Line"));
+    }
+    if (entity.route.includes("Franklin")) {
+      afLines.add(embedSVG("cr-franklin", "Franklin/Foxboro Line"));
+    }
+    if (entity.route.includes("Greenbush")) {
+      afLines.add(embedSVG("cr-greenbush", "Greenbush Line"));
+    }
+    if (entity.route.includes("Haverhill")) {
+      afLines.add(embedSVG("cr-haverhill", "Haverhill Line"));
+    }
+    if (entity.route.includes("Kingston")) {
+      afLines.add(embedSVG("cr-kingston", "Kingston Line"));
+    }
+    if (entity.route.includes("Lowell")) {
+      afLines.add(embedSVG("cr-lowell", "Lowell Line"));
+    }
+    if (entity.route.includes("Needham")) {
+      afLines.add(embedSVG("cr-needham", "Needham Line"));
+    }
+    if (entity.route.includes("Newburyport")) {
+      afLines.add(embedSVG("cr-newburyport", "Newburyport/Rockport Line"));
+    }
+    if (entity.route.includes("Providence")) {
+      afLines.add(embedSVG("cr-providence", "Providence Line"));
+    }
+    if (entity.route.includes("Worcester")) {
+      afLines.add(embedSVG("cr-worcester", "Worcester Line"));
+    }
+    if (entity.route === "749") {
+      afLines.add(embedSVG("sl5", "Silver Line 5"))
+    }
+    if (entity.route === "751") {
+      afLines.add(embedSVG("sl4", "Silver Line 4"));
+    }
+    if (entity.route === "746") {
+      afLines.add(embedSVG("slw", "Silver Line Way"));
+    }
+    if (entity.route === "743") {
+      afLines.add(embedSVG("sl3", "Silver Line 3"));
+    }
+    if (entity.route === "741") {
+      afLines.add(embedSVG("sl1", "Silver Line 1 (Airport)"));
+    }
+    if (entity.route === "742") {
+      afLines.add(embedSVG("sl2", "Silver Line 2"));
     }
   }
-  return [...afLines].join(", ");
+  return [...afLines].join("");
 }
 
 function alerts() {
@@ -350,13 +407,18 @@ function alerts() {
         }
         const rowData = [
           alert.attributes.severity,
-          formatDistance(
-            new Date(
-              alert.attributes.updated_at || alert.attributes.created_at
+          {
+            display: formatDistance(
+              new Date(
+                alert.attributes.updated_at || alert.attributes.created_at
+              ),
+              new Date(),
+              { addSuffix: true }
             ),
-            new Date(),
-            { addSuffix: true }
-          ),
+            "timestamp": new Date(
+              alert.attributes.updated_at || alert.attributes.created_at
+            ).getTime(),
+          },
           alert.attributes.header,
           calculateAffectedLines(alert.attributes.informed_entity),
         ];
@@ -366,13 +428,20 @@ function alerts() {
     new DataTable("#alerts", {
       columns: [
         { title: "Severity", className: "dt-body-center" },
-        { title: "Updated" },
+        {
+          title: "Updated",
+          render: {
+            _: "display",
+            sort: "timestamp",
+          },
+        },
         { title: "Alert", className: "alert-body" },
         { title: "Lines Affected" },
       ],
       data: dataSet,
-      ordering: false,
+      ordering: true,
       paging: false,
+      responsive: true,
     });
   });
 }
