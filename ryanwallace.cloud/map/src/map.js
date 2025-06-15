@@ -318,6 +318,7 @@ function calculateAffectedLines(data) {
   const routeMap = {
     Red: { svg: "rl", alt: "Red Line" },
     Blue: { svg: "bl", alt: "Blue Line" },
+    Greenbush: { svg: "cr-greenbush", alt: "Greenbush Line" },
     Green: { svg: "gl", alt: "Green Line" },
     Orange: { svg: "ol", alt: "Orange Line" },
     749: { svg: "sl5", alt: "Silver Line 5" },
@@ -328,9 +329,8 @@ function calculateAffectedLines(data) {
     742: { svg: "sl2", alt: "Silver Line 2" },
     Fitchburg: { svg: "cr-fitchburg", alt: "Fitchburg Line" },
     Fairmont: { svg: "cr-fairmont", alt: "Fairmont Line" },
-    "Fall River": { svg: "cr-fall-river", alt: "Fall River/New Bedford Line" },
+    NewBedford: { svg: "cr-fall-river", alt: "Fall River/New Bedford Line" },
     Franklin: { svg: "cr-franklin", alt: "Franklin/Foxboro Line" },
-    Greenbush: { svg: "cr-greenbush", alt: "Greenbush Line" },
     Haverhill: { svg: "cr-haverhill", alt: "Haverhill Line" },
     Kingston: { svg: "cr-kingston", alt: "Kingston Line" },
     Lowell: { svg: "cr-lowell", alt: "Lowell Line" },
@@ -349,10 +349,11 @@ function calculateAffectedLines(data) {
       ) {
         const { svg, alt } = routeMap[routePattern];
         afLines.add(embedSVG(svg, alt));
+        break
       }
     }
   }
-  return [...afLines].join("");
+  return [...afLines].join("</br>");
 }
 
 function alerts() {
@@ -373,6 +374,7 @@ function alerts() {
           }
         }
         const rowData = [
+          calculateAffectedLines(alert.attributes.informed_entity),
           alert.attributes.severity,
           {
             display: formatDistance(
@@ -387,13 +389,13 @@ function alerts() {
             ).getTime(),
           },
           alert.attributes.header,
-          calculateAffectedLines(alert.attributes.informed_entity),
         ];
         dataSet.push(rowData);
       }
     }
     new DataTable("#alerts", {
       columns: [
+        { title: "Lines" },
         { title: "Sev", className: "dt-body-center" },
         {
           title: "Upd",
@@ -403,7 +405,6 @@ function alerts() {
           },
         },
         { title: "Alert", className: "alert-body" },
-        { title: "Lines" },
       ],
       order: [
         [0, "dsc"],
