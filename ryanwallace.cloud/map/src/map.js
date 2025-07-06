@@ -262,12 +262,16 @@ function onEachFeature(feature, layer) {
         }
         carriages += "</ul>";
       }
+      let eta = "";
+      if (feature.properties["stop_eta"]) {
+        eta = `<br />ETA: ${feature.properties["stop_eta"]}`;
+      }
       const popup = L.popup({
         content: `<b>Route: ${feature.properties.route}</b> <br />ID: ${
           feature.id
         }<br />Status: ${feature.properties.status}<br />Stop: ${
           feature.properties.stop
-        }${speed}${occupancy}<br />${carriages}
+        }${eta}${speed}${occupancy}<br />${carriages}
         <small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
         keepInView: true,
       });
@@ -379,13 +383,13 @@ function alerts() {
           {
             display: formatDistance(
               new Date(
-                alert.attributes.updated_at || alert.attributes.created_at
+                alert.attributes.updated_at || alert.attributes.created_at,
               ),
               new Date(),
-              { addSuffix: true }
+              { addSuffix: true },
             ),
             timestamp: new Date(
-              alert.attributes.updated_at || alert.attributes.created_at
+              alert.attributes.updated_at || alert.attributes.created_at,
             ).getTime(),
           },
           alert.attributes.header,
