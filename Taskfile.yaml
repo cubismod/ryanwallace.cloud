@@ -14,3 +14,11 @@ tasks:
     - yarn build
     - yarn clean
     - yarn move
+  format:
+    dir: ryanwallace.cloud/map
+    cmds:
+    - yarn prettier --write ./src/**/*.{ts,html}
+  typecheck:
+    dir: ryanwallace.cloud/map
+    cmds:
+    - yarn tsc --noEmit
