@@ -1,4 +1,4 @@
 ---
-title: "MBTA Rail & Rapid Transit Live Tracker"
+title: 'MBTA Rail & Rapid Transit Live Tracker'
 draft: false
 ---

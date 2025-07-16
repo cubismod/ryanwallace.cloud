@@ -1,0 +1,590 @@
+import * as L from 'leaflet'
+import '@petoc/leaflet-double-touch-drag-zoom'
+import 'leaflet/dist/leaflet.css'
+import '@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom.css'
+import 'leaflet.fullscreen'
+import 'leaflet-easybutton'
+import 'leaflet-arrowheads'
+import 'invert-color'
+import DOMPurify from 'dompurify'
+import invert from 'invert-color'
+import DataTable from 'datatables.net-dt'
+import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
+import { formatDistance } from 'date-fns'
+
+// Type definitions
+interface VehicleFeature {
+  id: string | number
+  geometry: {
+    type: 'Point' | 'LineString'
+    coordinates: number[]
+  }
+  properties: {
+    'marker-symbol'?: string
+    'marker-color'?: string
+    'marker-size'?: string
+    route?: string
+    status?: string
+    stop?: string
+    update_time?: string
+    speed?: number
+    approximate_speed?: boolean
+    occupancy_status?: string
+    carriages?: string[]
+    stop_eta?: string
+    'stop-coordinates'?: number[]
+    name?: string
+  }
+}
+
+interface AlertEntity {
+  attributes: {
+    header: string
+    severity: string
+    updated_at?: string
+    created_at: string
+    active_period: Array<{
+      end?: string
+    }>
+    informed_entity: Array<{
+      route: string
+    }>
+  }
+}
+
+interface AlertData {
+  data: AlertEntity[]
+}
+
+interface RouteMapping {
+  svg: string
+  alt: string
+}
+
+declare global {
+  interface Window {
+    $: typeof import('jquery')
+  }
+}
+
+// Extend jQuery to include getJSON method
+declare const $: {
+  getJSON: (url: string, callback: (data: any) => void) => void
+}
+
+var map = L.map('map', {
+  doubleTouchDragZoom: true,
+  // @ts-expect-error - fullscreenControl is not a valid option
+  fullscreenControl: true,
+  fullscreenControlOptions: {
+    position: 'topleft',
+    title: 'Fullscreen',
+    forcePseudoFullscreen: true
+  }
+}).setView([42.36565, -71.05236], 13)
+
+const lines: string[] = ['rl', 'gl', 'bl', 'ol', 'sl', 'cr']
+const vehicleTypes: string[] = ['light', 'heavy', 'regional', 'bus']
+const vehicleCountMap: Map<
+  string,
+  Map<string, number>
+> = createVehicleCountMap()
+const vehicles_url: string =
+  process.env.VEHICLES_URL || 'https://vehicles.ryanwallace.cloud'
+
+let baseLayerLoaded: boolean = false
+
+document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
+
+new MaptilerLayer({
+  apiKey: process.env.MT_KEY || '',
+  style: 'streets-v2'
+}).addTo(map)
+
+let geoJsonLayer: L.GeoJSON | null = null
+
+function return_colors(route: string): string {
+  if (route.startsWith('Green')) {
+    return '#008150'
+  }
+  if (route.startsWith('Blue')) {
+    return '#2F5DA6'
+  }
+  if (route.startsWith('CR')) {
+    return '#7B388C'
+  }
+  if (route.startsWith('Red') || route.startsWith('Mattapan')) {
+    return '#FA2D27'
+  }
+  if (route.startsWith('Orange')) {
+    return '#FD8A03'
+  }
+  if (
+    route.startsWith('74') ||
+    route.startsWith('75') ||
+    route.startsWith('SL')
+  ) {
+    return '#9A9C9D'
+  }
+  return '#3e2426'
+}
+
+function createVehicleCountMap(): Map<string, Map<string, number>> {
+  const vehicleCountMap = new Map<string, Map<string, number>>()
+  for (const line of lines) {
+    vehicleCountMap.set(line, new Map<string, number>())
+  }
+  return vehicleCountMap
+}
+
+function clearMap(): void {
+  for (const line of lines) {
+    for (const vehicleType of vehicleTypes) {
+      vehicleCountMap.get(line)?.set(vehicleType, 0)
+    }
+  }
+}
+
+function incrementMapItem(route: string, vehicleType: string): void {
+  const existing = vehicleCountMap.get(route)?.get(vehicleType)
+  if (existing !== undefined) {
+    vehicleCountMap.get(route)!.set(vehicleType, existing + 1)
+  } else {
+    vehicleCountMap.get(route)?.set(vehicleType, 1)
+  }
+}
+
+function calculateTotal(dimension: string): number {
+  let total = 0
+  if (lines.includes(dimension)) {
+    // we are retrieving the total for a line
+    for (const vehicleType of vehicleTypes) {
+      total += vehicleCountMap.get(dimension)?.get(vehicleType) || 0
+    }
+    return total
+  } else if (vehicleTypes.includes(dimension)) {
+    // we are retrieving the total for a vehicle type
+    for (const line of lines) {
+      total += vehicleCountMap.get(line)?.get(dimension) || 0
+    }
+    return total
+  } else if (dimension === 'all') {
+    // we are retrieving the total for all dimensions
+    for (const line of lines) {
+      for (const vehicleType of vehicleTypes) {
+        total += vehicleCountMap.get(line)?.get(vehicleType) || 0
+      }
+    }
+    return total
+  }
+  return total
+}
+
+function updateTable(): void {
+  for (const line of lines) {
+    for (const vehicleType of vehicleTypes) {
+      const id = `${line}-${vehicleType}`
+      const element = document.getElementById(id)
+      if (element) {
+        element.innerHTML = String(
+          DOMPurify.sanitize(
+            String(vehicleCountMap.get(line)?.get(vehicleType) || 0)
+          )
+        )
+      }
+    }
+    const totalElement = document.getElementById(`${line}-total`)
+    if (totalElement) {
+      totalElement.innerHTML = String(
+        DOMPurify.sanitize(String(calculateTotal(line)))
+      )
+    }
+  }
+  for (const vehicleType of vehicleTypes) {
+    const element = document.getElementById(`${vehicleType}-total`)
+    if (element) {
+      element.innerHTML = String(
+        DOMPurify.sanitize(String(calculateTotal(vehicleType)))
+      )
+    }
+  }
+  const element = document.getElementById('total')
+  if (element) {
+    element.innerHTML = String(
+      DOMPurify.sanitize(String(calculateTotal('all')))
+    )
+  }
+}
+
+function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
+  let icon_size = 28
+  let icon = 'bus-yellow.svg'
+  let opacity = 1.0
+  let zIndex = 0
+  let status = ''
+  let station = ''
+  let stopOrGo = ''
+  // will enable this at a later point once i work out the UI
+  // if (feature.properties["status"] === "STOPPED_AT") {
+  //   stopOrGo = "-stop"
+  // } else if (feature.properties["status"] === "INCOMING_AT" || feature.properties["status"] === "IN_TRANSIT_TO") {
+  //   stopOrGo = "-go"
+  // }
+  if (feature.properties['marker-symbol'] === 'building') {
+    icon = 'entrance-alt1'
+    icon_size = 18
+    opacity = 1
+    zIndex = -10
+  } else {
+    if (feature.properties['marker-symbol'] === 'bus') {
+      opacity = 0.8
+      icon_size = 25
+    }
+    if (feature.properties['marker-size'] === 'small') {
+      icon_size = 27
+    }
+    if (feature.properties['marker-color'] === '#008150') {
+      icon = 'rail-light'
+      incrementMapItem('gl', 'light')
+    }
+    if (feature.properties['marker-color'] === '#2F5DA6') {
+      icon = 'rail-metro-blue'
+      incrementMapItem('bl', 'heavy')
+    }
+    if (feature.properties['marker-color'] === '#FA2D27') {
+      icon = 'rail-metro-red'
+      if (feature.properties['route'] === 'Mattapan') {
+        incrementMapItem('rl', 'light')
+      } else {
+        incrementMapItem('rl', 'heavy')
+      }
+    }
+    if (feature.properties['marker-color'] === '#FD8A03') {
+      icon = 'rail-metro-orange'
+      incrementMapItem('ol', 'heavy')
+    }
+    if (feature.properties['marker-color'] === '#7B388C') {
+      icon = 'rail'
+      incrementMapItem('cr', 'regional')
+    }
+    if (feature.properties.route && feature.properties.route.startsWith('SL')) {
+      incrementMapItem('sl', 'bus')
+      icon = 'bus-silver'
+      opacity = 0.9
+    }
+    if (
+      process.env.PRIDE_TRAIN_ID &&
+      feature.properties.carriages &&
+      feature.properties.carriages.includes(process.env.PRIDE_TRAIN_ID)
+    ) {
+      icon = 'rail-light-pride'
+      icon_size = 35
+    }
+  }
+
+  if (
+    feature.geometry.type === 'Point' &&
+    feature.properties['marker-symbol'] !== 'building'
+  ) {
+    status = feature.properties.status || ''
+    station = feature.properties.stop || ''
+  }
+
+  const leafletIcon = L.icon({
+    iconUrl: `/images/icons/${icon}${stopOrGo}.svg`,
+    iconSize: L.point(icon_size, icon_size)
+  })
+
+  return L.marker(latlng, {
+    icon: leafletIcon,
+    title: `${feature.id} ${status} ${station}`,
+    opacity: opacity,
+    zIndexOffset: zIndex,
+    riseOnHover: true,
+    riseOffset: 2000
+  })
+}
+
+function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
+  if (feature.geometry.type === 'LineString' && feature.properties.route) {
+    layer.bindPopup(`<b>${feature.properties.route}</b>`)
+  }
+  if (feature.geometry.type === 'Point') {
+    if (feature.properties['marker-symbol'] === 'building') {
+      layer.bindPopup(`<b>${feature.properties.name} Stop</b>`)
+    } else {
+      const update_time = new Date(
+        feature.properties['update_time'] || Date.now()
+      )
+      let speed = ''
+      if (
+        feature.properties['speed'] &&
+        feature.properties['status'] != 'STOPPED_AT'
+      ) {
+        speed = `<br />Speed: ${feature.properties.speed} mph`
+      }
+      if (feature.properties['approximate_speed']) {
+        speed += '* <small>approximate</small>'
+      }
+      let occupancy = ''
+      if (feature.properties['occupancy_status']) {
+        occupancy = `<br />Occupancy: ${feature.properties['occupancy_status']}`
+      }
+      let carriages = ''
+      if (feature.properties['carriages']) {
+        carriages += 'Cars:<br /><ul>'
+        for (const carriage of feature.properties['carriages']) {
+          carriages += `<li>${carriage}</li>`
+        }
+        carriages += '</ul>'
+      }
+      let eta = ''
+      if (feature.properties['stop_eta']) {
+        eta = `<br />ETA: ${feature.properties['stop_eta']}`
+      }
+      const popup = L.popup({
+        content: `<b>Route: ${feature.properties.route}</b> <br />ID: ${
+          feature.id
+        }<br />Status: ${feature.properties.status}<br />Stop: ${
+          feature.properties.stop
+        }${eta}${speed}${occupancy}<br />${carriages}
+        <small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
+        keepInView: true
+      })
+
+      if (
+        feature.properties['stop-coordinates'] &&
+        feature.properties['status'] != 'STOPPED_AT'
+      ) {
+        const coords: L.LatLngExpression[] = [
+          [feature.geometry.coordinates[1], feature.geometry.coordinates[0]],
+          [
+            feature.properties['stop-coordinates']![1],
+            feature.properties['stop-coordinates']![0]
+          ]
+        ]
+        const line1 = L.polyline(coords, {
+          color: invert(feature.properties['marker-color'] || '#000000', true),
+          weight: 15
+        })
+        const line2 = L.polyline(coords, {
+          color: feature.properties['marker-color'],
+          weight: 7
+        })
+        ;(line1 as any).arrowheads()
+        ;(line2 as any).arrowheads()
+
+        layer.addEventListener('click', () => {
+          line1.addTo(map)
+          line2.addTo(map)
+          map.panInsideBounds(line1.getBounds())
+          window.setTimeout(() => {
+            line1.removeFrom(map)
+            line2.removeFrom(map)
+          }, 10000)
+        })
+      }
+
+      layer.bindPopup(popup)
+    }
+  }
+}
+
+function embedSVG(line: string, alt: string): string {
+  return `<img src="/images/icons/lines/${line}.svg" alt="${alt}" class="line">`
+}
+
+function calculateAffectedLines(data: Array<{ route: string }>): string {
+  const routeMap: Record<string, RouteMapping> = {
+    Red: { svg: 'rl', alt: 'Red Line' },
+    Blue: { svg: 'bl', alt: 'Blue Line' },
+    Greenbush: { svg: 'cr-greenbush', alt: 'Greenbush Line' },
+    Green: { svg: 'gl', alt: 'Green Line' },
+    Orange: { svg: 'ol', alt: 'Orange Line' },
+    749: { svg: 'sl5', alt: 'Silver Line 5' },
+    751: { svg: 'sl4', alt: 'Silver Line 4' },
+    746: { svg: 'slw', alt: 'Silver Line Way' },
+    743: { svg: 'sl3', alt: 'Silver Line 3' },
+    741: { svg: 'sl1', alt: 'Silver Line 1 (Airport)' },
+    742: { svg: 'sl2', alt: 'Silver Line 2' },
+    Fitchburg: { svg: 'cr-fitchburg', alt: 'Fitchburg Line' },
+    Fairmont: { svg: 'cr-fairmont', alt: 'Fairmont Line' },
+    NewBedford: { svg: 'cr-fall-river', alt: 'Fall River/New Bedford Line' },
+    Franklin: { svg: 'cr-franklin', alt: 'Franklin/Foxboro Line' },
+    Haverhill: { svg: 'cr-haverhill', alt: 'Haverhill Line' },
+    Kingston: { svg: 'cr-kingston', alt: 'Kingston Line' },
+    Lowell: { svg: 'cr-lowell', alt: 'Lowell Line' },
+    Needham: { svg: 'cr-needham', alt: 'Needham Line' },
+    Newburyport: { svg: 'cr-newburyport', alt: 'Newburyport/Rockport Line' },
+    Providence: { svg: 'cr-providence', alt: 'Providence Line' },
+    Worcester: { svg: 'cr-worcester', alt: 'Worcester Line' }
+  }
+
+  const afLines = new Set()
+  for (const entity of data) {
+    for (const routePattern in routeMap) {
+      if (
+        entity.route === routePattern ||
+        entity.route.includes(routePattern)
+      ) {
+        const { svg, alt } = routeMap[routePattern]
+        afLines.add(embedSVG(svg, alt))
+        break
+      }
+    }
+  }
+  return [...afLines].join('</br>')
+}
+
+function alerts(): void {
+  $.getJSON(`${vehicles_url}/alerts`, function (data: AlertData) {
+    const msgs = new Set()
+    const dataSet = []
+
+    for (const alert of data.data) {
+      if (alert.attributes && !msgs.has(alert.attributes.header)) {
+        if (
+          alert.attributes.active_period.length > 0 &&
+          alert.attributes.active_period[0].end
+        ) {
+          // skip alert if end time already passed
+          const end_time = alert.attributes.active_period[0].end
+          if (Date.parse(end_time) < Date.now()) {
+            continue
+          }
+        }
+        const rowData = [
+          calculateAffectedLines(alert.attributes.informed_entity),
+          alert.attributes.severity,
+          {
+            display: formatDistance(
+              new Date(
+                alert.attributes.updated_at || alert.attributes.created_at
+              ),
+              new Date(),
+              { addSuffix: true }
+            ),
+            timestamp: new Date(
+              alert.attributes.updated_at || alert.attributes.created_at
+            ).getTime()
+          },
+          alert.attributes.header
+        ]
+        dataSet.push(rowData)
+      }
+    }
+    new DataTable('#alerts', {
+      columns: [
+        { title: 'Lines' },
+        { title: 'Sev', className: 'dt-body-center' },
+        {
+          title: 'Upd',
+          render: {
+            _: 'display',
+            sort: 'timestamp'
+          }
+        },
+        { title: 'Alert', className: 'alert-body' }
+      ],
+      order: [
+        [0, 'desc'],
+        [1, 'desc']
+      ],
+      data: dataSet,
+      ordering: true,
+      paging: false
+    })
+  })
+}
+
+function annotate_map(): void {
+  clearMap()
+  $.getJSON(vehicles_url, function (data: any) {
+    if (geoJsonLayer) {
+      map.removeLayer(geoJsonLayer)
+    }
+    geoJsonLayer = L.geoJSON(data, {
+      pointToLayer: pointToLayer as any,
+      onEachFeature: onEachFeature as any
+    }).addTo(map)
+    console.log('Map loaded')
+    window.setTimeout(() => {
+      updateTable()
+    }, 100)
+  })
+  if (!baseLayerLoaded) {
+    $.getJSON(`${vehicles_url}/shapes`, function (data) {
+      L.geoJSON(data, {
+        style: (feature) => {
+          if (feature && feature.geometry.type === 'LineString') {
+            var weight = 4
+            if (
+              feature.properties.route?.startsWith('CR') ||
+              feature.properties.route?.startsWith('SL')
+            ) {
+              weight = 3
+            }
+            if (
+              parseInt(feature.properties.route || '') ==
+              parseInt(feature.properties.route || '')
+            ) {
+              weight = 2
+            }
+            return {
+              color: return_colors(feature.properties.route || ''),
+              weight: weight
+            }
+          }
+          return {}
+        },
+        pointToLayer: pointToLayer as any,
+        onEachFeature: onEachFeature as any
+      }).addTo(map)
+    })
+    baseLayerLoaded = true
+  }
+}
+
+annotate_map()
+let intervalID: number = window.setInterval(annotate_map, 15000)
+
+L.easyButton({
+  position: 'topright',
+  states: [
+    {
+      stateName: 'refresh',
+      title: 'Refresh',
+      onClick: (_btn, _map) => {
+        annotate_map()
+      },
+      icon: "<span class='refresh'>&olarr;</span>"
+    }
+  ]
+}).addTo(map)
+
+L.easyButton({
+  position: 'topright',
+  states: [
+    {
+      stateName: 'locate',
+      title: 'Locate',
+      onClick: (_btn, map) => {
+        map.locate({ enableHighAccuracy: true, setView: true })
+      },
+      icon: "<span class='odot'>&odot;</span>"
+    }
+  ]
+}).addTo(map)
+
+document
+  .getElementById('refresh-rate')!
+  .addEventListener('change', (event: Event) => {
+    window.clearInterval(intervalID)
+    const target = event.target as HTMLInputElement
+    const newVal = parseInt(target.value)
+    if (newVal) {
+      intervalID = window.setInterval(annotate_map, newVal * 1000)
+    }
+  })
+
+alerts()
