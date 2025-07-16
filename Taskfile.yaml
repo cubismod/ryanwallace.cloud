@@ -17,7 +17,7 @@ tasks:
   format:
     dir: ryanwallace.cloud/map
     cmds:
-    - yarn prettier --write ./src/**/*.{ts,html}
+    - yarn prettier --write .
   typecheck:
     dir: ryanwallace.cloud/map
     cmds:
