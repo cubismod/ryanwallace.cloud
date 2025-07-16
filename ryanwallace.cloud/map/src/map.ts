@@ -1,4 +1,4 @@
-import L from "leaflet";
+import * as L from "leaflet";
 import "@petoc/leaflet-double-touch-drag-zoom";
 import "leaflet/dist/leaflet.css";
 import "@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom.css";
@@ -12,6 +12,66 @@ import DataTable from "datatables.net-dt";
 import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 import { formatDistance } from "date-fns";
 
+// Type definitions
+interface VehicleFeature {
+  id: string;
+  geometry: {
+    type: "Point" | "LineString";
+    coordinates: number[];
+  };
+  properties: {
+    "marker-symbol"?: string;
+    "marker-color"?: string;
+    "marker-size"?: string;
+    route?: string;
+    status?: string;
+    stop?: string;
+    update_time?: string;
+    speed?: number;
+    approximate_speed?: boolean;
+    occupancy_status?: string;
+    carriages?: string[];
+    stop_eta?: string;
+    "stop-coordinates"?: number[];
+    name?: string;
+  };
+}
+
+interface AlertEntity {
+  attributes: {
+    header: string;
+    severity: string;
+    updated_at?: string;
+    created_at: string;
+    active_period: Array<{
+      end?: string;
+    }>;
+    informed_entity: Array<{
+      route: string;
+    }>;
+  };
+}
+
+interface AlertData {
+  data: AlertEntity[];
+}
+
+interface RouteMapping {
+  svg: string;
+  alt: string;
+}
+
+declare global {
+  interface Window {
+    $: typeof import("jquery");
+  }
+}
+
+// Extend jQuery to include getJSON method
+declare const $: {
+  getJSON: (url: string, callback: (data: any) => void) => void;
+};
+
 var map = L.map("map", {
   doubleTouchDragZoom: true,
   fullscreenControl: true,
@@ -22,13 +82,13 @@ var map = L.map("map", {
   },
 }).setView([42.36565, -71.05236], 13);
 
-const lines = ["rl", "gl", "bl", "ol", "sl", "cr"];
-const vehicleTypes = ["light", "heavy", "regional", "bus"];
-const vehicleCountMap = createVehicleCountMap();
-const vehicles_url =
+const lines: string[] = ["rl", "gl", "bl", "ol", "sl", "cr"];
+const vehicleTypes: string[] = ["light", "heavy", "regional", "bus"];
+const vehicleCountMap: Map<string, Map<string, number>> = createVehicleCountMap();
+const vehicles_url: string =
   process.env.VEHICLES_URL || "https://vehicles.ryanwallace.cloud";
 
-var baseLayerLoaded = false;
+let baseLayerLoaded: boolean = false;
 
 document.getElementById("map").scrollIntoView({ behavior: "smooth" });
 
@@ -37,9 +97,9 @@ const mtLayer = new MaptilerLayer({
   style: "streets-v2",
 }).addTo(map);
 
-var geoJsonLayer = null;
+let geoJsonLayer: L.GeoJSON | null = null;
 
-function return_colors(route) {
+function return_colors(route: string): string {
   if (route.startsWith("Green")) {
     return "#008150";
   }
@@ -65,15 +125,15 @@ function return_colors(route) {
   return "#3e2426";
 }
 
-function createVehicleCountMap() {
-  const vehicleCountMap = new Map();
+function createVehicleCountMap(): Map<string, Map<string, number>> {
+  const vehicleCountMap = new Map<string, Map<string, number>>();
   for (const line of lines) {
-    vehicleCountMap.set(line, new Map());
+    vehicleCountMap.set(line, new Map<string, number>());
   }
   return vehicleCountMap;
 }
 
-function clearMap() {
+function clearMap(): void {
   for (const line of lines) {
     for (const vehicleType of vehicleTypes) {
       vehicleCountMap.get(line)?.set(vehicleType, 0);
@@ -81,17 +141,17 @@ function clearMap() {
   }
 }
 
-function incrementMapItem(route, vehicleType) {
+function incrementMapItem(route: string, vehicleType: string): void {
   const existing = vehicleCountMap.get(route)?.get(vehicleType);
   if (existing !== undefined) {
-    vehicleCountMap.get(route).set(vehicleType, existing + 1);
+    vehicleCountMap.get(route)!.set(vehicleType, existing + 1);
   } else {
-    vehicleCountMap.get(route).set(vehicleType, 1);
+    vehicleCountMap.get(route)?.set(vehicleType, 1);
   }
 }
 
-function calculateTotal(dimension) {
-  var total = 0;
+function calculateTotal(dimension: string): number {
+  let total = 0;
   if (lines.includes(dimension)) {
     // we are retrieving the total for a line
     for (const vehicleType of vehicleTypes) {
@@ -113,9 +173,10 @@ function calculateTotal(dimension) {
     }
     return total;
   }
+  return total;
 }
 
-function updateTable() {
+function updateTable(): void {
   for (const line of lines) {
     for (const vehicleType of vehicleTypes) {
       const id = `${line}-${vehicleType}`;
@@ -142,14 +203,14 @@ function updateTable() {
   }
 }
 
-function pointToLayer(feature, latlng) {
-  var icon_size = 28;
-  var icon = "bus-yellow.svg";
-  var opacity = 1.0;
-  var zIndex = 0;
-  var status = "";
-  var station = "";
-  var stopOrGo = "";
+function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
+  let icon_size = 28;
+  let icon = "bus-yellow.svg";
+  let opacity = 1.0;
+  let zIndex = 0;
+  let status = "";
+  let station = "";
+  let stopOrGo = "";
   // will enable this at a later point once i work out the UI
   // if (feature.properties["status"] === "STOPPED_AT") {
   //   stopOrGo = "-stop"
@@ -216,13 +277,13 @@ function pointToLayer(feature, latlng) {
     station = feature.properties.stop;
   }
 
-  var icon = L.icon({
+  const leafletIcon = L.icon({
     iconUrl: `/images/icons/${icon}${stopOrGo}.svg`,
     iconSize: L.point(icon_size, icon_size),
   });
 
   return L.marker(latlng, {
-    icon: icon,
+    icon: leafletIcon,
     title: `${feature.id} ${status} ${station}`,
     opacity: opacity,
     zIndexOffset: zIndex,
@@ -231,7 +292,7 @@ function pointToLayer(feature, latlng) {
   });
 }
 
-function onEachFeature(feature, layer) {
+function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
   if (feature.geometry.type === "LineString" && feature.properties.route) {
     layer.bindPopup(`<b>${feature.properties.route}</b>`);
   }
@@ -314,12 +375,12 @@ function onEachFeature(feature, layer) {
   }
 }
 
-function embedSVG(line, alt) {
+function embedSVG(line: string, alt: string): string {
   return `<img src="/images/icons/lines/${line}.svg" alt="${alt}" class="line">`;
 }
 
-function calculateAffectedLines(data) {
-  const routeMap = {
+function calculateAffectedLines(data: Array<{ route: string }>): string {
+  const routeMap: Record<string, RouteMapping> = {
     Red: { svg: "rl", alt: "Red Line" },
     Blue: { svg: "bl", alt: "Blue Line" },
     Greenbush: { svg: "cr-greenbush", alt: "Greenbush Line" },
@@ -360,8 +421,8 @@ function calculateAffectedLines(data) {
   return [...afLines].join("</br>");
 }
 
-function alerts() {
-  $.getJSON(`${vehicles_url}/alerts`, function (data) {
+function alerts(): void {
+  $.getJSON(`${vehicles_url}/alerts`, function (data: AlertData) {
     const msgs = new Set();
     const dataSet = [];
 
@@ -411,8 +472,8 @@ function alerts() {
         { title: "Alert", className: "alert-body" },
       ],
       order: [
-        [0, "dsc"],
-        [1, "dsc"],
+        [0, "desc"],
+        [1, "desc"],
       ],
       data: dataSet,
       ordering: true,
@@ -422,9 +483,9 @@ function alerts() {
   });
 }
 
-function annotate_map() {
+function annotate_map(): void {
   clearMap();
-  $.getJSON(vehicles_url, function (data) {
+  $.getJSON(vehicles_url, function (data: any) {
     if (geoJsonLayer) {
       map.removeLayer(geoJsonLayer);
     }
@@ -450,8 +511,8 @@ function annotate_map() {
               weight = 3;
             }
             if (
-              Number.parseInt(feature.properties.route) ==
-              feature.properties.route
+              parseInt(feature.properties.route) ==
+              parseInt(feature.properties.route)
             ) {
               weight = 2;
             }
@@ -470,7 +531,7 @@ function annotate_map() {
 }
 
 annotate_map();
-var intervalID = window.setInterval(annotate_map, 15000);
+let intervalID: number = window.setInterval(annotate_map, 15000);
 
 L.easyButton({
   position: "topright",
@@ -498,11 +559,12 @@ L.easyButton({
   ],
 }).addTo(map);
 
-document.getElementById("refresh-rate").addEventListener("change", (event) => {
+document.getElementById("refresh-rate")!.addEventListener("change", (event: Event) => {
   window.clearInterval(intervalID);
-  var newVal = parseInt(event.target.value);
+  const target = event.target as HTMLInputElement;
+  const newVal = parseInt(target.value);
   if (newVal) {
-    intervalID = window.setInterval(annotate_map, event.target.value * 1000);
+    intervalID = window.setInterval(annotate_map, newVal * 1000);
   }
 });
 

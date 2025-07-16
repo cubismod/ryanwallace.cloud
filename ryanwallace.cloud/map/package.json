@@ -21,8 +21,13 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.2.0",
+    "@types/jquery": "^3.5.32",
+    "@types/leaflet": "^1.9.20",
+    "@types/node": "^24.0.14",
     "buffer": "6.0.3",
-    "parcel": "2.15.4"
+    "parcel": "2.15.4",
+    "typescript": "^5.8.3"
   },
   "scripts": {
     "build": "parcel build src/index.html --public-url /map/",
