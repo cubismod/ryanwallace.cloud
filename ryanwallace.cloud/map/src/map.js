@@ -241,6 +241,14 @@ function onEachFeature(feature, layer) {
     } else {
       const update_time = new Date(feature.properties["update_time"]);
       let speed = "";
+      let predicted_track = "";
+      if (
+        feature.properties["platform_prediction"] &&
+        feature.properties["stop"] &&
+        !feature.properties["stop"].toLowerCase().includes("track")
+      ) {
+        predicted_track = `<br />Predicted Track: ${feature.properties["platform_prediction"]}`;
+      }
       if (
         feature.properties["speed"] &&
         feature.properties["status"] != "STOPPED_AT"
@@ -269,9 +277,11 @@ function onEachFeature(feature, layer) {
       const popup = L.popup({
         content: `<b>Route: ${feature.properties.route}</b> <br />ID: ${
           feature.id
-        }<br />Status: ${feature.properties.status}<br />Stop: ${
+        }<br />Headsign: ${feature.properties.headsign}<br />Status: ${
+          feature.properties.status
+        }<br />Stop: ${
           feature.properties.stop
-        }${eta}${speed}${occupancy}<br />${carriages}
+        }${eta}${speed}${occupancy}${predicted_track}<br />${carriages}
         <small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
         keepInView: true,
       });
@@ -383,13 +393,13 @@ function alerts() {
           {
             display: formatDistance(
               new Date(
-                alert.attributes.updated_at || alert.attributes.created_at,
+                alert.attributes.updated_at || alert.attributes.created_at
               ),
               new Date(),
-              { addSuffix: true },
+              { addSuffix: true }
             ),
             timestamp: new Date(
-              alert.attributes.updated_at || alert.attributes.created_at,
+              alert.attributes.updated_at || alert.attributes.created_at
             ).getTime(),
           },
           alert.attributes.header,
