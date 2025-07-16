@@ -73,17 +73,15 @@ declare const $: {
 }
 
 var map = L.map('map', {
-  doubleTouchDragZoom: true
-} as any).setView([42.36565, -71.05236], 13)
-
-// Add fullscreen control separately
-;(map as any).addControl(
-  new (L as any).Control.Fullscreen({
+  doubleTouchDragZoom: true,
+  // @ts-expect-error - fullscreenControl is not a valid option
+  fullscreenControl: true,
+  fullscreenControlOptions: {
     position: 'topleft',
     title: 'Fullscreen',
     forcePseudoFullscreen: true
-  })
-)
+  }
+}).setView([42.36565, -71.05236], 13)
 
 const lines: string[] = ['rl', 'gl', 'bl', 'ol', 'sl', 'cr']
 const vehicleTypes: string[] = ['light', 'heavy', 'regional', 'bus']
