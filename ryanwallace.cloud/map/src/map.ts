@@ -342,7 +342,10 @@ function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
         eta = `<br />ETA: ${feature.properties['stop_eta']}`
       }
       let platform_prediction = ''
-      if (feature.properties['platform_prediction']) {
+      if (
+        !feature.properties.stop?.toLowerCase().includes('track') &&
+        feature.properties['platform_prediction']
+      ) {
         platform_prediction = `<br />Platform Prediction: ${feature.properties['platform_prediction']}`
       }
       const popup = L.popup({
