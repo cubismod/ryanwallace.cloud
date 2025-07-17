@@ -34,6 +34,8 @@ interface VehicleFeature {
     stop_eta?: string
     'stop-coordinates'?: number[]
     name?: string
+    headsign?: string
+    platform_prediction?: string
   }
 }
 
@@ -272,14 +274,6 @@ function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
       icon = 'bus-silver'
       opacity = 0.9
     }
-    if (
-      process.env.PRIDE_TRAIN_ID &&
-      feature.properties.carriages &&
-      feature.properties.carriages.includes(process.env.PRIDE_TRAIN_ID)
-    ) {
-      icon = 'rail-light-pride'
-      icon_size = 35
-    }
   }
 
   if (
@@ -303,6 +297,19 @@ function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
     riseOnHover: true,
     riseOffset: 2000
   })
+}
+
+function niceStatus(status: string): string {
+  if (status === 'INCOMING_AT') {
+    return 'Arriving'
+  }
+  if (status === 'IN_TRANSIT_TO') {
+    return 'In Transit'
+  }
+  if (status === 'STOPPED_AT') {
+    return 'Stopped'
+  }
+  return status
 }
 
 function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
@@ -330,25 +337,20 @@ function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
       if (feature.properties['occupancy_status']) {
         occupancy = `<br />Occupancy: ${feature.properties['occupancy_status']}`
       }
-      let carriages = ''
-      if (feature.properties['carriages']) {
-        carriages += 'Cars:<br /><ul>'
-        for (const carriage of feature.properties['carriages']) {
-          carriages += `<li>${carriage}</li>`
-        }
-        carriages += '</ul>'
-      }
       let eta = ''
       if (feature.properties['stop_eta']) {
         eta = `<br />ETA: ${feature.properties['stop_eta']}`
       }
+      let platform_prediction = ''
+      if (feature.properties['platform_prediction']) {
+        platform_prediction = `<br />Platform Prediction: ${feature.properties['platform_prediction']}`
+      }
       const popup = L.popup({
-        content: `<b>Route: ${feature.properties.route}</b> <br />ID: ${
-          feature.id
-        }<br />Status: ${feature.properties.status}<br />Stop: ${
-          feature.properties.stop
-        }${eta}${speed}${occupancy}<br />${carriages}
-        <small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
+        content: `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
+        <br />Stop: ${feature.properties.stop || ''}
+        <br />Status: ${niceStatus(feature.properties.status || '')}
+        ${eta}${speed}${occupancy}${platform_prediction}
+        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
         keepInView: true
       })
 
