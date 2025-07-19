@@ -251,9 +251,9 @@ function getStopName(stopId: string): string {
   return STOP_NAMES[stopId] || stopId
 }
 
-function getDirectionName(directionId: number): string {
-  return DIRECTION_NAMES[directionId.toString()] || 'Unknown'
-}
+// function getDirectionName(directionId: number): string {
+//   return DIRECTION_NAMES[directionId.toString()] || 'Unknown'
+// }
 
 function formatConfidence(confidence: number): string {
   if (confidence >= 0.7) {
@@ -272,9 +272,9 @@ function formatPlatform(platform: string): string {
   return 'TBD'
 }
 
-// function formatRoute(routeId: string): string {
-//   return `<span class="route-badge">${routeId}</span>`
-// }
+function formatRoute(routeId: string): string {
+  return `${routeId.replace('CR-', '').trim()} Line`
+}
 
 function formatDestination(destination: string): string {
   return `<span class="route-badge">${destination}</span>`
@@ -379,7 +379,7 @@ function restructureData(
       const row: PredictionRow = {
         station: getStopName(stopId),
         time: depDate,
-        destination: trackPrediction.headsign || getDirectionName(directionId),
+        destination: `${trackPrediction.headsign} via ${formatRoute(routeId)}`,
         track: trackPrediction?.track_number || 'TBD',
         confidence: trackPrediction?.confidence_score || 0
       }
@@ -409,7 +409,7 @@ function restructureData(
       const row: PredictionRow = {
         station: getStopName(stopId),
         time: depDate,
-        destination: trackPrediction.headsign || getDirectionName(directionId),
+        destination: `${trackPrediction.headsign} via ${formatRoute(routeId)}`,
         track: trackPrediction?.track_number || 'TBD',
         confidence: trackPrediction?.confidence_score || 0
       }
