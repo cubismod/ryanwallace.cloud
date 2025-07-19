@@ -293,7 +293,12 @@ async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
 
 async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   const stopIds = STOP_IDS.join(',')
-  const url = `${MBTA_API_BASE}/schedules?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time&page[limit]=25&filter[min_time]=${moment().tz('America/New_York').format('HH:mm')}`
+  const minTime = moment().tz('America/New_York')
+  let minTimeFilter = ''
+  if (minTime.isAfter('2:00')) {
+    minTimeFilter = `&page[limit]=25&filter[min_time]=${minTime.format('HH:mm')}`
+  }
+  const url = `${MBTA_API_BASE}/schedules?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time${minTimeFilter}`
 
   return new Promise((resolve, reject) => {
     $.getJSON(url, (data: MBTAScheduleResponse) => {
