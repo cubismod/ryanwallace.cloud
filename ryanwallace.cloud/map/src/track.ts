@@ -216,10 +216,10 @@ const STOP_NAMES: Record<string, string> = {
 }
 
 // Direction mapping
-const DIRECTION_NAMES: Record<string, string> = {
-  '0': 'Outbound',
-  '1': 'Inbound'
-}
+// const DIRECTION_NAMES: Record<string, string> = {
+//   '0': 'Outbound',
+//   '1': 'Inbound'
+// }
 
 function fullStationName(stopId: string): string {
   if (stopId.includes('BNT')) {

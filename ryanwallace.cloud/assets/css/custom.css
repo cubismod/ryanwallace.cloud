@@ -188,8 +188,12 @@ pre {
   font-weight: bold;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
-  background-color: #f3f4f6;
-  color: #1f2937;
+  background-color: var(--light-badge-bg, #f3f4f6);
+  color: var(--text-color);
+}
+
+body.dark-theme .platform-prediction {
+  background-color: var(--dark-badge-bg, #3a3a3a);
 }
 
 .route-badge {
@@ -218,7 +222,11 @@ pre {
 
 .last-updated {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--muted-text-color, #6b7280);
+}
+
+body.dark-theme .last-updated {
+  color: var(--dark-muted-text, #9ca3af);
 }
 
 /* Loading Overlay Styles */
@@ -238,7 +246,11 @@ pre {
 
 .loading-spinner {
   text-align: center;
-  color: #6b7280;
+  color: var(--muted-text-color, #6b7280);
+}
+
+body.dark-theme .loading-spinner {
+  color: var(--dark-muted-text, #9ca3af);
 }
 
 .loading-spinner p {
@@ -330,9 +342,52 @@ pre {
   text-align: left !important;
 }
 
+#predictions-table {
+  background: var(--bkg-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme #predictions-table {
+  background: var(--content-bg-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 #predictions-table th,
 #predictions-table td {
   text-align: center;
+  color: var(--text-color);
+  border-color: var(--light-border-color, #dee2e6);
+}
+
+body.dark-theme #predictions-table th,
+body.dark-theme #predictions-table td {
+  border-color: var(--dark-border-color, #444);
+}
+
+#predictions-table thead th {
+  background: var(--light-header-bg, #f8f9fa);
+}
+
+body.dark-theme #predictions-table thead th {
+  background: var(--dark-header-bg, #2a2a2a);
+}
+
+#predictions-table tbody tr:nth-child(even) {
+  background: var(--light-alt-row, rgba(248, 249, 250, 0.5));
+}
+
+body.dark-theme #predictions-table tbody tr:nth-child(even) {
+  background: var(--dark-alt-row, rgba(42, 42, 42, 0.5));
+}
+
+#predictions-table tbody tr:hover {
+  background: var(--light-hover-row, #e9ecef);
+}
+
+body.dark-theme #predictions-table tbody tr:hover {
+  background: var(--dark-hover-row, #3a3a3a);
 }
 
 /* Map page responsive improvements */
