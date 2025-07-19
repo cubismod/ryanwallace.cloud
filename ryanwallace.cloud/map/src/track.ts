@@ -42,7 +42,6 @@ interface MBTAPrediction {
     }
   }
 }
-
 interface MBTAStop {
   id: string
   type: string
@@ -97,6 +96,46 @@ interface MBTATrip {
 
 interface MBTAResponse {
   data: MBTAPrediction[]
+  included: Array<MBTAStop | MBTARoute | MBTATrip>
+}
+
+interface MBTASchedule {
+  id: string
+  type: string
+  attributes: {
+    arrival_time: string | null
+    departure_time: string | null
+    direction_id: number
+    drop_off_type: number
+    pickup_type: number
+    stop_headsign: string | null
+    stop_sequence: number
+    timepoint: boolean
+  }
+  relationships: {
+    route: {
+      data: {
+        id: string
+        type: string
+      }
+    }
+    stop: {
+      data: {
+        id: string
+        type: string
+      }
+    }
+    trip: {
+      data: {
+        id: string
+        type: string
+      }
+    }
+  }
+}
+
+interface MBTAScheduleResponse {
+  data: MBTASchedule[]
   included: Array<MBTAStop | MBTARoute | MBTATrip>
 }
 
@@ -191,7 +230,7 @@ function getDirectionName(directionId: number): string {
 function formatConfidence(confidence: number): string {
   if (confidence >= 0.8) {
     return `<span class="confidence-high">${Math.round(confidence * 100)}%</span>`
-  } else if (confidence >= 0.6) {
+  } else if (confidence >= 0.5) {
     return `<span class="confidence-medium">${Math.round(confidence * 100)}%</span>`
   } else {
     return `<span class="confidence-low">${Math.round(confidence * 100)}%</span>`
@@ -227,6 +266,40 @@ async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
   })
 }
 
+function getLastPredictionTime(predictions: MBTAPrediction[]): Date | null {
+  if (predictions.length === 0) return null
+
+  let lastTime: Date | null = null
+
+  for (const prediction of predictions) {
+    const departureTime =
+      prediction.attributes.departure_time || prediction.attributes.arrival_time
+    if (departureTime) {
+      const time = new Date(departureTime)
+      if (!lastTime || time > lastTime) {
+        lastTime = time
+      }
+    }
+  }
+
+  return lastTime
+}
+
+async function fetchMBTASchedules(startTime: Date): Promise<MBTASchedule[]> {
+  const stopIds = STOP_IDS.join(',')
+  const minTime = startTime.toISOString()
+  const url = `${MBTA_API_BASE}/schedules?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&filter[min_time]=${minTime}&sort=departure_time&page[limit]=10&filter[date]=${startTime.toISOString().split('T')[0]}`
+
+  return new Promise((resolve, reject) => {
+    $.getJSON(url, (data: MBTAScheduleResponse) => {
+      resolve(data.data)
+    }).fail((error: any) => {
+      console.error('Error fetching MBTA schedules:', error)
+      reject(error)
+    })
+  })
+}
+
 async function fetchTrackPrediction(
   station_id: string,
   route_id: string,
@@ -249,6 +322,7 @@ async function fetchTrackPrediction(
 
 function restructureData(
   mbtaPredictions: MBTAPrediction[],
+  mbtaSchedules: MBTASchedule[],
   trackPredictions: TrackPrediction[]
 ): PredictionRow[] {
   const rows: PredictionRow[] = []
@@ -260,12 +334,14 @@ function restructureData(
     trackPredictionMap.set(key, tp)
   })
 
+  // Process MBTA predictions
   for (const prediction of mbtaPredictions) {
     const departureTime =
       prediction.attributes.departure_time || prediction.attributes.arrival_time
     if (!departureTime) continue
 
     const depDate = new Date(departureTime)
+    if (depDate < new Date()) continue
 
     const stopId = fullStationName(prediction.relationships.stop.data.id)
     const routeId = prediction.relationships.route.data.id
@@ -275,16 +351,48 @@ function restructureData(
     const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
     const trackPrediction = trackPredictionMap.get(trackKey)
 
-    const row: PredictionRow = {
-      stop_name: getStopName(stopId),
-      route_name: routeId,
-      direction: getDirectionName(directionId),
-      scheduled_time: depDate,
-      predicted_platform: trackPrediction?.track_number || 'TBD',
-      confidence: trackPrediction?.confidence_score || 0
-    }
+    if (trackPrediction?.confidence_score) {
+      const row: PredictionRow = {
+        stop_name: getStopName(stopId),
+        route_name: routeId,
+        direction: getDirectionName(directionId),
+        scheduled_time: depDate,
+        predicted_platform: trackPrediction?.track_number || 'TBD',
+        confidence: trackPrediction?.confidence_score || 0
+      }
 
-    rows.push(row)
+      rows.push(row)
+    }
+  }
+
+  // Process MBTA schedules
+  for (const schedule of mbtaSchedules) {
+    const departureTime =
+      schedule.attributes.departure_time || schedule.attributes.arrival_time
+    if (!departureTime) continue
+
+    const depDate = new Date(departureTime)
+
+    const stopId = fullStationName(schedule.relationships.stop.data.id)
+    const routeId = schedule.relationships.route.data.id
+    const directionId = schedule.attributes.direction_id
+
+    // Try to find matching track prediction
+    const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
+    const trackPrediction = trackPredictionMap.get(trackKey)
+
+    if (trackPrediction?.confidence_score) {
+      const row: PredictionRow = {
+        stop_name: getStopName(stopId),
+        route_name: routeId,
+        direction: getDirectionName(directionId),
+        scheduled_time: depDate,
+        predicted_platform: trackPrediction?.track_number || 'TBD',
+        confidence: trackPrediction?.confidence_score || 0
+      }
+
+      rows.push(row)
+    }
   }
 
   return rows.sort(
@@ -324,7 +432,20 @@ async function refreshPredictions(): Promise<void> {
   try {
     console.log('Fetching predictions...')
     const mbtaPredictions = await fetchMBTAPredictions()
+
+    // Calculate last prediction time and fetch schedules if needed
+    const lastPredictionTime = getLastPredictionTime(mbtaPredictions)
+    let mbtaSchedules: MBTASchedule[] = []
+
+    if (lastPredictionTime) {
+      console.log('Last prediction time:', lastPredictionTime.toISOString())
+      console.log('Fetching schedules after predictions end...')
+      mbtaSchedules = await fetchMBTASchedules(lastPredictionTime)
+    }
+
     const trackPredictions: TrackPrediction[] = []
+
+    // Get track predictions for MBTA predictions
     for (const prediction of mbtaPredictions) {
       const trackPrediction = await fetchTrackPrediction(
         prediction.relationships.stop.data.id,
@@ -340,9 +461,31 @@ async function refreshPredictions(): Promise<void> {
         trackPredictions.push(trackPrediction.prediction)
       }
     }
-    const rows = restructureData(mbtaPredictions, trackPredictions)
+
+    // Get track predictions for schedules
+    for (const schedule of mbtaSchedules) {
+      const trackPrediction = await fetchTrackPrediction(
+        schedule.relationships.stop.data.id,
+        schedule.relationships.route.data.id,
+        schedule.relationships.trip.data.id,
+        schedule.relationships.route.data.id,
+        schedule.attributes.direction_id,
+        schedule.attributes.departure_time ||
+          schedule.attributes.arrival_time ||
+          new Date().toISOString()
+      )
+      if (trackPrediction.success) {
+        trackPredictions.push(trackPrediction.prediction)
+      }
+    }
+
+    const rows = restructureData(
+      mbtaPredictions,
+      mbtaSchedules,
+      trackPredictions
+    )
     updateTable(rows)
-    console.log(`Updated table with ${rows.length} predictions`)
+    console.log(`Updated table with ${rows.length} predictions and schedules`)
   } catch (error) {
     console.error('Error refreshing predictions:', error)
   }
