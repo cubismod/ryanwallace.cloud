@@ -157,3 +157,59 @@ td {
   margin: auto;
   display: block;
 }
+
+/* Track Predictions Styles */
+#refresh-controls {
+  margin: 1rem 0;
+}
+
+#predictions-container {
+  margin-top: 1rem;
+}
+
+.confidence-high {
+  color: #22c55e;
+  font-weight: bold;
+}
+
+.confidence-medium {
+  color: #f59e0b;
+  font-weight: bold;
+}
+
+.confidence-low {
+  color: #ef4444;
+  font-weight: bold;
+}
+
+.platform-prediction {
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.route-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: bold;
+  font-size: 0.875rem;
+  color: white;
+  background-color: #7B388C;
+}
+
+.stop-name {
+  font-weight: bold;
+}
+
+.departure-time {
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+
+.last-updated {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
