@@ -177,11 +177,10 @@ interface ChainedPredictionsResponse {
 }
 
 interface PredictionRow {
-  stop_name: string
-  route_name: string
-  direction: string
-  scheduled_time: Date
-  predicted_platform: string
+  station: string
+  time: moment.Moment
+  destination: string
+  track: string
   confidence: number
 }
 
@@ -190,6 +189,10 @@ declare global {
     $: typeof import('jquery')
   }
 }
+
+document
+  .getElementById('predictions-container')
+  ?.scrollIntoView({ behavior: 'smooth' })
 
 // Constants
 const STOP_IDS = [
@@ -208,8 +211,8 @@ const STOP_NAMES: Record<string, string> = {
   'place-NEC-1851': 'Ruggles',
   'place-rugg': 'Ruggles',
   'place-bbsta': 'Back Bay',
-  'place-sstat': 'South Station',
-  'place-north': 'North Station'
+  'place-sstat': 'South Stat.',
+  'place-north': 'North Stat.'
 }
 
 // Direction mapping
@@ -237,12 +240,12 @@ function fullStationName(stopId: string): string {
   return stopId
 }
 
-function shortLineName(routeId: string): string {
-  if (routeId.includes('CR-')) {
-    return routeId.replace('CR-', '')
-  }
-  return routeId
-}
+// function shortLineName(routeId: string): string {
+//   if (routeId.includes('CR-')) {
+//     return routeId.replace('CR-', '')
+//   }
+//   return routeId
+// }
 
 function getStopName(stopId: string): string {
   return STOP_NAMES[stopId] || stopId
@@ -269,12 +272,16 @@ function formatPlatform(platform: string): string {
   return 'TBD'
 }
 
-function formatRoute(routeId: string): string {
-  return `<span class="route-badge">${routeId}</span>`
+// function formatRoute(routeId: string): string {
+//   return `<span class="route-badge">${routeId}</span>`
+// }
+
+function formatDestination(destination: string): string {
+  return `<span class="route-badge">${destination}</span>`
 }
 
-function formatTime(date: Date): string {
-  return `<span class="departure-time">${date.toLocaleTimeString()}</span>`
+function formatTime(date: moment.Moment): string {
+  return `<span class="departure-time">${date.format('HH:mm')}</span>`
 }
 
 async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
@@ -295,10 +302,10 @@ async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   const stopIds = STOP_IDS.join(',')
   const minTime = moment().tz('America/New_York')
   let minTimeFilter = ''
-  if (minTime.isAfter('2:00')) {
+  if (minTime.hour() > 2) {
     minTimeFilter = `&page[limit]=25&filter[min_time]=${minTime.format('HH:mm')}`
   }
-  const url = `${MBTA_API_BASE}/schedules?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time${minTimeFilter}`
+  const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time${minTimeFilter}`
 
   return new Promise((resolve, reject) => {
     $.getJSON(url, (data: MBTAScheduleResponse) => {
@@ -360,17 +367,20 @@ function restructureData(
     const routeId = prediction.relationships.route.data.id
     const directionId = prediction.attributes.direction_id
 
+    // skip inbound arrivals for terminal stations
+    if (stopId.includes('place-north') && directionId === 0) continue
+    if (stopId.includes('place-sstat') && directionId === 0) continue
+
     // Try to find matching track prediction
     const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
     const trackPrediction = trackPredictionMap.get(trackKey)
 
     if (trackPrediction?.confidence_score) {
       const row: PredictionRow = {
-        stop_name: getStopName(stopId),
-        route_name: shortLineName(routeId),
-        direction: getDirectionName(directionId),
-        scheduled_time: depDate.toDate(),
-        predicted_platform: trackPrediction?.track_number || 'TBD',
+        station: getStopName(stopId),
+        time: depDate,
+        destination: trackPrediction.headsign || getDirectionName(directionId),
+        track: trackPrediction?.track_number || 'TBD',
         confidence: trackPrediction?.confidence_score || 0
       }
 
@@ -397,11 +407,10 @@ function restructureData(
 
     if (trackPrediction?.confidence_score) {
       const row: PredictionRow = {
-        stop_name: getStopName(stopId),
-        route_name: shortLineName(routeId),
-        direction: getDirectionName(directionId),
-        scheduled_time: depDate.toDate(),
-        predicted_platform: trackPrediction?.track_number || 'TBD',
+        station: getStopName(stopId),
+        time: depDate,
+        destination: trackPrediction.headsign || getDirectionName(directionId),
+        track: trackPrediction?.track_number || 'TBD',
         confidence: trackPrediction?.confidence_score || 0
       }
 
@@ -409,9 +418,7 @@ function restructureData(
     }
   }
 
-  return rows.sort(
-    (a, b) => a.scheduled_time.getTime() - b.scheduled_time.getTime()
-  )
+  return rows.sort((a, b) => a.time.diff(b.time))
 }
 
 function showLoading(): void {
@@ -447,27 +454,26 @@ function updateTable(rows: PredictionRow[]): void {
   hideLoading()
 
   const tableData = rows.map((row) => [
-    `<span class="stop-name">${DOMPurify.sanitize(row.stop_name)}</span>`,
-    formatRoute(DOMPurify.sanitize(row.route_name)),
-    DOMPurify.sanitize(row.direction),
-    formatTime(row.scheduled_time),
-    formatPlatform(DOMPurify.sanitize(row.predicted_platform)),
-    formatConfidence(row.confidence)
+    formatPlatform(DOMPurify.sanitize(row.track)),
+    `<span class="stop-name">${DOMPurify.sanitize(row.station)}</span>`,
+    formatTime(row.time),
+    formatConfidence(row.confidence),
+    formatDestination(DOMPurify.sanitize(row.destination))
   ])
 
   new DataTable('#predictions-table', {
     data: tableData,
     columns: [
-      { title: 'Stop' },
-      { title: 'Route' },
-      { title: 'Direction' },
-      { title: 'Departure Time', type: 'date' },
-      { title: 'Predicted Platform' },
-      { title: 'Confidence' }
+      { title: 'Track' },
+      { title: 'Station' },
+      { title: 'Time', type: 'date' },
+      { title: 'Score' },
+      { title: 'Destination' }
     ],
     order: [[3, 'asc']], // Sort by departure time
     pageLength: 25,
     searching: false,
+    ordering: false,
     info: true,
     lengthChange: false
   })

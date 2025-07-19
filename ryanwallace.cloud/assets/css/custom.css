@@ -201,6 +201,10 @@ td {
 }
 
 .stop-name {
+  font-weight: normal;
+}
+
+.destination {
   font-weight: bold;
 }
 
@@ -253,4 +257,58 @@ td {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Mobile Responsive Styles for Track Predictions Table */
+@media (max-width: 768px) {
+  #predictions-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  #predictions-table {
+    font-size: 0.875rem;
+    min-width: 600px;
+  }
+  
+  #predictions-table th,
+  #predictions-table td {
+    padding: 0.5rem 0.25rem;
+    white-space: nowrap;
+  }
+  
+  .route-badge {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+  }
+  
+  .departure-time {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #predictions-table {
+    font-size: 0.75rem;
+    min-width: 500px;
+  }
+  
+  #predictions-table th,
+  #predictions-table td {
+    padding: 0.375rem 0.125rem;
+  }
+  
+  .route-badge {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.25rem;
+  }
+  
+  .departure-time {
+    font-size: 0.625rem;
+  }
+  
+  .platform-prediction {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.75rem;
+  }
 }
