@@ -8,7 +8,7 @@ tasks:
     dir: ryanwallace.cloud
     cmds:
     - hugo server -D
-  map_build:
+  build:
     dir: ryanwallace.cloud/map
     cmds:
     - yarn build
