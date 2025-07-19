@@ -159,6 +159,23 @@ interface TrackPredictionResponse {
   prediction: TrackPrediction
 }
 
+interface PredictionRequest {
+  station_id: string
+  route_id: string
+  trip_id: string
+  headsign: string
+  direction_id: number
+  scheduled_time: string
+}
+
+interface ChainedPredictionsRequest {
+  predictions: PredictionRequest[]
+}
+
+interface ChainedPredictionsResponse {
+  results: TrackPredictionResponse[]
+}
+
 interface PredictionRow {
   stop_name: string
   route_name: string
@@ -281,22 +298,25 @@ async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   })
 }
 
-async function fetchTrackPrediction(
-  station_id: string,
-  route_id: string,
-  trip_id: string,
-  headsign: string,
-  direction_id: number,
-  scheduled_time: string
-): Promise<TrackPredictionResponse> {
-  const url = `${TRACK_PREDICTION_API}/predictions?station_id=${station_id}&route_id=${route_id}&trip_id=${trip_id}&headsign=${headsign}&direction_id=${direction_id}&scheduled_time=${scheduled_time}`
+async function fetchChainedTrackPredictions(
+  requests: PredictionRequest[]
+): Promise<TrackPredictionResponse[]> {
+  const url = `${TRACK_PREDICTION_API}/chained-predictions`
+  const requestBody: ChainedPredictionsRequest = { predictions: requests }
 
   return new Promise((resolve, reject) => {
-    $.post(url, (data: TrackPredictionResponse) => {
-      resolve(data)
-    }).fail((error: any) => {
-      console.error('Error fetching track predictions:', error)
-      reject(error)
+    $.ajax({
+      url: url,
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify(requestBody),
+      success: (data: ChainedPredictionsResponse) => {
+        resolve(data.results)
+      },
+      error: (error: any) => {
+        console.error('Error fetching chained track predictions:', error)
+        reject(error)
+      }
     })
   })
 }
@@ -447,41 +467,46 @@ async function refreshPredictions(): Promise<void> {
     console.log('Fetching predictions...')
     const mbtaPredictions = await fetchMBTAPredictions()
     const mbtaSchedules = await fetchMBTASchedules()
-    const trackPredictions: TrackPrediction[] = []
 
-    // Get track predictions for MBTA predictions
+    // Prepare batch requests for track predictions
+    const predictionRequests: PredictionRequest[] = []
+
+    // Add requests for MBTA predictions
     for (const prediction of mbtaPredictions) {
-      const trackPrediction = await fetchTrackPrediction(
-        prediction.relationships.stop.data.id,
-        prediction.relationships.route.data.id,
-        prediction.relationships.trip.data.id,
-        prediction.relationships.route.data.id,
-        prediction.attributes.direction_id,
-        prediction.attributes.departure_time ||
+      predictionRequests.push({
+        station_id: prediction.relationships.stop.data.id,
+        route_id: prediction.relationships.route.data.id,
+        trip_id: prediction.relationships.trip.data.id,
+        headsign: prediction.relationships.route.data.id,
+        direction_id: prediction.attributes.direction_id,
+        scheduled_time:
+          prediction.attributes.departure_time ||
           prediction.attributes.arrival_time ||
           new Date().toISOString()
-      )
-      if (trackPrediction.success) {
-        trackPredictions.push(trackPrediction.prediction)
-      }
+      })
     }
 
-    // Get track predictions for schedules
+    // Add requests for schedules
     for (const schedule of mbtaSchedules) {
-      const trackPrediction = await fetchTrackPrediction(
-        schedule.relationships.stop.data.id,
-        schedule.relationships.route.data.id,
-        schedule.relationships.trip.data.id,
-        schedule.relationships.route.data.id,
-        schedule.attributes.direction_id,
-        schedule.attributes.departure_time ||
+      predictionRequests.push({
+        station_id: schedule.relationships.stop.data.id,
+        route_id: schedule.relationships.route.data.id,
+        trip_id: schedule.relationships.trip.data.id,
+        headsign: schedule.relationships.route.data.id,
+        direction_id: schedule.attributes.direction_id,
+        scheduled_time:
+          schedule.attributes.departure_time ||
           schedule.attributes.arrival_time ||
           new Date().toISOString()
-      )
-      if (trackPrediction.success) {
-        trackPredictions.push(trackPrediction.prediction)
-      }
+      })
     }
+
+    // Fetch all track predictions in a single batch request
+    const trackPredictionResponses =
+      await fetchChainedTrackPredictions(predictionRequests)
+    const trackPredictions: TrackPrediction[] = trackPredictionResponses
+      .filter((response) => response.success)
+      .map((response) => response.prediction)
 
     const rows = restructureData(
       mbtaPredictions,
