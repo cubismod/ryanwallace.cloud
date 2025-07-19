@@ -259,6 +259,12 @@ td {
   100% { transform: rotate(360deg); }
 }
 
+/* Station column width adjustment */
+#predictions-table th:nth-child(2),
+#predictions-table td:nth-child(2) {
+  width: 15% !important;
+}
+
 /* Mobile Responsive Styles for Track Predictions Table */
 @media (max-width: 768px) {
   #predictions-container {
