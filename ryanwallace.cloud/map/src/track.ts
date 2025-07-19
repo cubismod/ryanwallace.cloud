@@ -229,7 +229,7 @@ function getDirectionName(directionId: number): string {
 }
 
 function formatConfidence(confidence: number): string {
-  if (confidence >= 0.8) {
+  if (confidence >= 0.7) {
     return `<span class="confidence-high">${Math.round(confidence * 100)}%</span>`
   } else if (confidence >= 0.5) {
     return `<span class="confidence-medium">${Math.round(confidence * 100)}%</span>`
