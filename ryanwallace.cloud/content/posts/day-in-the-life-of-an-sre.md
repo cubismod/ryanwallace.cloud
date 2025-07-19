@@ -11,5 +11,4 @@ will forever torment me and its extremely memeable quotes.
 
 {{< instagram Cw5T2n0Mb3H >}}
 
-
 [LinkedIn video](https://www.linkedin.com/feed/update/urn:li:activity:7105580787957174272/)

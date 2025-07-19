@@ -1,64 +1,51 @@
 <!-- Taken from https://github.com/lukeorth/poison/blob/04e39661e718d90449a6f681474376b93ae11f1b/layouts/partials/sidebar/menu.html-->
 <nav>
-    <ul class="sidebar-nav">
-
-        {{ $sections := .Site.Sections.ByTitle }}
-        {{ $taxonomies := .Site.Taxonomies }}
-        {{ range .Site.Params.menu }}
-        {{ $menu_item := . }}
-            {{ if eq (len $menu_item.URL) 0 }}
-                <li class="heading">{{ $menu_item.Name }}</li>
-            {{ else if $menu_item.External }}
-                <li class="bullet">
-                    <a href="{{ $menu_item.URL }}" target="_blank" rel="noopener noreferrer">{{ $menu_item.Name }}</a>
-                </li>
-            {{ end }}
-
-            {{ range $sections }}
-                {{ $trimmedURL := (lower (strings.TrimSuffix "/" (strings.TrimPrefix "/" $menu_item.URL))) }}
-                {{ if eq (lower .Title) (replace $trimmedURL "-" " ") }}
-                    <li class="heading">
-                        <a href="{{ $menu_item.URL }}">{{ $menu_item.Name }}</a>
-                    </li>
-                    {{ if $menu_item.HasChildren }}
-                        <li class="sub-heading">
-                            {{ $menu_item.Pre }}
-                        </li>
-                        {{ range (first $menu_item.Limit .Pages) }}
-                            <li class="bullet">
-                                <a href="{{ .Permalink }}">{{ .Title }}</a>
-                            </li>
-                        {{ end }}
-                    {{ end }}
-                {{ end }}
-            {{ end }}
-            {{ range $name, $taxonomy := $taxonomies }}
-                {{ if eq (lower $name) (lower $menu_item.Name) }}
-                    <li class="heading">
-                        <a href="{{$menu_item.URL }}">{{ $menu_item.Name }}</a>
-                    </li>
-                {{ end }}
-                {{ range $term, $page := $taxonomy }}
-                        {{ if eq (lower $term) (lower $menu_item.Name) }}
-                            <li class="heading">
-                                <a href="{{$menu_item.URL }}">{{ $menu_item.Name }}</a>
-                            </li>
-                            {{ if $menu_item.HasChildren }}
-                            <li class="sub-heading">
-                                {{ $menu_item.Pre }}
-                            </li>
-                            {{ range (first $menu_item.Limit .Pages) }}
-                                <li class="bullet">
-                                    <a href="{{ .Permalink }}">{{ .Title }}</a>
-                                </li>
-                            {{ end }}
-                        {{ end }}
-                    {{ end }}
-                {{ end }}
-            {{ end }}
-        {{ end }}
-    </ul>
-    <div class="ci">
-        <a href="/map"><img src="/images/icons/mbta-button.svg" alt="link to an MBTA rapid transit live tracker"></a>
-    </div>
+  <ul class="sidebar-nav">
+    {{ $sections := .Site.Sections.ByTitle }} {{ $taxonomies := .Site.Taxonomies
+    }} {{ range .Site.Params.menu }} {{ $menu_item := . }} {{ if eq (len
+    $menu_item.URL) 0 }}
+    <li class="heading">{{ $menu_item.Name }}</li>
+    {{ else if $menu_item.External }}
+    <li class="bullet">
+      <a href="{{ $menu_item.URL }}" target="_blank" rel="noopener noreferrer"
+        >{{ $menu_item.Name }}</a
+      >
+    </li>
+    {{ end }} {{ range $sections }} {{ $trimmedURL := (lower (strings.TrimSuffix
+    "/" (strings.TrimPrefix "/" $menu_item.URL))) }} {{ if eq (lower .Title)
+    (replace $trimmedURL "-" " ") }}
+    <li class="heading">
+      <a href="{{ $menu_item.URL }}">{{ $menu_item.Name }}</a>
+    </li>
+    {{ if $menu_item.HasChildren }}
+    <li class="sub-heading">{{ $menu_item.Pre }}</li>
+    {{ range (first $menu_item.Limit .Pages) }}
+    <li class="bullet">
+      <a href="{{ .Permalink }}">{{ .Title }}</a>
+    </li>
+    {{ end }} {{ end }} {{ end }} {{ end }} {{ range $name, $taxonomy :=
+    $taxonomies }} {{ if eq (lower $name) (lower $menu_item.Name) }}
+    <li class="heading">
+      <a href="{{$menu_item.URL }}">{{ $menu_item.Name }}</a>
+    </li>
+    {{ end }} {{ range $term, $page := $taxonomy }} {{ if eq (lower $term)
+    (lower $menu_item.Name) }}
+    <li class="heading">
+      <a href="{{$menu_item.URL }}">{{ $menu_item.Name }}</a>
+    </li>
+    {{ if $menu_item.HasChildren }}
+    <li class="sub-heading">{{ $menu_item.Pre }}</li>
+    {{ range (first $menu_item.Limit .Pages) }}
+    <li class="bullet">
+      <a href="{{ .Permalink }}">{{ .Title }}</a>
+    </li>
+    {{ end }} {{ end }} {{ end }} {{ end }} {{ end }} {{ end }}
+  </ul>
+  <div class="ci">
+    <a href="/map"
+      ><img
+        src="/images/icons/mbta-button.svg"
+        alt="link to an MBTA rapid transit live tracker"
+    /></a>
+  </div>
 </nav>

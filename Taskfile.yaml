@@ -1,24 +1,23 @@
-version: '3'
+version: "3"
 
 dotenv:
-- ryanwallace.cloud/map/.env
+  - ryanwallace.cloud/map/.env
 
 tasks:
   dev:
     dir: ryanwallace.cloud
     cmds:
-    - hugo server -D
+      - hugo server -D
   build:
     dir: ryanwallace.cloud/map
     cmds:
-    - yarn build
-    - yarn clean
-    - yarn move
+      - yarn build
+      - yarn clean
+      - yarn move
   format:
-    dir: ryanwallace.cloud/map
     cmds:
-    - yarn prettier --write .
+      - npx prettier --write .
   typecheck:
     dir: ryanwallace.cloud/map
     cmds:
-    - yarn tsc --noEmit
+      - yarn tsc --noEmit

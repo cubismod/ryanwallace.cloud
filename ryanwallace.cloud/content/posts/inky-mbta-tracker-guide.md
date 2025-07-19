@@ -42,12 +42,11 @@ services:
     image: docker.io/library/redis:7.4
     restart: unless-stopped
     container_name: tracker-redis
-    command: [ "redis-server", "--requirepass", "<redis_pass>"]
+    command: ["redis-server", "--requirepass", "<redis_pass>"]
     volumes:
       - tracker-redis:/data
     ports:
       - "6379:6379"
-
 
   inky-mbta-tracker:
     # releases are available at https://github.com/cubismod/inky-mbta-tracker/pkgs/container/inky-mbta-tracker%2Finky-mbta-tracker
@@ -72,12 +71,15 @@ services:
 ```
 
 A couple of notes...
-* Consider embedding secrets in a better way than just in the docker compose file.
-* An MBTA API token can be acquired at <https://api-v3.mbta.com/>.
-* MQTT is optional but can be used to integrate with Home Assistant.
+
+- Consider embedding secrets in a better way than just in the docker compose file.
+- An MBTA API token can be acquired at <https://api-v3.mbta.com/>.
+- MQTT is optional but can be used to integrate with Home Assistant.
 
 ### Config File
+
 A config file in .json form is required. Here's what the schema looks like:
+
 ```json
 {
   "stops": [
@@ -95,7 +97,7 @@ A config file in .json form is required. Here's what the schema looks like:
       // REQUIRED, time to walk/drive/bike/etc to get to this station
       // this will be used by the display component to actually determine when
       // you can make an arrival
-      "transit_time_min": 18,
+      "transit_time_min": 18
       // OPTIONAL, use this for stops that never have real-time departure information
       // (looking at you with side-eye, Medford-Tufts. This will spawn a different
       // task which retrieves static schedule information every couple of hours
@@ -154,19 +156,19 @@ From, the [inky-display Git](https://github.com/cubismod/inky-display/blob/main/
 
 ### Required Components
 
-* [Yellow Inky wHAT Display](https://shop.pimoroni.com/products/inky-what?variant=21441988558931).
-  * [Microcenter link to display](https://www.microcenter.com/product/631583/pimoroni-inky-what-(epaper-eink-epd)-yellow-black-white)
-  * Note: this is only yellow right now because I would have to change the colors otherwise to get red
-  working. Black and white will not work.
-* Compatible Raspberry Pi.
-  * [Microcenter link to Pi Zero W2 w/ Headers](https://www.microcenter.com/product/683270/raspberry-pi-raspberry-pi-zero-w-2-with-headers)
-* Configured inky-mbta-tracker Redis accessible over the network.
-  * May I recommend [Tailscale](https://tailscale.com/) to bridge those gaps.
+- [Yellow Inky wHAT Display](https://shop.pimoroni.com/products/inky-what?variant=21441988558931).
+  - [Microcenter link to display](<https://www.microcenter.com/product/631583/pimoroni-inky-what-(epaper-eink-epd)-yellow-black-white>)
+  - Note: this is only yellow right now because I would have to change the colors otherwise to get red
+    working. Black and white will not work.
+- Compatible Raspberry Pi.
+  - [Microcenter link to Pi Zero W2 w/ Headers](https://www.microcenter.com/product/683270/raspberry-pi-raspberry-pi-zero-w-2-with-headers)
+- Configured inky-mbta-tracker Redis accessible over the network.
+  - May I recommend [Tailscale](https://tailscale.com/) to bridge those gaps.
 
 ### Setup
 
-* Setting up your Pi & Inky wHAT is left to the reader.
-* Create a `.env` file:
+- Setting up your Pi & Inky wHAT is left to the reader.
+- Create a `.env` file:
 
 ```
 REDIS_HOST=<your_host_here>
@@ -174,11 +176,11 @@ REDIS_PORT=<port_num>
 REDIS_PASS=<password>
 ```
 
-* Create a virtual environment.
-* Follow the I2C/SPI pre-req steps from the [inky GitHub library README](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually).
-* Install [Taskfile](https://taskfile.dev/installation/) which is used in lieu of a Makefile.
-* Run `task install-fonts` to install the required fonts to the `fonts/` directory.
-* Run `task run` to watch the display.
+- Create a virtual environment.
+- Follow the I2C/SPI pre-req steps from the [inky GitHub library README](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually).
+- Install [Taskfile](https://taskfile.dev/installation/) which is used in lieu of a Makefile.
+- Run `task install-fonts` to install the required fonts to the `fonts/` directory.
+- Run `task run` to watch the display.
 
 ## Conclusion
 

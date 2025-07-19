@@ -1,7 +1,9 @@
 # ryanwallace.cloud
+
 personal website
 
 # Color Palette
+
 - #845ec2
 - #4b4453
 - #b0a8b9

@@ -3,3 +3,6 @@ public
 dist
 .parcel-cache
 **/*.map.js
+themes
+resources
+static/map
