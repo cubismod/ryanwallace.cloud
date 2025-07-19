@@ -464,15 +464,16 @@ function updateTable(rows: PredictionRow[]): void {
   new DataTable('#predictions-table', {
     data: tableData,
     columns: [
-      { title: 'Track' },
-      { title: 'Station' },
-      { title: 'Time', type: 'date' },
-      { title: 'Score' },
-      { title: 'Destination' }
+      { title: 'Track', width: '5%' },
+      { title: 'Station', width: '10%' },
+      { title: 'Time', type: 'date', width: '5%' },
+      { title: 'Score', width: '5%' },
+      { title: 'Destination', width: '10%', className: 'left-align-column' }
     ],
     order: [[3, 'asc']], // Sort by departure time
     pageLength: 25,
     searching: false,
+    autoWidth: true,
     ordering: false,
     info: true,
     lengthChange: false

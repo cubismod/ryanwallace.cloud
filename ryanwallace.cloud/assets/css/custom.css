@@ -265,6 +265,11 @@ pre {
   }
 }
 
+/* #predictions-table th,
+  #predictions-table td {
+    width: 15% !important;
+  } */
+
 /* Mobile Responsive Styles for Track Predictions Table */
 @media (max-width: 768px) {
   #predictions-container {
@@ -279,7 +284,6 @@ pre {
 
   #predictions-table th,
   #predictions-table td {
-    width: 15% !important;
     white-space: nowrap;
   }
 
@@ -297,11 +301,6 @@ pre {
   #predictions-table {
     font-size: 0.75rem;
     min-width: 500px;
-  }
-
-  #predictions-table th,
-  #predictions-table td {
-    width: 15% !important;
   }
 
   .route-badge {
@@ -325,6 +324,11 @@ pre {
 .article-toc {
   width: 0% !important;
 }
+
+.left-align-column {
+  text-align: left !important;
+}
+
 #predictions-table th,
 #predictions-table td {
   text-align: center;
