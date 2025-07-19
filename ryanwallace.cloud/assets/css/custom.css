@@ -132,11 +132,6 @@ pre {
   padding: 5px;
 }
 
-td {
-  text-align: center;
-  padding: 5px;
-}
-
 .content div {
   color: inherit !important;
 }
@@ -259,12 +254,6 @@ td {
   100% { transform: rotate(360deg); }
 }
 
-/* Station column width adjustment */
-#predictions-table th:nth-child(2),
-#predictions-table td:nth-child(2) {
-  width: 15% !important;
-}
-
 /* Mobile Responsive Styles for Track Predictions Table */
 @media (max-width: 768px) {
   #predictions-container {
@@ -279,7 +268,7 @@ td {
   
   #predictions-table th,
   #predictions-table td {
-    padding: 0.5rem 0.25rem;
+    width: 15% !important;
     white-space: nowrap;
   }
   
@@ -301,7 +290,7 @@ td {
   
   #predictions-table th,
   #predictions-table td {
-    padding: 0.375rem 0.125rem;
+    width: 15% !important;
   }
   
   .route-badge {
