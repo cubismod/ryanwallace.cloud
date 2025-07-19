@@ -237,6 +237,13 @@ function fullStationName(stopId: string): string {
   return stopId
 }
 
+function shortLineName(routeId: string): string {
+  if (routeId.includes('CR-')) {
+    return routeId.replace('CR-', '')
+  }
+  return routeId
+}
+
 function getStopName(stopId: string): string {
   return STOP_NAMES[stopId] || stopId
 }
@@ -355,7 +362,7 @@ function restructureData(
     if (trackPrediction?.confidence_score) {
       const row: PredictionRow = {
         stop_name: getStopName(stopId),
-        route_name: routeId,
+        route_name: shortLineName(routeId),
         direction: getDirectionName(directionId),
         scheduled_time: depDate.toDate(),
         predicted_platform: trackPrediction?.track_number || 'TBD',
@@ -386,7 +393,7 @@ function restructureData(
     if (trackPrediction?.confidence_score) {
       const row: PredictionRow = {
         stop_name: getStopName(stopId),
-        route_name: routeId,
+        route_name: shortLineName(routeId),
         direction: getDirectionName(directionId),
         scheduled_time: depDate.toDate(),
         predicted_platform: trackPrediction?.track_number || 'TBD',
