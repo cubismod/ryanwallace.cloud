@@ -334,3 +334,186 @@ pre {
 #predictions-table td {
   text-align: center;
 }
+
+/* Map page responsive improvements */
+#map {
+  width: 100%;
+  min-height: 400px;
+  height: 60vh;
+  max-height: 750px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+}
+
+/* Form controls */
+.controls-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--bkg-color);
+  border-radius: 6px;
+  border: 1px solid var(--light-border-color, #e9ecef);
+}
+
+body.dark-theme .controls-section {
+  background: var(--content-bg-color);
+  border-color: var(--dark-border-color, #444);
+}
+
+.controls-section label {
+  font-weight: 600;
+  margin-right: 0.5rem;
+  color: var(--text-color);
+}
+
+#refresh-rate {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--light-border-color, #ced4da);
+  border-radius: 4px;
+  background-color: var(--bkg-color);
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+
+body.dark-theme #refresh-rate {
+  border-color: var(--dark-border-color, #555);
+  background-color: var(--content-bg-color);
+}
+
+/* Vehicle table styling */
+#vehicle-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  background: var(--bkg-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme #vehicle-table {
+  background: var(--content-bg-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#vehicle-table td {
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  border: 1px solid var(--light-border-color, #dee2e6);
+  vertical-align: middle;
+  color: var(--text-color);
+}
+
+body.dark-theme #vehicle-table td {
+  border-color: var(--dark-border-color, #444);
+}
+
+#vehicle-table tr:first-child td {
+  background: var(--light-header-bg, #f8f9fa);
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+body.dark-theme #vehicle-table tr:first-child td {
+  background: var(--dark-header-bg, #2a2a2a);
+}
+
+#vehicle-table tr:last-child td {
+  background: var(--light-header-bg, #f8f9fa);
+  font-weight: 600;
+}
+
+body.dark-theme #vehicle-table tr:last-child td {
+  background: var(--dark-header-bg, #2a2a2a);
+}
+
+/* Alerts table */
+#alerts {
+  margin: 2rem 0;
+  width: 100%;
+}
+
+/* Links styling */
+.info-links {
+  margin: 2rem 0;
+  padding: 1rem;
+  background: var(--light-info-bg, #f8f9fa);
+  border-radius: 6px;
+  border-left: 4px solid var(--link-color);
+  color: var(--text-color);
+}
+
+body.dark-theme .info-links {
+  background: var(--dark-info-bg, #2a2a2a);
+}
+
+.info-links p {
+  margin: 0.5rem 0;
+}
+
+.info-links a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.info-links a:hover {
+  text-decoration: underline;
+}
+
+/* Mobile responsiveness for map page */
+@media (max-width: 768px) {
+  #map {
+    height: 50vh;
+    min-height: 300px;
+    border-radius: 4px;
+  }
+
+  .controls-section {
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+  }
+
+  #vehicle-table {
+    font-size: 0.85rem;
+    margin: 0.5rem 0;
+  }
+
+  #vehicle-table td {
+    padding: 0.5rem 0.25rem;
+  }
+
+  #vehicle-table small {
+    font-size: 0.75rem;
+  }
+
+  .info-links {
+    margin: 1rem 0;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #vehicle-table {
+    font-size: 0.75rem;
+  }
+
+  #vehicle-table td {
+    padding: 0.4rem 0.2rem;
+  }
+
+  #vehicle-table b,
+  #vehicle-table i {
+    font-size: 0.8rem;
+  }
+
+  .controls-section {
+    text-align: center;
+  }
+
+  .controls-section label,
+  .controls-section select {
+    display: block;
+    margin: 0.25rem auto;
+  }
+}

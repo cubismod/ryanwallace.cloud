@@ -8,17 +8,8 @@
   href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css"
 />
 
-<style>
-  .content.container {
-    max-width: 100% !important;
-  }
-  .article-toc {
-    width: 0% !important;
-  }
-</style>
-
-<div id="map" style="height: 750px" class="noselect"></div>
-<p>
+<div id="map" class="noselect"></div>
+<div class="controls-section">
   <label for="refresh-rate">Refresh rate:</label>
   <select name="refresh-rate" id="refresh-rate">
     <option value="5">5 seconds</option>
@@ -28,7 +19,7 @@
     <option value="60">60 seconds</option>
     <option value="99999">Off</option>
   </select>
-</p>
+</div>
 
 <script type="module" src="map.ts"></script>
 
@@ -96,27 +87,29 @@
   </tr>
 </table>
 
-<p>
-  <a href="http://roster.transithistory.org/" target="_blank"
-    >Full MBTA Vehicle Inventory</a
-  >
-</p>
+<div class="info-links">
+  <p>
+    <a href="http://roster.transithistory.org/" target="_blank"
+      >Full MBTA Vehicle Inventory</a
+    >
+  </p>
 
-<p>
-  This map live updates using the
-  <a href="/posts/inky-mbta-tracker-guide/" target="_blank"
-    >Inky MBTA Tracker</a
-  >
-  <br />
-  Data comes from the
-  <a href="https://www.mbta.com/developers/v3-api" target="_blank"
-    >MBTA V3 API</a
-  >
-  <br />
-  Icons from
-  <a href="https://labs.mapbox.com/maki-icons/" target="_blank"
-    >Mapbox Maki Icons</a
-  >
-</p>
+  <p>
+    This map live updates using the
+    <a href="/posts/inky-mbta-tracker-guide/" target="_blank"
+      >Inky MBTA Tracker</a
+    >
+    <br />
+    Data comes from the
+    <a href="https://www.mbta.com/developers/v3-api" target="_blank"
+      >MBTA V3 API</a
+    >
+    <br />
+    Icons from
+    <a href="https://labs.mapbox.com/maki-icons/" target="_blank"
+      >Mapbox Maki Icons</a
+    >
+  </p>
+</div>
 
 <table id="alerts" class="display compact"></table>
