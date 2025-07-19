@@ -1,5 +1,6 @@
 import DataTable from 'datatables.net-dt'
 import DOMPurify from 'dompurify'
+import moment from 'moment-timezone'
 
 // Type definitions
 interface MBTAPrediction {
@@ -266,29 +267,9 @@ async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
   })
 }
 
-function getLastPredictionTime(predictions: MBTAPrediction[]): Date | null {
-  if (predictions.length === 0) return null
-
-  let lastTime: Date | null = null
-
-  for (const prediction of predictions) {
-    const departureTime =
-      prediction.attributes.departure_time || prediction.attributes.arrival_time
-    if (departureTime) {
-      const time = new Date(departureTime)
-      if (!lastTime || time > lastTime) {
-        lastTime = time
-      }
-    }
-  }
-
-  return lastTime
-}
-
-async function fetchMBTASchedules(startTime: Date): Promise<MBTASchedule[]> {
+async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   const stopIds = STOP_IDS.join(',')
-  const minTime = startTime.toISOString()
-  const url = `${MBTA_API_BASE}/schedules?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&filter[min_time]=${minTime}&sort=departure_time&page[limit]=30&filter[date]=${startTime.toISOString().split('T')[0]}`
+  const url = `${MBTA_API_BASE}/schedules?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time&page[limit]=25&filter[min_time]=${moment().tz('America/New_York').format('HH:mm')}`
 
   return new Promise((resolve, reject) => {
     $.getJSON(url, (data: MBTAScheduleResponse) => {
@@ -340,8 +321,8 @@ function restructureData(
       prediction.attributes.departure_time || prediction.attributes.arrival_time
     if (!departureTime) continue
 
-    const depDate = new Date(departureTime)
-    if (depDate < new Date()) continue
+    const depDate = moment(departureTime).tz('America/New_York')
+    if (depDate.isBefore(moment().tz('America/New_York'))) continue
 
     const stopId = fullStationName(prediction.relationships.stop.data.id)
     const routeId = prediction.relationships.route.data.id
@@ -356,7 +337,7 @@ function restructureData(
         stop_name: getStopName(stopId),
         route_name: routeId,
         direction: getDirectionName(directionId),
-        scheduled_time: depDate,
+        scheduled_time: depDate.toDate(),
         predicted_platform: trackPrediction?.track_number || 'TBD',
         confidence: trackPrediction?.confidence_score || 0
       }
@@ -371,7 +352,8 @@ function restructureData(
       schedule.attributes.departure_time || schedule.attributes.arrival_time
     if (!departureTime) continue
 
-    const depDate = new Date(departureTime)
+    const depDate = moment(departureTime)
+    if (depDate.isBefore(moment().tz('America/New_York'))) continue
 
     const stopId = fullStationName(schedule.relationships.stop.data.id)
     const routeId = schedule.relationships.route.data.id
@@ -386,7 +368,7 @@ function restructureData(
         stop_name: getStopName(stopId),
         route_name: routeId,
         direction: getDirectionName(directionId),
-        scheduled_time: depDate,
+        scheduled_time: depDate.toDate(),
         predicted_platform: trackPrediction?.track_number || 'TBD',
         confidence: trackPrediction?.confidence_score || 0
       }
@@ -464,17 +446,7 @@ async function refreshPredictions(): Promise<void> {
     showLoading()
     console.log('Fetching predictions...')
     const mbtaPredictions = await fetchMBTAPredictions()
-
-    // Calculate last prediction time and fetch schedules if needed
-    const lastPredictionTime = getLastPredictionTime(mbtaPredictions)
-    let mbtaSchedules: MBTASchedule[] = []
-
-    if (lastPredictionTime) {
-      console.log('Last prediction time:', lastPredictionTime.toISOString())
-      console.log('Fetching schedules after predictions end...')
-      mbtaSchedules = await fetchMBTASchedules(lastPredictionTime)
-    }
-
+    const mbtaSchedules = await fetchMBTASchedules()
     const trackPredictions: TrackPrediction[] = []
 
     // Get track predictions for MBTA predictions

@@ -18,6 +18,8 @@
     "leaflet-arrowheads": "^1.4.0",
     "leaflet-easybutton": "^2.4.0",
     "leaflet.fullscreen": "^4.0.0",
+    "moment": "^2.30.1",
+    "moment-timezone": "^0.6.0",
     "yarn": "^1.22.22"
   },
   "prettier": "prettier-config-standard",
