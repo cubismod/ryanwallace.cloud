@@ -288,7 +288,7 @@ function getLastPredictionTime(predictions: MBTAPrediction[]): Date | null {
 async function fetchMBTASchedules(startTime: Date): Promise<MBTASchedule[]> {
   const stopIds = STOP_IDS.join(',')
   const minTime = startTime.toISOString()
-  const url = `${MBTA_API_BASE}/schedules?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&filter[min_time]=${minTime}&sort=departure_time&page[limit]=10&filter[date]=${startTime.toISOString().split('T')[0]}`
+  const url = `${MBTA_API_BASE}/schedules?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&filter[min_time]=${minTime}&sort=departure_time&page[limit]=30&filter[date]=${startTime.toISOString().split('T')[0]}`
 
   return new Promise((resolve, reject) => {
     $.getJSON(url, (data: MBTAScheduleResponse) => {
@@ -400,7 +400,38 @@ function restructureData(
   )
 }
 
+function showLoading(): void {
+  const container =
+    document.querySelector('#predictions-table_wrapper') ||
+    document.querySelector('#predictions-table')?.parentElement
+  if (container) {
+    const existingLoader = container.querySelector('.loading-overlay')
+    if (!existingLoader) {
+      const loadingOverlay = document.createElement('div')
+      loadingOverlay.className = 'loading-overlay'
+      loadingOverlay.innerHTML = `
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+        </div>
+      `
+      if (container instanceof HTMLElement) {
+        container.style.position = 'relative'
+      }
+      container.appendChild(loadingOverlay)
+    }
+  }
+}
+
+function hideLoading(): void {
+  const loadingOverlay = document.querySelector('.loading-overlay')
+  if (loadingOverlay) {
+    loadingOverlay.remove()
+  }
+}
+
 function updateTable(rows: PredictionRow[]): void {
+  hideLoading()
+
   const tableData = rows.map((row) => [
     `<span class="stop-name">${DOMPurify.sanitize(row.stop_name)}</span>`,
     formatRoute(DOMPurify.sanitize(row.route_name)),
@@ -430,6 +461,7 @@ function updateTable(rows: PredictionRow[]): void {
 
 async function refreshPredictions(): Promise<void> {
   try {
+    showLoading()
     console.log('Fetching predictions...')
     const mbtaPredictions = await fetchMBTAPredictions()
 
@@ -487,6 +519,7 @@ async function refreshPredictions(): Promise<void> {
     updateTable(rows)
     console.log(`Updated table with ${rows.length} predictions and schedules`)
   } catch (error) {
+    hideLoading()
     console.error('Error refreshing predictions:', error)
   }
 }
