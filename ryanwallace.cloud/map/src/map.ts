@@ -712,21 +712,27 @@ L.easyButton({
       stateName: 'locate',
       title: 'Locate',
       onClick: (_btn, map) => {
-        map.locate({ setView: true, watch: true })
+        map.locate({ setView: true })
       },
       icon: "<span class='odot'>&odot;</span>"
     }
   ]
 }).addTo(map)
 
-// Variable to store the user location circle
+// Variables to store the user location circle and watch state
 let userLocationCircle: L.Circle | null = null
+let userLocationMarker: L.Marker | null = null
+// let isWatchingLocation: boolean = false
+let locationWatchID: number | null = null
 
 // Handle successful geolocation
 map.on('locationfound', (e: L.LocationEvent) => {
-  // Remove existing location circle if it exists
+  // Remove existing location circle and marker if they exist
   if (userLocationCircle) {
     map.removeLayer(userLocationCircle)
+  }
+  if (userLocationMarker) {
+    map.removeLayer(userLocationMarker)
   }
 
   // Create a circle representing the user's location with accuracy radius
@@ -737,6 +743,19 @@ map.on('locationfound', (e: L.LocationEvent) => {
     fillOpacity: 0.2,
     weight: 2
   }).addTo(map)
+
+  // Add a marker at the exact location
+  // userLocationMarker = L.marker(e.latlng, {
+  //   icon: L.icon({
+  //     iconUrl: '/images/icons/location-dot.svg',
+  //     iconSize: L.point(20, 20)
+  //   })
+  // }).addTo(map).bindPopup('Your location')
+
+  // // If not watching location, center the map view once
+  // if (!isWatchingLocation) {
+  //   map.setView(e.latlng, Math.max(map.getZoom(), 15))
+  // }
 })
 
 // Handle geolocation errors
@@ -831,6 +850,67 @@ document
       intervalID = window.setInterval(annotate_map, newVal * 1000)
       setCookie('refresh-rate', newVal.toString())
     }
+  })
+
+// Function to start/stop location watching
+function toggleLocationWatch(enabled: boolean): void {
+  if (enabled) {
+    // isWatchingLocation = true
+    locationWatchID = navigator.geolocation.watchPosition(
+      (position) => {
+        const lat = position.coords.latitude
+        const lng = position.coords.longitude
+        const accuracy = position.coords.accuracy
+
+        // Simulate a locationfound event
+        map.fire('locationfound', {
+          latlng: L.latLng(lat, lng),
+          accuracy: accuracy,
+          timestamp: position.timestamp
+        } as L.LocationEvent)
+
+        // Keep the map centered on the user's location when watching
+        map.setView([lat, lng], Math.max(map.getZoom(), 15))
+      },
+      (error) => {
+        console.warn('Location watch error:', error.message)
+        map.fire('locationerror', { message: error.message } as L.ErrorEvent)
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 60000
+      }
+    )
+  } else {
+    // isWatchingLocation = false
+    if (locationWatchID !== null) {
+      navigator.geolocation.clearWatch(locationWatchID)
+      locationWatchID = null
+    }
+  }
+}
+
+// Load saved follow location setting from cookie
+const savedFollowLocation = getCookie('follow-location')
+const followLocationElement = document.getElementById(
+  'follow-location'
+) as HTMLInputElement
+if (followLocationElement) {
+  const defaultFollowLocation = savedFollowLocation === 'true'
+  followLocationElement.checked = defaultFollowLocation
+  if (defaultFollowLocation) {
+    toggleLocationWatch(true)
+  }
+}
+
+// Handle follow location toggle
+document
+  .getElementById('follow-location')!
+  .addEventListener('change', (event: Event) => {
+    const target = event.target as HTMLInputElement
+    toggleLocationWatch(target.checked)
+    setCookie('follow-location', target.checked.toString())
   })
 
 alerts()

@@ -10,15 +10,25 @@
 
 <div id="map" class="noselect"></div>
 <div class="controls-section">
-  <label for="refresh-rate">Refresh rate:</label>
-  <select name="refresh-rate" id="refresh-rate">
-    <option value="5">5 seconds</option>
-    <option value="10">10 seconds</option>
-    <option value="15" selected>15 seconds</option>
-    <option value="30">30 seconds</option>
-    <option value="60">60 seconds</option>
-    <option value="99999">Off</option>
-  </select>
+  <div class="control-group">
+    <label for="refresh-rate">Refresh rate:</label>
+    <select name="refresh-rate" id="refresh-rate">
+      <option value="5">5 seconds</option>
+      <option value="10">10 seconds</option>
+      <option value="15" selected>15 seconds</option>
+      <option value="30">30 seconds</option>
+      <option value="60">60 seconds</option>
+      <option value="99999">Off</option>
+    </select>
+  </div>
+  
+  <div class="control-group">
+    <label for="follow-location">Follow location:</label>
+    <label class="toggle-switch">
+      <input type="checkbox" id="follow-location" name="follow-location" />
+      <span class="slider"></span>
+    </label>
+  </div>
 </div>
 
 <script type="module" src="map.ts"></script>

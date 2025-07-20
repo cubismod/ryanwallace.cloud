@@ -580,3 +580,113 @@ body.dark-theme .info-links {
     margin: 0.25rem auto;
   }
 }
+
+/* Improved controls section layout */
+.controls-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Custom toggle switch for follow location */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--light-border-color, #ccc);
+  transition: 0.4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+  background-color: #4285f4;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+body.dark-theme .slider {
+  background-color: var(--dark-border-color, #555);
+}
+
+body.dark-theme .slider:before {
+  background-color: var(--bkg-color);
+}
+
+/* Responsive controls for mobile */
+@media (max-width: 768px) {
+  .controls-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .control-group {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .controls-section {
+    text-align: left;
+    gap: 0.5rem;
+  }
+  
+  .controls-section label,
+  .controls-section select {
+    display: inline;
+    margin: 0;
+  }
+  
+  .control-group {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .toggle-switch {
+    flex-shrink: 0;
+  }
+}
