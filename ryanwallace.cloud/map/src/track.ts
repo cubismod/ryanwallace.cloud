@@ -1,6 +1,7 @@
 import DataTable from 'datatables.net-dt'
 import DOMPurify from 'dompurify'
 import moment from 'moment-timezone'
+import levenshtein from 'string-comparison'
 
 // Type definitions
 interface MBTAPrediction {
@@ -211,8 +212,8 @@ const STOP_NAMES: Record<string, string> = {
   'place-NEC-1851': 'Ruggles',
   'place-rugg': 'Ruggles',
   'place-bbsta': 'Back Bay',
-  'place-sstat': 'South Stat.',
-  'place-north': 'North Stat.'
+  'place-sstat': 'South Station',
+  'place-north': 'North Station'
 }
 
 // Direction mapping
@@ -255,8 +256,17 @@ function getStopName(stopId: string): string {
 //   return DIRECTION_NAMES[directionId.toString()] || 'Unknown'
 // }
 
+function formatDestination(headsign: string, routeId: string): string {
+  const similarity = levenshtein.levenshtein.similarity(headsign, routeId)
+  console.log(similarity)
+  if (similarity < 0.5) {
+    return `<span class="route-badge">${headsign} via ${routeId}</span>`
+  }
+  return `<span class="route-badge">${headsign}</span>`
+}
+
 function formatConfidence(confidence: number): string {
-  if (confidence >= 0.7) {
+  if (confidence >= 0.6) {
     return `<span class="confidence-high">${Math.round(confidence * 100)}%</span>`
   } else if (confidence >= 0.5) {
     return `<span class="confidence-medium">${Math.round(confidence * 100)}%</span>`
@@ -274,10 +284,6 @@ function formatPlatform(platform: string): string {
 
 function formatRoute(routeId: string): string {
   return `${routeId.replace('CR-', '').trim()} Line`
-}
-
-function formatDestination(destination: string): string {
-  return `<span class="route-badge">${destination}</span>`
 }
 
 function formatTime(date: moment.Moment): string {
@@ -379,7 +385,10 @@ function restructureData(
       const row: PredictionRow = {
         station: getStopName(stopId),
         time: depDate,
-        destination: `${trackPrediction.headsign} via ${formatRoute(routeId)}`,
+        destination: formatDestination(
+          trackPrediction.headsign,
+          formatRoute(routeId)
+        ),
         track: trackPrediction?.track_number || 'TBD',
         confidence: trackPrediction?.confidence_score || 0
       }
@@ -409,7 +418,10 @@ function restructureData(
       const row: PredictionRow = {
         station: getStopName(stopId),
         time: depDate,
-        destination: `${trackPrediction.headsign} via ${formatRoute(routeId)}`,
+        destination: formatDestination(
+          trackPrediction.headsign,
+          formatRoute(routeId)
+        ),
         track: trackPrediction?.track_number || 'TBD',
         confidence: trackPrediction?.confidence_score || 0
       }
@@ -458,7 +470,7 @@ function updateTable(rows: PredictionRow[]): void {
     `<span class="stop-name">${DOMPurify.sanitize(row.station)}</span>`,
     formatTime(row.time),
     formatConfidence(row.confidence),
-    formatDestination(DOMPurify.sanitize(row.destination))
+    DOMPurify.sanitize(row.destination)
   ])
 
   new DataTable('#predictions-table', {
