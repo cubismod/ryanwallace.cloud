@@ -712,12 +712,37 @@ L.easyButton({
       stateName: 'locate',
       title: 'Locate',
       onClick: (_btn, map) => {
-        map.locate({ enableHighAccuracy: true, setView: true })
+        map.locate({ setView: true, watch: true })
       },
       icon: "<span class='odot'>&odot;</span>"
     }
   ]
 }).addTo(map)
+
+// Variable to store the user location circle
+let userLocationCircle: L.Circle | null = null
+
+// Handle successful geolocation
+map.on('locationfound', (e: L.LocationEvent) => {
+  // Remove existing location circle if it exists
+  if (userLocationCircle) {
+    map.removeLayer(userLocationCircle)
+  }
+
+  // Create a circle representing the user's location with accuracy radius
+  userLocationCircle = L.circle(e.latlng, {
+    radius: e.accuracy,
+    color: '#4285f4',
+    fillColor: '#4285f4',
+    fillOpacity: 0.2,
+    weight: 2
+  }).addTo(map)
+})
+
+// Handle geolocation errors
+map.on('locationerror', (e: L.ErrorEvent) => {
+  console.warn('Location access denied or unavailable:', e.message)
+})
 
 const overlayMaps = {
   '🟥 Red Line': layerGroups.red,
