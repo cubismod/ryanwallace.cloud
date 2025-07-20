@@ -12,6 +12,24 @@ import DataTable from 'datatables.net-dt'
 import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
 import { formatDistance } from 'date-fns'
 
+// Cookie utility functions
+function setCookie(name: string, value: string, days: number = 365): void {
+  const expires = new Date()
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`
+}
+
+function getCookie(name: string): string | null {
+  const nameEQ = name + '='
+  const ca = document.cookie.split(';')
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i]
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+  }
+  return null
+}
+
 // Type definitions
 interface VehicleFeature {
   id?: string | number
@@ -656,7 +674,22 @@ function annotate_map(): void {
 }
 
 annotate_map()
-let intervalID: number = window.setInterval(annotate_map, 15000)
+
+// Load saved refresh rate from cookie or default to 15 seconds
+const savedRefreshRate = getCookie('refresh-rate')
+const defaultRefreshRate = savedRefreshRate ? parseInt(savedRefreshRate) : 15
+let intervalID: number = window.setInterval(
+  annotate_map,
+  defaultRefreshRate * 1000
+)
+
+// Set the refresh rate input to the saved value
+const refreshRateElement = document.getElementById(
+  'refresh-rate'
+) as HTMLInputElement
+if (refreshRateElement) {
+  refreshRateElement.value = defaultRefreshRate.toString()
+}
 
 L.easyButton({
   position: 'topright',
@@ -701,8 +734,32 @@ const overlayMaps = {
   '🟣 Commuter Rail Routes': shapesLayerGroups.commuter
 }
 
-Object.values(layerGroups).forEach((group) => group.addTo(map))
-Object.values(shapesLayerGroups).forEach((group) => group.addTo(map))
+// Load saved layer visibility settings from cookies
+const savedLayerStates = getCookie('layer-visibility')
+let layerStates: Record<string, boolean> = {}
+
+if (savedLayerStates) {
+  try {
+    layerStates = JSON.parse(savedLayerStates)
+  } catch (e) {
+    console.warn('Failed to parse saved layer states, using defaults')
+  }
+}
+
+// Apply layer visibility based on saved states or defaults (all visible)
+Object.entries(layerGroups).forEach(([key, group]) => {
+  const vehicleLayerKey = `vehicles-${key}`
+  if (layerStates[vehicleLayerKey] !== false) {
+    group.addTo(map)
+  }
+})
+
+Object.entries(shapesLayerGroups).forEach(([key, group]) => {
+  const routeLayerKey = `routes-${key}`
+  if (layerStates[routeLayerKey] !== false) {
+    group.addTo(map)
+  }
+})
 
 L.control
   .layers({}, overlayMaps, {
@@ -710,6 +767,34 @@ L.control
     collapsed: true
   })
   .addTo(map)
+
+// Save layer visibility when layers are toggled
+map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
+  const layerName = (e as any).name
+  const isVisible = e.type === 'overlayadd'
+
+  // Map display names to internal keys
+  const layerKeyMap: Record<string, string> = {
+    '🟥 Red Line': 'vehicles-red',
+    '🟦 Blue Line': 'vehicles-blue',
+    '🟩 Green Line': 'vehicles-green',
+    '🟧 Orange Line': 'vehicles-orange',
+    '🚍 Silver Line': 'vehicles-silver',
+    '🟪 Commuter Rail': 'vehicles-commuter',
+    '🔴 Red Line Routes': 'routes-red',
+    '🔵 Blue Line Routes': 'routes-blue',
+    '🟢 Green Line Routes': 'routes-green',
+    '🟠 Orange Line Routes': 'routes-orange',
+    '🚏 Silver Line Routes': 'routes-silver',
+    '🟣 Commuter Rail Routes': 'routes-commuter'
+  }
+
+  const layerKey = layerKeyMap[layerName]
+  if (layerKey) {
+    layerStates[layerKey] = isVisible
+    setCookie('layer-visibility', JSON.stringify(layerStates))
+  }
+})
 
 document
   .getElementById('refresh-rate')!
@@ -719,6 +804,7 @@ document
     const newVal = parseInt(target.value)
     if (newVal) {
       intervalID = window.setInterval(annotate_map, newVal * 1000)
+      setCookie('refresh-rate', newVal.toString())
     }
   })
 
