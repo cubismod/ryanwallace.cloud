@@ -12,9 +12,27 @@ import DataTable from 'datatables.net-dt'
 import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
 import { formatDistance } from 'date-fns'
 
+// Cookie utility functions
+function setCookie(name: string, value: string, days: number = 365): void {
+  const expires = new Date()
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`
+}
+
+function getCookie(name: string): string | null {
+  const nameEQ = name + '='
+  const ca = document.cookie.split(';')
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i]
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+  }
+  return null
+}
+
 // Type definitions
 interface VehicleFeature {
-  id: string | number
+  id?: string | number
   geometry: {
     type: 'Point' | 'LineString'
     coordinates: number[]
@@ -103,6 +121,24 @@ new MaptilerLayer({
 }).addTo(map)
 
 let geoJsonLayer: L.GeoJSON | null = null
+
+const layerGroups = {
+  red: L.layerGroup(),
+  blue: L.layerGroup(),
+  green: L.layerGroup(),
+  orange: L.layerGroup(),
+  silver: L.layerGroup(),
+  commuter: L.layerGroup()
+}
+
+const shapesLayerGroups = {
+  red: L.layerGroup(),
+  blue: L.layerGroup(),
+  green: L.layerGroup(),
+  orange: L.layerGroup(),
+  silver: L.layerGroup(),
+  commuter: L.layerGroup()
+}
 
 function return_colors(route: string): string {
   if (route.startsWith('Green')) {
@@ -215,6 +251,58 @@ function updateTable(): void {
       DOMPurify.sanitize(String(calculateTotal('all')))
     )
   }
+}
+
+function getLayerGroupForRoute(route: string): L.LayerGroup {
+  if (route.startsWith('Red') || route.startsWith('Mattapan')) {
+    return layerGroups.red
+  }
+  if (route.startsWith('Blue')) {
+    return layerGroups.blue
+  }
+  if (route.startsWith('Green')) {
+    return layerGroups.green
+  }
+  if (route.startsWith('Orange')) {
+    return layerGroups.orange
+  }
+  if (
+    route.startsWith('SL') ||
+    route.startsWith('74') ||
+    route.startsWith('75')
+  ) {
+    return layerGroups.silver
+  }
+  if (route.startsWith('CR')) {
+    return layerGroups.commuter
+  }
+  return layerGroups.commuter
+}
+
+function getShapesLayerGroupForRoute(route: string): L.LayerGroup {
+  if (route.startsWith('Red') || route.startsWith('Mattapan')) {
+    return shapesLayerGroups.red
+  }
+  if (route.startsWith('Blue')) {
+    return shapesLayerGroups.blue
+  }
+  if (route.startsWith('Green')) {
+    return shapesLayerGroups.green
+  }
+  if (route.startsWith('Orange')) {
+    return shapesLayerGroups.orange
+  }
+  if (
+    route.startsWith('SL') ||
+    route.startsWith('74') ||
+    route.startsWith('75')
+  ) {
+    return shapesLayerGroups.silver
+  }
+  if (route.startsWith('CR')) {
+    return shapesLayerGroups.commuter
+  }
+  return shapesLayerGroups.commuter
 }
 
 function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
@@ -503,20 +591,49 @@ function alerts(): void {
 
 function annotate_map(): void {
   clearMap()
+
+  Object.values(layerGroups).forEach((group) => {
+    group.clearLayers()
+  })
+
   $.getJSON(vehicles_url, function (data: any) {
     if (geoJsonLayer) {
       map.removeLayer(geoJsonLayer)
     }
-    geoJsonLayer = L.geoJSON(data, {
+
+    L.geoJSON(data, {
+      pointToLayer: (feature: VehicleFeature, latlng: L.LatLng) => {
+        const marker = pointToLayer(feature, latlng)
+        if (feature.properties.route) {
+          const layerGroup = getLayerGroupForRoute(feature.properties.route)
+          layerGroup.addLayer(marker)
+        }
+        return marker
+      },
+      onEachFeature: onEachFeature as any,
+      filter: (feature) => {
+        return feature.properties['marker-symbol'] !== 'building'
+      }
+    })
+
+    L.geoJSON(data, {
       pointToLayer: pointToLayer as any,
-      onEachFeature: onEachFeature as any
+      onEachFeature: onEachFeature as any,
+      filter: (feature) => {
+        return feature.properties['marker-symbol'] === 'building'
+      }
     }).addTo(map)
+
     console.log('Map loaded')
     window.setTimeout(() => {
       updateTable()
     }, 100)
   })
   if (!baseLayerLoaded) {
+    Object.values(shapesLayerGroups).forEach((group) => {
+      group.clearLayers()
+    })
+
     $.getJSON(`${vehicles_url}/shapes`, function (data) {
       L.geoJSON(data, {
         style: (feature) => {
@@ -541,16 +658,38 @@ function annotate_map(): void {
           }
           return {}
         },
-        pointToLayer: pointToLayer as any,
-        onEachFeature: onEachFeature as any
-      }).addTo(map)
+        onEachFeature: (feature, layer) => {
+          if (feature.properties.route) {
+            const shapesGroup = getShapesLayerGroupForRoute(
+              feature.properties.route
+            )
+            shapesGroup.addLayer(layer)
+          }
+          onEachFeature(feature as VehicleFeature, layer)
+        }
+      })
     })
     baseLayerLoaded = true
   }
 }
 
 annotate_map()
-let intervalID: number = window.setInterval(annotate_map, 15000)
+
+// Load saved refresh rate from cookie or default to 15 seconds
+const savedRefreshRate = getCookie('refresh-rate')
+const defaultRefreshRate = savedRefreshRate ? parseInt(savedRefreshRate) : 15
+let intervalID: number = window.setInterval(
+  annotate_map,
+  defaultRefreshRate * 1000
+)
+
+// Set the refresh rate input to the saved value
+const refreshRateElement = document.getElementById(
+  'refresh-rate'
+) as HTMLInputElement
+if (refreshRateElement) {
+  refreshRateElement.value = defaultRefreshRate.toString()
+}
 
 L.easyButton({
   position: 'topright',
@@ -580,6 +719,83 @@ L.easyButton({
   ]
 }).addTo(map)
 
+const overlayMaps = {
+  '🟥 Red Line': layerGroups.red,
+  '🟦 Blue Line': layerGroups.blue,
+  '🟩 Green Line': layerGroups.green,
+  '🟧 Orange Line': layerGroups.orange,
+  '🚍 Silver Line': layerGroups.silver,
+  '🟪 Commuter Rail': layerGroups.commuter,
+  '🔴 Red Line Routes': shapesLayerGroups.red,
+  '🔵 Blue Line Routes': shapesLayerGroups.blue,
+  '🟢 Green Line Routes': shapesLayerGroups.green,
+  '🟠 Orange Line Routes': shapesLayerGroups.orange,
+  '🚏 Silver Line Routes': shapesLayerGroups.silver,
+  '🟣 Commuter Rail Routes': shapesLayerGroups.commuter
+}
+
+// Load saved layer visibility settings from cookies
+const savedLayerStates = getCookie('layer-visibility')
+let layerStates: Record<string, boolean> = {}
+
+if (savedLayerStates) {
+  try {
+    layerStates = JSON.parse(savedLayerStates)
+  } catch (e) {
+    console.warn('Failed to parse saved layer states, using defaults')
+  }
+}
+
+// Apply layer visibility based on saved states or defaults (all visible)
+Object.entries(layerGroups).forEach(([key, group]) => {
+  const vehicleLayerKey = `vehicles-${key}`
+  if (layerStates[vehicleLayerKey] !== false) {
+    group.addTo(map)
+  }
+})
+
+Object.entries(shapesLayerGroups).forEach(([key, group]) => {
+  const routeLayerKey = `routes-${key}`
+  if (layerStates[routeLayerKey] !== false) {
+    group.addTo(map)
+  }
+})
+
+L.control
+  .layers({}, overlayMaps, {
+    position: 'topright',
+    collapsed: true
+  })
+  .addTo(map)
+
+// Save layer visibility when layers are toggled
+map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
+  const layerName = (e as any).name
+  const isVisible = e.type === 'overlayadd'
+
+  // Map display names to internal keys
+  const layerKeyMap: Record<string, string> = {
+    '🟥 Red Line': 'vehicles-red',
+    '🟦 Blue Line': 'vehicles-blue',
+    '🟩 Green Line': 'vehicles-green',
+    '🟧 Orange Line': 'vehicles-orange',
+    '🚍 Silver Line': 'vehicles-silver',
+    '🟪 Commuter Rail': 'vehicles-commuter',
+    '🔴 Red Line Routes': 'routes-red',
+    '🔵 Blue Line Routes': 'routes-blue',
+    '🟢 Green Line Routes': 'routes-green',
+    '🟠 Orange Line Routes': 'routes-orange',
+    '🚏 Silver Line Routes': 'routes-silver',
+    '🟣 Commuter Rail Routes': 'routes-commuter'
+  }
+
+  const layerKey = layerKeyMap[layerName]
+  if (layerKey) {
+    layerStates[layerKey] = isVisible
+    setCookie('layer-visibility', JSON.stringify(layerStates))
+  }
+})
+
 document
   .getElementById('refresh-rate')!
   .addEventListener('change', (event: Event) => {
@@ -588,6 +804,7 @@ document
     const newVal = parseInt(target.value)
     if (newVal) {
       intervalID = window.setInterval(annotate_map, newVal * 1000)
+      setCookie('refresh-rate', newVal.toString())
     }
   })
 
