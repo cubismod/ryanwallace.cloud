@@ -14,7 +14,7 @@ import { formatDistance } from 'date-fns'
 
 // Type definitions
 interface VehicleFeature {
-  id: string | number
+  id?: string | number
   geometry: {
     type: 'Point' | 'LineString'
     coordinates: number[]
@@ -647,7 +647,7 @@ function annotate_map(): void {
             )
             shapesGroup.addLayer(layer)
           }
-          onEachFeature(feature, layer)
+          onEachFeature(feature as VehicleFeature, layer)
         }
       })
     })
