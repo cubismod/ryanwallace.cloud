@@ -354,6 +354,14 @@ body.dark-theme #predictions-table {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+.leaflet-control-zoom-fullscreen {
+  background-image: url("/images/icons/fullscreen.svg") !important;
+}
+
+.leaflet-control-layers-toggle {
+  background-image: url("/images/icons/layers.svg") !important;
+}
+
 #predictions-table th,
 #predictions-table td {
   text-align: center;

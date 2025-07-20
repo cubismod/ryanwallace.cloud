@@ -104,6 +104,24 @@ new MaptilerLayer({
 
 let geoJsonLayer: L.GeoJSON | null = null
 
+const layerGroups = {
+  red: L.layerGroup(),
+  blue: L.layerGroup(),
+  green: L.layerGroup(),
+  orange: L.layerGroup(),
+  silver: L.layerGroup(),
+  commuter: L.layerGroup()
+}
+
+const shapesLayerGroups = {
+  red: L.layerGroup(),
+  blue: L.layerGroup(),
+  green: L.layerGroup(),
+  orange: L.layerGroup(),
+  silver: L.layerGroup(),
+  commuter: L.layerGroup()
+}
+
 function return_colors(route: string): string {
   if (route.startsWith('Green')) {
     return '#008150'
@@ -215,6 +233,58 @@ function updateTable(): void {
       DOMPurify.sanitize(String(calculateTotal('all')))
     )
   }
+}
+
+function getLayerGroupForRoute(route: string): L.LayerGroup {
+  if (route.startsWith('Red') || route.startsWith('Mattapan')) {
+    return layerGroups.red
+  }
+  if (route.startsWith('Blue')) {
+    return layerGroups.blue
+  }
+  if (route.startsWith('Green')) {
+    return layerGroups.green
+  }
+  if (route.startsWith('Orange')) {
+    return layerGroups.orange
+  }
+  if (
+    route.startsWith('SL') ||
+    route.startsWith('74') ||
+    route.startsWith('75')
+  ) {
+    return layerGroups.silver
+  }
+  if (route.startsWith('CR')) {
+    return layerGroups.commuter
+  }
+  return layerGroups.commuter
+}
+
+function getShapesLayerGroupForRoute(route: string): L.LayerGroup {
+  if (route.startsWith('Red') || route.startsWith('Mattapan')) {
+    return shapesLayerGroups.red
+  }
+  if (route.startsWith('Blue')) {
+    return shapesLayerGroups.blue
+  }
+  if (route.startsWith('Green')) {
+    return shapesLayerGroups.green
+  }
+  if (route.startsWith('Orange')) {
+    return shapesLayerGroups.orange
+  }
+  if (
+    route.startsWith('SL') ||
+    route.startsWith('74') ||
+    route.startsWith('75')
+  ) {
+    return shapesLayerGroups.silver
+  }
+  if (route.startsWith('CR')) {
+    return shapesLayerGroups.commuter
+  }
+  return shapesLayerGroups.commuter
 }
 
 function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
@@ -503,20 +573,49 @@ function alerts(): void {
 
 function annotate_map(): void {
   clearMap()
+
+  Object.values(layerGroups).forEach((group) => {
+    group.clearLayers()
+  })
+
   $.getJSON(vehicles_url, function (data: any) {
     if (geoJsonLayer) {
       map.removeLayer(geoJsonLayer)
     }
-    geoJsonLayer = L.geoJSON(data, {
+
+    L.geoJSON(data, {
+      pointToLayer: (feature: VehicleFeature, latlng: L.LatLng) => {
+        const marker = pointToLayer(feature, latlng)
+        if (feature.properties.route) {
+          const layerGroup = getLayerGroupForRoute(feature.properties.route)
+          layerGroup.addLayer(marker)
+        }
+        return marker
+      },
+      onEachFeature: onEachFeature as any,
+      filter: (feature) => {
+        return feature.properties['marker-symbol'] !== 'building'
+      }
+    })
+
+    L.geoJSON(data, {
       pointToLayer: pointToLayer as any,
-      onEachFeature: onEachFeature as any
+      onEachFeature: onEachFeature as any,
+      filter: (feature) => {
+        return feature.properties['marker-symbol'] === 'building'
+      }
     }).addTo(map)
+
     console.log('Map loaded')
     window.setTimeout(() => {
       updateTable()
     }, 100)
   })
   if (!baseLayerLoaded) {
+    Object.values(shapesLayerGroups).forEach((group) => {
+      group.clearLayers()
+    })
+
     $.getJSON(`${vehicles_url}/shapes`, function (data) {
       L.geoJSON(data, {
         style: (feature) => {
@@ -541,9 +640,16 @@ function annotate_map(): void {
           }
           return {}
         },
-        pointToLayer: pointToLayer as any,
-        onEachFeature: onEachFeature as any
-      }).addTo(map)
+        onEachFeature: (feature, layer) => {
+          if (feature.properties.route) {
+            const shapesGroup = getShapesLayerGroupForRoute(
+              feature.properties.route
+            )
+            shapesGroup.addLayer(layer)
+          }
+          onEachFeature(feature, layer)
+        }
+      })
     })
     baseLayerLoaded = true
   }
@@ -579,6 +685,31 @@ L.easyButton({
     }
   ]
 }).addTo(map)
+
+const overlayMaps = {
+  '🟥 Red Line': layerGroups.red,
+  '🟦 Blue Line': layerGroups.blue,
+  '🟩 Green Line': layerGroups.green,
+  '🟧 Orange Line': layerGroups.orange,
+  '🚍 Silver Line': layerGroups.silver,
+  '🟪 Commuter Rail': layerGroups.commuter,
+  '🔴 Red Line Routes': shapesLayerGroups.red,
+  '🔵 Blue Line Routes': shapesLayerGroups.blue,
+  '🟢 Green Line Routes': shapesLayerGroups.green,
+  '🟠 Orange Line Routes': shapesLayerGroups.orange,
+  '🚏 Silver Line Routes': shapesLayerGroups.silver,
+  '🟣 Commuter Rail Routes': shapesLayerGroups.commuter
+}
+
+Object.values(layerGroups).forEach((group) => group.addTo(map))
+Object.values(shapesLayerGroups).forEach((group) => group.addTo(map))
+
+L.control
+  .layers({}, overlayMaps, {
+    position: 'topright',
+    collapsed: true
+  })
+  .addTo(map)
 
 document
   .getElementById('refresh-rate')!
