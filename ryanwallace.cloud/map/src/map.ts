@@ -102,7 +102,7 @@ var map = L.map('map', {
   }
 }).setView([42.36565, -71.05236], 13)
 
-const lines: string[] = ['rl', 'gl', 'bl', 'ol', 'sl', 'cr']
+const lines: string[] = ['rl', 'gl', 'bl', 'ol', 'sl', 'cr', 'amtrak']
 const vehicleTypes: string[] = ['light', 'heavy', 'regional', 'bus']
 const vehicleCountMap: Map<
   string,
@@ -110,6 +110,7 @@ const vehicleCountMap: Map<
 > = createVehicleCountMap()
 const vehicles_url: string =
   process.env.VEHICLES_URL || 'https://vehicles.ryanwallace.cloud'
+const bos_url: string = 'https://bos.ryanwallace.cloud'
 
 let baseLayerLoaded: boolean = false
 
@@ -128,7 +129,8 @@ const layerGroups = {
   green: L.layerGroup(),
   orange: L.layerGroup(),
   silver: L.layerGroup(),
-  commuter: L.layerGroup()
+  commuter: L.layerGroup(),
+  amtrak: L.layerGroup()
 }
 
 const shapesLayerGroups = {
@@ -276,6 +278,13 @@ function getLayerGroupForRoute(route: string): L.LayerGroup {
   if (route.startsWith('CR')) {
     return layerGroups.commuter
   }
+  if (
+    route === 'Amtrak' ||
+    route.startsWith('Acela') ||
+    route.includes('Northeast Regional')
+  ) {
+    return layerGroups.amtrak
+  }
   return layerGroups.commuter
 }
 
@@ -355,6 +364,15 @@ function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
     if (feature.properties['marker-color'] === '#7B388C') {
       icon = 'rail'
       incrementMapItem('cr', 'regional')
+    }
+    if (
+      feature.properties.route &&
+      (feature.properties.route === 'Amtrak' ||
+        feature.properties.route.startsWith('Acela') ||
+        feature.properties.route.includes('Northeast Regional'))
+    ) {
+      icon = 'rail-amtrak'
+      incrementMapItem('amtrak', 'regional')
     }
     if (feature.properties.route && feature.properties.route.startsWith('SL')) {
       incrementMapItem('sl', 'bus')
@@ -629,6 +647,9 @@ function annotate_map(): void {
       updateTable()
     }, 100)
   })
+
+  // Fetch Amtrak data from BOS API
+  fetchAmtrakData()
   if (!baseLayerLoaded) {
     Object.values(shapesLayerGroups).forEach((group) => {
       group.clearLayers()
@@ -770,6 +791,7 @@ const overlayMaps = {
   '🟧 Orange Line': layerGroups.orange,
   '🚍 Silver Line': layerGroups.silver,
   '🟪 Commuter Rail': layerGroups.commuter,
+  '🚄 Amtrak': layerGroups.amtrak,
   '🔴 Red Line Routes': shapesLayerGroups.red,
   '🔵 Blue Line Routes': shapesLayerGroups.blue,
   '🟢 Green Line Routes': shapesLayerGroups.green,
@@ -790,11 +812,19 @@ if (savedLayerStates) {
   }
 }
 
-// Apply layer visibility based on saved states or defaults (all visible)
+// Apply layer visibility based on saved states or defaults (all visible except Amtrak)
 Object.entries(layerGroups).forEach(([key, group]) => {
   const vehicleLayerKey = `vehicles-${key}`
-  if (layerStates[vehicleLayerKey] !== false) {
-    group.addTo(map)
+  if (key === 'amtrak') {
+    // Amtrak layer is off by default
+    if (layerStates[vehicleLayerKey] === true) {
+      group.addTo(map)
+    }
+  } else {
+    // All other layers are on by default
+    if (layerStates[vehicleLayerKey] !== false) {
+      group.addTo(map)
+    }
   }
 })
 
@@ -825,6 +855,7 @@ map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
     '🟧 Orange Line': 'vehicles-orange',
     '🚍 Silver Line': 'vehicles-silver',
     '🟪 Commuter Rail': 'vehicles-commuter',
+    '🚄 Amtrak': 'vehicles-amtrak',
     '🔴 Red Line Routes': 'routes-red',
     '🔵 Blue Line Routes': 'routes-blue',
     '🟢 Green Line Routes': 'routes-green',
@@ -912,5 +943,42 @@ document
     toggleLocationWatch(target.checked)
     setCookie('follow-location', target.checked.toString())
   })
+
+function fetchAmtrakData(): void {
+  $.getJSON(`${bos_url}/trains/geojson`, function (data: any) {
+    if (data && data.features) {
+      L.geoJSON(data, {
+        pointToLayer: (feature: any, latlng: L.LatLng) => {
+          const transformedFeature: VehicleFeature = {
+            id: feature.id,
+            geometry: feature.geometry,
+            properties: {
+              route: 'Amtrak',
+              'marker-color': '#004080',
+              'marker-symbol': 'rail',
+              status: feature.properties.status || 'IN_TRANSIT_TO',
+              headsign:
+                feature.properties.headsign ||
+                feature.properties.route ||
+                'Amtrak',
+              speed: feature.properties.speed || 0,
+              update_time:
+                (feature.properties as any).timestamp ||
+                new Date().toISOString()
+            }
+          }
+
+          const marker = pointToLayer(transformedFeature, latlng)
+          layerGroups.amtrak.addLayer(marker)
+          return marker
+        },
+        onEachFeature: onEachFeature as any,
+        filter: (feature) => {
+          return feature.geometry.type === 'Point'
+        }
+      })
+    }
+  })
+}
 
 alerts()
