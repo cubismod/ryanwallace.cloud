@@ -281,7 +281,8 @@ function getLayerGroupForRoute(route: string): L.LayerGroup {
   if (
     route === 'Amtrak' ||
     route.startsWith('Acela') ||
-    route.includes('Northeast Regional')
+    route.includes('Northeast Regional') ||
+    route.includes('Downeaster')
   ) {
     return layerGroups.amtrak
   }
