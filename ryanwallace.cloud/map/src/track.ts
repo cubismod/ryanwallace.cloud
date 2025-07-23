@@ -196,13 +196,7 @@ document
   ?.scrollIntoView({ behavior: 'smooth' })
 
 // Constants
-const STOP_IDS = [
-  'place-NEC-1851',
-  'place-rugg',
-  'place-bbsta',
-  'place-sstat',
-  'place-north'
-]
+const STOP_IDS = ['place-NEC-1851', 'place-bbsta', 'place-sstat', 'place-north']
 const MBTA_API_BASE = process.env.MBTA_API_BASE || 'https://api-v3.mbta.com'
 const TRACK_PREDICTION_API =
   process.env.TRACK_PREDICTION_API || 'https://imt.ryanwallace.cloud'
