@@ -92,10 +92,14 @@ declare const $: {
   getJSON: (url: string, callback: (data: any) => void) => void
 }
 
+const markerIdInfo: Map<string, { route: string; vehicleType: string }> =
+  new Map()
+
 var map = L.map('map', {
   doubleTouchDragZoom: true,
   // @ts-expect-error - fullscreenControl is not a valid option
   fullscreenControl: true,
+  preferCanvas: true,
   fullscreenControlOptions: {
     position: 'topleft',
     title: 'Fullscreen'
@@ -121,7 +125,8 @@ new MaptilerLayer({
   style: 'streets-v2'
 }).addTo(map)
 
-let geoJsonLayer: L.GeoJSON | null = null
+let currentMarkers: Map<string | number, L.Marker> = new Map()
+let buildingMarkers: L.GeoJSON | null = null
 
 const layerGroups = {
   red: L.layerGroup(),
@@ -176,20 +181,40 @@ function createVehicleCountMap(): Map<string, Map<string, number>> {
   return vehicleCountMap
 }
 
-function clearMap(): void {
-  for (const line of lines) {
-    for (const vehicleType of vehicleTypes) {
-      vehicleCountMap.get(line)?.set(vehicleType, 0)
+// function clearMap(): void {
+//   for (const line of lines) {
+//     for (const vehicleType of vehicleTypes) {
+//       vehicleCountMap.get(line)?.set(vehicleType, 0)
+//     }
+//   }
+// }
+
+function incrementMapItem(
+  id: string,
+  route: string,
+  vehicleType: string
+): void {
+  // we only want to increment the count if the marker is not already in the map
+  const existingInfo = markerIdInfo.get(id)
+  if (!existingInfo) {
+    markerIdInfo.set(id, { route, vehicleType: vehicleType })
+    const existingCount = vehicleCountMap.get(route)?.get(vehicleType)
+    if (existingCount !== undefined) {
+      vehicleCountMap.get(route)!.set(vehicleType, existingCount + 1)
+    } else {
+      vehicleCountMap.get(route)?.set(vehicleType, 1)
     }
   }
 }
 
-function incrementMapItem(route: string, vehicleType: string): void {
+function decrementMapItem(id: string): void {
+  const { route, vehicleType } = markerIdInfo.get(id) || {
+    route: '',
+    vehicleType: ''
+  }
   const existing = vehicleCountMap.get(route)?.get(vehicleType)
   if (existing !== undefined) {
-    vehicleCountMap.get(route)!.set(vehicleType, existing + 1)
-  } else {
-    vehicleCountMap.get(route)?.set(vehicleType, 1)
+    vehicleCountMap.get(route)!.set(vehicleType, existing - 1)
   }
 }
 
@@ -344,27 +369,27 @@ function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
     }
     if (feature.properties['marker-color'] === '#008150') {
       icon = 'rail-light'
-      incrementMapItem('gl', 'light')
+      incrementMapItem(feature.id as string, 'gl', 'light')
     }
     if (feature.properties['marker-color'] === '#2F5DA6') {
       icon = 'rail-metro-blue'
-      incrementMapItem('bl', 'heavy')
+      incrementMapItem(feature.id as string, 'bl', 'heavy')
     }
     if (feature.properties['marker-color'] === '#FA2D27') {
       icon = 'rail-metro-red'
       if (feature.properties['route'] === 'Mattapan') {
-        incrementMapItem('rl', 'light')
+        incrementMapItem(feature.id as string, 'rl', 'light')
       } else {
-        incrementMapItem('rl', 'heavy')
+        incrementMapItem(feature.id as string, 'rl', 'heavy')
       }
     }
     if (feature.properties['marker-color'] === '#FD8A03') {
       icon = 'rail-metro-orange'
-      incrementMapItem('ol', 'heavy')
+      incrementMapItem(feature.id as string, 'ol', 'heavy')
     }
     if (feature.properties['marker-color'] === '#7B388C') {
       icon = 'rail'
-      incrementMapItem('cr', 'regional')
+      incrementMapItem(feature.id as string, 'cr', 'regional')
     }
     if (
       feature.properties.route &&
@@ -373,10 +398,10 @@ function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
         feature.properties.route.includes('Northeast Regional'))
     ) {
       icon = 'rail-amtrak'
-      incrementMapItem('amtrak', 'regional')
+      incrementMapItem(feature.id as string, 'amtrak', 'regional')
     }
     if (feature.properties.route && feature.properties.route.startsWith('SL')) {
-      incrementMapItem('sl', 'bus')
+      incrementMapItem(feature.id as string, 'sl', 'bus')
       icon = 'bus-silver'
       opacity = 0.9
     }
@@ -397,7 +422,7 @@ function pointToLayer(feature: VehicleFeature, latlng: L.LatLng): L.Marker {
 
   return L.marker(latlng, {
     icon: leafletIcon,
-    title: `${feature.id} ${status} ${station}`,
+    title: `${feature.id} ${feature.properties.route} ${status} ${station}`,
     opacity: opacity,
     zIndexOffset: zIndex,
     riseOnHover: true,
@@ -608,40 +633,165 @@ function alerts(): void {
   })
 }
 
-function annotate_map(): void {
-  clearMap()
+function updateMarkers(features: VehicleFeature[]): void {
+  const newMarkerIds = new Set<string | number>()
 
-  Object.values(layerGroups).forEach((group) => {
-    group.clearLayers()
-  })
+  // Process vehicle features (non-building markers)
+  const vehicleFeatures = features.filter(
+    (f) => f.properties['marker-symbol'] !== 'building'
+  )
 
-  $.getJSON(vehicles_url, function (data: any) {
-    if (geoJsonLayer) {
-      map.removeLayer(geoJsonLayer)
+  for (const feature of vehicleFeatures) {
+    const markerId =
+      feature.id ||
+      `${feature.geometry.coordinates[0]}-${feature.geometry.coordinates[1]}`
+    newMarkerIds.add(markerId)
+
+    const latlng = L.latLng(
+      feature.geometry.coordinates[1],
+      feature.geometry.coordinates[0]
+    )
+    const existingMarker = currentMarkers.get(markerId)
+
+    if (existingMarker) {
+      // Update existing marker position and properties
+      existingMarker.setLatLng(latlng)
+
+      // Update popup content
+      const update_time = new Date(
+        feature.properties['update_time'] || Date.now()
+      )
+      let speed = ''
+      if (
+        feature.properties['speed'] &&
+        feature.properties['status'] != 'STOPPED_AT'
+      ) {
+        speed = `<br />Speed: ${feature.properties.speed} mph`
+      }
+      if (feature.properties['approximate_speed']) {
+        speed += '* <small>approximate</small>'
+      }
+      let occupancy = ''
+      if (feature.properties['occupancy_status']) {
+        occupancy = `<br />Occupancy: ${feature.properties['occupancy_status']}`
+      }
+      let eta = ''
+      if (feature.properties['stop_eta']) {
+        eta = `<br />ETA: ${feature.properties['stop_eta']}`
+      }
+      let platform_prediction = ''
+      if (
+        !feature.properties.stop?.toLowerCase().includes('track') &&
+        feature.properties['platform_prediction']
+      ) {
+        platform_prediction = `<br />Platform Prediction: ${feature.properties['platform_prediction']}`
+      }
+
+      const popupContent = `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
+        <br />Stop: ${feature.properties.stop || ''}
+        <br />Status: ${niceStatus(feature.properties.status || '')}
+        ${eta}${speed}${occupancy}${platform_prediction}
+        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`
+
+      existingMarker.setPopupContent(popupContent)
+
+      // Update icon if needed
+      const newIcon = createIconForFeature(feature)
+      if (newIcon) {
+        existingMarker.setIcon(newIcon)
+      }
+    } else {
+      // Create new marker
+      const marker = pointToLayer(feature, latlng)
+      currentMarkers.set(markerId, marker)
+
+      if (feature.properties.route) {
+        const layerGroup = getLayerGroupForRoute(feature.properties.route)
+        layerGroup.addLayer(marker)
+      }
+
+      onEachFeature(feature, marker)
     }
+  }
 
-    L.geoJSON(data, {
-      pointToLayer: (feature: VehicleFeature, latlng: L.LatLng) => {
-        const marker = pointToLayer(feature, latlng)
-        if (feature.properties.route) {
-          const layerGroup = getLayerGroupForRoute(feature.properties.route)
-          layerGroup.addLayer(marker)
+  // Remove markers that are no longer in the data
+  for (const [markerId, marker] of currentMarkers.entries()) {
+    if (!newMarkerIds.has(markerId)) {
+      // Remove from all layer groups
+      Object.values(layerGroups).forEach((group) => {
+        if (group.hasLayer(marker)) {
+          group.removeLayer(marker)
         }
-        return marker
-      },
-      onEachFeature: onEachFeature as any,
-      filter: (feature) => {
-        return feature.properties['marker-symbol'] !== 'building'
-      }
-    })
+      })
+      currentMarkers.delete(markerId)
+      decrementMapItem(markerId as string)
+    }
+  }
+}
 
-    L.geoJSON(data, {
-      pointToLayer: pointToLayer as any,
-      onEachFeature: onEachFeature as any,
-      filter: (feature) => {
-        return feature.properties['marker-symbol'] === 'building'
-      }
-    }).addTo(map)
+function createIconForFeature(feature: VehicleFeature): L.Icon | null {
+  let icon_size = 28
+  let icon = 'bus-yellow.svg'
+  let stopOrGo = ''
+
+  if (feature.properties['marker-symbol'] === 'building') {
+    return null // Buildings handled separately
+  }
+
+  if (feature.properties['marker-symbol'] === 'bus') {
+    icon_size = 25
+  }
+  if (feature.properties['marker-size'] === 'small') {
+    icon_size = 27
+  }
+  if (feature.properties['marker-color'] === '#008150') {
+    icon = 'rail-light'
+  }
+  if (feature.properties['marker-color'] === '#2F5DA6') {
+    icon = 'rail-metro-blue'
+  }
+  if (feature.properties['marker-color'] === '#FA2D27') {
+    icon = 'rail-metro-red'
+  }
+  if (feature.properties['marker-color'] === '#FD8A03') {
+    icon = 'rail-metro-orange'
+  }
+  if (feature.properties['marker-color'] === '#7B388C') {
+    icon = 'rail'
+  }
+  if (
+    feature.properties.route &&
+    (feature.properties.route === 'Amtrak' ||
+      feature.properties.route.startsWith('Acela') ||
+      feature.properties.route.includes('Northeast Regional'))
+  ) {
+    icon = 'rail-amtrak'
+  }
+  if (feature.properties.route && feature.properties.route.startsWith('SL')) {
+    icon = 'bus-silver'
+  }
+
+  return L.icon({
+    iconUrl: `/images/icons/${icon}${stopOrGo}.svg`,
+    iconSize: L.point(icon_size, icon_size)
+  })
+}
+
+function annotate_map(): void {
+  $.getJSON(vehicles_url, function (data: any) {
+    // Update vehicle markers efficiently
+    updateMarkers(data.features || [])
+
+    // Handle building markers (static, so only create once if needed)
+    if (!buildingMarkers) {
+      buildingMarkers = L.geoJSON(data, {
+        pointToLayer: pointToLayer as any,
+        onEachFeature: onEachFeature as any,
+        filter: (feature) => {
+          return feature.properties['marker-symbol'] === 'building'
+        }
+      }).addTo(map)
+    }
 
     console.log('Map loaded')
     window.setTimeout(() => {
