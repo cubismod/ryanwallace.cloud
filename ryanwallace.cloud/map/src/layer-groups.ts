@@ -1,13 +1,47 @@
 import * as L from 'leaflet'
+import 'leaflet.markercluster'
+
+function createClusterIcon(
+  cluster: L.MarkerCluster,
+  lineType: string
+): L.DivIcon {
+  const childCount = cluster.getChildCount()
+  return new L.DivIcon({
+    html: `<div><span>${childCount}</span></div>`,
+    className: `marker-cluster-icon marker-cluster-${lineType}`,
+    iconSize: new L.Point(40, 40)
+  })
+}
 
 export const layerGroups = {
-  red: L.layerGroup(),
-  blue: L.layerGroup(),
-  green: L.layerGroup(),
-  orange: L.layerGroup(),
-  silver: L.layerGroup(),
-  commuter: L.layerGroup(),
-  amtrak: L.layerGroup()
+  red: L.markerClusterGroup({
+    maxClusterRadius: 40,
+    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'red')
+  }),
+  blue: L.markerClusterGroup({
+    maxClusterRadius: 40,
+    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'blue')
+  }),
+  green: L.markerClusterGroup({
+    maxClusterRadius: 50,
+    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'green')
+  }),
+  orange: L.markerClusterGroup({
+    maxClusterRadius: 40,
+    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'orange')
+  }),
+  silver: L.markerClusterGroup({
+    maxClusterRadius: 50,
+    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'silver')
+  }),
+  commuter: L.markerClusterGroup({
+    maxClusterRadius: 80,
+    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'commuter')
+  }),
+  amtrak: L.markerClusterGroup({
+    maxClusterRadius: 80,
+    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'amtrak')
+  })
 }
 
 export const shapesLayerGroups = {
@@ -19,7 +53,7 @@ export const shapesLayerGroups = {
   commuter: L.layerGroup()
 }
 
-export function getLayerGroupForRoute(route: string): L.LayerGroup {
+export function getLayerGroupForRoute(route: string): L.MarkerClusterGroup {
   if (route.startsWith('Red') || route.startsWith('Mattapan')) {
     return layerGroups.red
   }

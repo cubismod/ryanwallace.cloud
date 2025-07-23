@@ -5,6 +5,10 @@ import '@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom
 import 'leaflet.fullscreen'
 import 'leaflet-easybutton'
 import 'leaflet-arrowheads'
+import 'leaflet.markercluster'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+import 'invert-color'
 import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
 
 // Import modules
@@ -38,6 +42,7 @@ var map = L.map('map', {
   // @ts-expect-error - fullscreenControl is not a valid option
   fullscreenControl: true,
   preferCanvas: true,
+  maxZoom: 50,
   fullscreenControlOptions: {
     position: 'topleft',
     title: 'Fullscreen',
