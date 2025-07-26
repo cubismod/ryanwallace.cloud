@@ -183,6 +183,7 @@ interface PredictionRow {
   destination: string
   track: string
   confidence: number
+  realtime: boolean
 }
 
 declare global {
@@ -300,12 +301,16 @@ async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
 
 async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   const stopIds = STOP_IDS.join(',')
-  const minTime = moment().tz('America/New_York')
-  let minTimeFilter = ''
+  const minTime = moment().tz('America/New_York').add(30, 'minutes')
+  let timeFilter = ''
   if (minTime.hour() > 2) {
-    minTimeFilter = `&page[limit]=25&filter[min_time]=${minTime.format('HH:mm')}`
+    const maxTime = moment()
+      .tz('America/New_York')
+      .add(1, 'hour')
+      .add(30, 'minutes')
+    timeFilter = `&filter[min_time]=${minTime.format('HH:mm')}&filter[max_time]=${maxTime.format('HH:mm')}`
   }
-  const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time${minTimeFilter}`
+  const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time${timeFilter}`
 
   return new Promise((resolve, reject) => {
     $.getJSON(url, (data: MBTAScheduleResponse) => {
@@ -384,7 +389,8 @@ function restructureData(
           formatRoute(routeId)
         ),
         track: trackPrediction?.track_number || 'TBD',
-        confidence: trackPrediction?.confidence_score || 0
+        confidence: trackPrediction?.confidence_score || 0,
+        realtime: true
       }
 
       rows.push(row)
@@ -417,7 +423,8 @@ function restructureData(
           formatRoute(routeId)
         ),
         track: trackPrediction?.track_number || 'TBD',
-        confidence: trackPrediction?.confidence_score || 0
+        confidence: trackPrediction?.confidence_score || 0,
+        realtime: false
       }
 
       rows.push(row)
@@ -464,17 +471,19 @@ function updateTable(rows: PredictionRow[]): void {
     `<span class="stop-name">${DOMPurify.sanitize(row.station)}</span>`,
     formatTime(row.time),
     formatConfidence(row.confidence),
-    DOMPurify.sanitize(row.destination)
+    DOMPurify.sanitize(row.destination),
+    row.realtime ? 'Yes' : 'No'
   ])
 
   new DataTable('#predictions-table', {
     data: tableData,
     columns: [
+      { title: 'Time', type: 'date', width: '5%' },
       { title: 'Track', width: '5%' },
       { title: 'Station', width: '10%' },
-      { title: 'Time', type: 'date', width: '5%' },
       { title: 'Score', width: '5%' },
-      { title: 'Destination', width: '10%', className: 'left-align-column' }
+      { title: 'Destination', width: '10%' },
+      { title: 'Live', width: '5%' }
     ],
     order: [[3, 'asc']], // Sort by departure time
     pageLength: 25,
