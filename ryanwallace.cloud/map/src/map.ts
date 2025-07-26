@@ -5,12 +5,11 @@ import '@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom
 import 'leaflet.fullscreen'
 import 'leaflet-easybutton'
 import 'leaflet-arrowheads'
-import 'invert-color'
 import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
 
 // Import modules
 import { setCookie, getCookie, return_colors } from './utils'
-import { pointToLayer, onEachFeature } from './markers'
+import { pointToLayer, onEachFeature, updateVehicleFeatures } from './markers'
 import {
   layerGroups,
   shapesLayerGroups,
@@ -24,6 +23,14 @@ import { fetchAmtrakData } from './amtrak'
 // Extend jQuery to include getJSON method
 declare const $: {
   getJSON: (url: string, callback: (data: any) => void) => void
+}
+
+// Extend window to include moveMapToStop function and buildingMarkers
+declare global {
+  interface Window {
+    moveMapToStop: (lat: number, lng: number) => void
+    buildingMarkers: L.GeoJSON | null
+  }
 }
 
 var map = L.map('map', {
@@ -52,8 +59,15 @@ new MaptilerLayer({
   style: 'streets-v2'
 }).addTo(map)
 
+// Global function to move map to stop coordinates
+window.moveMapToStop = (lat: number, lng: number): void => {
+  map.setView([lat, lng], Math.max(map.getZoom(), 16))
+}
+
 function annotate_map(): void {
   $.getJSON(vehicles_url, function (data: any) {
+    updateVehicleFeatures(data.features || [])
+
     // Update vehicle markers efficiently
     updateMarkers(data.features || [])
 
@@ -66,6 +80,8 @@ function annotate_map(): void {
           return feature.properties['marker-symbol'] === 'building'
         }
       }).addTo(map)
+      // Make buildingMarkers accessible globally
+      window.buildingMarkers = buildingMarkers
     }
 
     console.log('Map loaded')

@@ -1,5 +1,4 @@
 import * as L from 'leaflet'
-import invert from 'invert-color'
 import { VehicleFeature } from './types'
 import { niceStatus } from './utils'
 import { incrementMapItem } from './vehicle-counter'
@@ -140,13 +139,100 @@ export function createIconForFeature(feature: VehicleFeature): L.Icon | null {
   })
 }
 
+// Global variable to store all vehicle features for stop predictions
+let allVehicleFeatures: VehicleFeature[] = []
+
+// Function to update vehicle features data and refresh stop popups
+export function updateVehicleFeatures(features: VehicleFeature[]): void {
+  allVehicleFeatures = features
+  // Update stop popup content if building markers exist
+  if (typeof window !== 'undefined' && (window as any).buildingMarkers) {
+    ;(window as any).buildingMarkers.eachLayer((layer: any) => {
+      if (
+        layer.feature &&
+        layer.feature.properties['marker-symbol'] === 'building'
+      ) {
+        const stopName = layer.feature.properties.name || 'Unknown Stop'
+        const incomingVehicles = getIncomingVehicles(stopName)
+
+        let vehicleInfo = ''
+        if (incomingVehicles.length > 0) {
+          vehicleInfo = '<br/><br/><b>Incoming Vehicles:</b>'
+          incomingVehicles.forEach((vehicle) => {
+            const route = vehicle.properties.route || 'Unknown'
+            const eta = vehicle.properties.stop_eta || 'Unknown'
+            const headsign =
+              vehicle.properties.headsign ||
+              vehicle.properties.stop ||
+              'Unknown destination'
+            const vehicleCoords = vehicle.geometry.coordinates
+            if (vehicleCoords && vehicleCoords.length >= 2) {
+              vehicleInfo += `<br/>• <a href="#" onclick="window.moveMapToStop(${vehicleCoords[1]}, ${vehicleCoords[0]}); return false;" class="popup-link">${route}</a> to ${headsign} - ETA: ${eta}`
+            } else {
+              vehicleInfo += `<br/>• <span class="popup-link">${route}</span> to ${headsign} - ETA: ${eta}`
+            }
+          })
+        } else {
+          vehicleInfo =
+            '<br/><br/><small>No incoming vehicles currently tracked</small>'
+        }
+
+        const newContent = `<b>${stopName} Stop</b>${vehicleInfo}`
+        layer.setPopupContent(newContent)
+      }
+    })
+  }
+}
+
+// Function to get incoming vehicles for a stop
+function getIncomingVehicles(stopName: string): VehicleFeature[] {
+  if (!stopName) return []
+
+  return allVehicleFeatures
+    .filter(
+      (vehicle) =>
+        vehicle.properties.stop &&
+        vehicle.properties.stop
+          .toLowerCase()
+          .includes(stopName.toLowerCase()) &&
+        vehicle.properties.stop_eta &&
+        vehicle.properties['marker-symbol'] !== 'building'
+    )
+    .slice(0, 3) // Limit to next 3 incoming vehicles
+}
+
 export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
   if (feature.geometry.type === 'LineString' && feature.properties.route) {
     layer.bindPopup(`<b>${feature.properties.route}</b>`)
   }
   if (feature.geometry.type === 'Point') {
     if (feature.properties['marker-symbol'] === 'building') {
-      layer.bindPopup(`<b>${feature.properties.name} Stop</b>`)
+      const stopName = feature.properties.name || 'Unknown Stop'
+      const incomingVehicles = getIncomingVehicles(stopName)
+
+      let vehicleInfo = ''
+      if (incomingVehicles.length > 0) {
+        vehicleInfo = '<br/><br/><b>Incoming Vehicles:</b>'
+        incomingVehicles.forEach((vehicle) => {
+          const route = vehicle.properties.route || 'Unknown'
+          const eta = vehicle.properties.stop_eta || 'Unknown'
+          const headsign =
+            vehicle.properties.headsign ||
+            vehicle.properties.stop ||
+            'Unknown destination'
+          const vehicleCoords = vehicle.geometry.coordinates
+          if (vehicleCoords && vehicleCoords.length >= 2) {
+            vehicleInfo += `<br/>• <a href="#" onclick="window.moveMapToStop(${vehicleCoords[1]}, ${vehicleCoords[0]}); return false;" class="popup-link">${route}</a> to ${headsign} - ETA: ${eta}`
+          } else {
+            vehicleInfo += `<br/>• <span class="popup-link">${route}</span> to ${headsign} - ETA: ${eta}`
+          }
+        })
+      } else {
+        vehicleInfo =
+          '<br/><br/><small>No incoming vehicles currently tracked</small>'
+      }
+
+      layer.bindPopup(`<b>${stopName} Stop</b>${vehicleInfo}`)
     } else {
       const update_time = new Date(
         feature.properties['update_time'] || Date.now()
@@ -176,51 +262,28 @@ export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
       ) {
         platform_prediction = `<br />Platform Prediction: ${feature.properties['platform_prediction']}`
       }
+
+      let stopDisplay = feature.properties.stop || ''
+      if (feature.properties.stop && feature.properties['stop-coordinates']) {
+        const coords = feature.properties['stop-coordinates']
+        if (coords && coords.length >= 2) {
+          const lat = coords[1]
+          const lng = coords[0]
+          stopDisplay = `<a href="#" onclick="window.moveMapToStop(${lat}, ${lng}); return false;" class="popup-link">${feature.properties.stop}</a>`
+        }
+      } else if (feature.properties.stop) {
+        stopDisplay = feature.properties.stop
+      }
+
       const popup = L.popup({
         content: `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
-        <br />Stop: ${feature.properties.stop || ''}
+        <br />Stop: ${stopDisplay}
         <br />Status: ${niceStatus(feature.properties.status || '')}
         ${eta}${speed}${occupancy}${platform_prediction}
         <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
-        keepInView: true
+        autoPan: true,
+        closeOnEscapeKey: true
       })
-
-      if (
-        feature.properties['stop-coordinates'] &&
-        feature.properties['status'] != 'STOPPED_AT'
-      ) {
-        const coords: L.LatLngExpression[] = [
-          [feature.geometry.coordinates[1], feature.geometry.coordinates[0]],
-          [
-            feature.properties['stop-coordinates']![1],
-            feature.properties['stop-coordinates']![0]
-          ]
-        ]
-        const line1 = L.polyline(coords, {
-          color: invert(feature.properties['marker-color'] || '#000000', true),
-          weight: 15
-        })
-        const line2 = L.polyline(coords, {
-          color: feature.properties['marker-color'],
-          weight: 7
-        })
-        ;(line1 as any).arrowheads()
-        ;(line2 as any).arrowheads()
-
-        layer.addEventListener('click', () => {
-          const layerMap = (layer as any)._map
-          if (layerMap) {
-            line1.addTo(layerMap)
-            line2.addTo(layerMap)
-            layerMap.panInsideBounds(line1.getBounds())
-            window.setTimeout(() => {
-              line1.removeFrom(layerMap)
-              line2.removeFrom(layerMap)
-            }, 10000)
-          }
-        })
-      }
-
       layer.bindPopup(popup)
     }
   }

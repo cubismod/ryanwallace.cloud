@@ -689,3 +689,23 @@ body.dark-theme .slider:before {
     flex-shrink: 0;
   }
 }
+
+/* Subtle popup link styling */
+.popup-link {
+  color: #8b5a96;
+  text-decoration: none;
+  font-weight: normal;
+}
+
+.popup-link:hover {
+  color: #4b5563;
+  text-decoration: underline;
+}
+
+body.dark-theme .popup-link {
+  color: #8b5a96;
+}
+
+body.dark-theme .popup-link:hover {
+  color: #4b5563;
+}

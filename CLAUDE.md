@@ -65,3 +65,4 @@ The app handles real-time vehicle tracking, route visualization, and service ale
 - `ryanwallace.cloud/hugo.toml` - Site configuration
 - `Dockerfile` - Production build definition
 - `Caddyfile` - Web server configuration
+- `ryanwallace.cloud/assets/css/custom.css` - CSS configuration
