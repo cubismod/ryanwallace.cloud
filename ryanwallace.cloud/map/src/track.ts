@@ -306,7 +306,7 @@ async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   if (minTime.hour() > 2) {
     const maxTime = moment()
       .tz('America/New_York')
-      .add(1, 'hour')
+      .add(2, 'hour')
       .add(30, 'minutes')
     timeFilter = `&filter[min_time]=${minTime.format('HH:mm')}&filter[max_time]=${maxTime.format('HH:mm')}`
   }
@@ -414,6 +414,9 @@ function restructureData(
     const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
     const trackPrediction = trackPredictionMap.get(trackKey)
 
+    if (stopId.includes('place-north') && directionId === 1) continue
+    if (stopId.includes('place-sstat') && directionId === 1) continue
+
     if (trackPrediction?.confidence_score) {
       const row: PredictionRow = {
         station: getStopName(stopId),
@@ -467,9 +470,9 @@ function updateTable(rows: PredictionRow[]): void {
   hideLoading()
 
   const tableData = rows.map((row) => [
+    formatTime(row.time),
     formatPlatform(DOMPurify.sanitize(row.track)),
     `<span class="stop-name">${DOMPurify.sanitize(row.station)}</span>`,
-    formatTime(row.time),
     formatConfidence(row.confidence),
     DOMPurify.sanitize(row.destination),
     row.realtime ? 'Yes' : 'No'
