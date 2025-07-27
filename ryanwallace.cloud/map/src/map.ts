@@ -71,17 +71,22 @@ function annotate_map(): void {
     // Update vehicle markers efficiently
     updateMarkers(data.features || [])
 
-    // Handle building markers (static, so only create once if needed)
-    if (!buildingMarkers) {
-      buildingMarkers = L.geoJSON(data, {
+    // Handle building markers (stops) - refresh their data each time but keep them displayed
+    const buildingFeatures = data.features.filter(
+      (feature: any) => feature.properties['marker-symbol'] === 'building'
+    )
+
+    if (!buildingMarkers && buildingFeatures.length > 0) {
+      buildingMarkers = L.geoJSON(buildingFeatures, {
         pointToLayer: pointToLayer as any,
-        onEachFeature: onEachFeature as any,
-        filter: (feature) => {
-          return feature.properties['marker-symbol'] === 'building'
-        }
+        onEachFeature: onEachFeature as any
       }).addTo(map)
       // Make buildingMarkers accessible globally
       window.buildingMarkers = buildingMarkers
+    } else if (buildingMarkers && buildingFeatures.length > 0) {
+      // Update existing building markers with new data
+      buildingMarkers.clearLayers()
+      buildingMarkers.addData(buildingFeatures)
     }
 
     console.log('Map loaded')

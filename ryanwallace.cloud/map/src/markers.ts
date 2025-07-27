@@ -159,22 +159,24 @@ export function updateVehicleFeatures(features: VehicleFeature[]): void {
         if (incomingVehicles.length > 0) {
           vehicleInfo = '<br/><br/><b>Incoming Vehicles:</b>'
           incomingVehicles.forEach((vehicle) => {
-            const route = vehicle.properties.route || 'Unknown'
-            const eta = vehicle.properties.stop_eta || 'Unknown'
+            const route = vehicle.properties.route || 'Unknown Route'
+            const eta = vehicle.properties.stop_eta
+              ? ` - ETA: ${vehicle.properties.stop_eta}`
+              : ''
+            const status = vehicle.properties.status
+              ? ` (${vehicle.properties.status})`
+              : ''
             const headsign =
               vehicle.properties.headsign ||
               vehicle.properties.stop ||
               'Unknown destination'
             const vehicleCoords = vehicle.geometry.coordinates
             if (vehicleCoords && vehicleCoords.length >= 2) {
-              vehicleInfo += `<br/>• <a href="#" onclick="window.moveMapToStop(${vehicleCoords[1]}, ${vehicleCoords[0]}); return false;" class="popup-link">${route}</a> to ${headsign} - ETA: ${eta}`
+              vehicleInfo += `<br/>• <a href="#" onclick="window.moveMapToStop(${vehicleCoords[1]}, ${vehicleCoords[0]}); return false;" class="popup-link">${route}</a> to ${headsign}${eta}${status}`
             } else {
-              vehicleInfo += `<br/>• <span class="popup-link">${route}</span> to ${headsign} - ETA: ${eta}`
+              vehicleInfo += `<br/>• <span class="popup-link">${route}</span> to ${headsign}${eta}${status}`
             }
           })
-        } else {
-          vehicleInfo =
-            '<br/><br/><small>No incoming vehicles currently tracked</small>'
         }
 
         const newContent = `<b>${stopName} Stop</b>${vehicleInfo}`
@@ -184,21 +186,151 @@ export function updateVehicleFeatures(features: VehicleFeature[]): void {
   }
 }
 
+// Function to determine vehicle type from route
+function getVehicleType(
+  route: string
+): 'subway' | 'bus' | 'commuter' | 'amtrak' | 'unknown' {
+  if (!route) return 'unknown'
+
+  const routeLower = route.toLowerCase()
+
+  // Subway lines
+  if (
+    routeLower.startsWith('red') ||
+    routeLower.startsWith('blue') ||
+    routeLower.startsWith('green') ||
+    routeLower.startsWith('orange') ||
+    routeLower.includes('mattapan')
+  ) {
+    return 'subway'
+  }
+
+  // Silver Line (BRT)
+  if (routeLower.startsWith('sl') || routeLower.includes('silver')) {
+    return 'bus'
+  }
+
+  // Commuter Rail
+  if (
+    routeLower.startsWith('cr-') ||
+    (routeLower.includes('line') &&
+      !routeLower.includes('red') &&
+      !routeLower.includes('blue') &&
+      !routeLower.includes('green') &&
+      !routeLower.includes('orange'))
+  ) {
+    return 'commuter'
+  }
+
+  // Amtrak
+  if (
+    routeLower.includes('amtrak') ||
+    routeLower.includes('acela') ||
+    routeLower.includes('northeast regional')
+  ) {
+    return 'amtrak'
+  }
+
+  // Bus routes (numeric)
+  if (/^\d+$/.test(route)) {
+    return 'bus'
+  }
+
+  return 'unknown'
+}
+
+// Function to determine expected vehicle types for a stop
+function getExpectedVehicleTypes(
+  stopName: string
+): ('subway' | 'bus' | 'commuter' | 'amtrak')[] {
+  const stopLower = stopName.toLowerCase()
+
+  // Commuter Rail stations typically have "station" in the name or are recognizable CR stops
+  if (
+    stopLower.includes('station') ||
+    [
+      'south station',
+      'north station',
+      'back bay',
+      'ruggles',
+      'forest hills'
+    ].some((cr) => stopLower.includes(cr))
+  ) {
+    return ['commuter', 'amtrak', 'subway'] // Allow some crossover at major hubs
+  }
+
+  // Major interchange stations
+  if (
+    [
+      'downtown crossing',
+      'park street',
+      'government center',
+      'haymarket',
+      'state'
+    ].some((hub) => stopLower.includes(hub))
+  ) {
+    return ['subway', 'bus']
+  }
+
+  // Airport-related stops
+  if (stopLower.includes('airport') || stopLower.includes('logan')) {
+    return ['bus', 'subway']
+  }
+
+  // Default to subway for most stops (can be refined further)
+  return ['subway', 'bus']
+}
+
 // Function to get incoming vehicles for a stop
 function getIncomingVehicles(stopName: string): VehicleFeature[] {
-  if (!stopName) return []
+  if (!stopName || !allVehicleFeatures.length) return []
+
+  // Normalize stop name for better matching
+  const normalizedStopName = stopName.toLowerCase().trim()
+  const expectedTypes = getExpectedVehicleTypes(stopName)
 
   return allVehicleFeatures
-    .filter(
-      (vehicle) =>
-        vehicle.properties.stop &&
-        vehicle.properties.stop
-          .toLowerCase()
-          .includes(stopName.toLowerCase()) &&
-        vehicle.properties.stop_eta &&
-        vehicle.properties['marker-symbol'] !== 'building'
-    )
-    .slice(0, 3) // Limit to next 3 incoming vehicles
+    .filter((vehicle) => {
+      // Must be a vehicle, not a building
+      if (vehicle.properties['marker-symbol'] === 'building') return false
+
+      // Must have a stop destination
+      if (!vehicle.properties.stop) return false
+
+      // Filter by vehicle type compatibility
+      const vehicleType = getVehicleType(vehicle.properties.route || '')
+      if (
+        vehicleType === 'unknown' ||
+        vehicleType === 'amtrak' ||
+        !expectedTypes.includes(vehicleType)
+      )
+        return false
+
+      const vehicleStop = vehicle.properties.stop.toLowerCase().trim()
+
+      // EXTREMELY strict matching - only exact matches or very close variants
+      const exactMatch = vehicleStop === normalizedStopName
+
+      // Allow for common suffix variations but be very strict
+      const cleanStopName = normalizedStopName
+        .replace(/\s+(station|stop|st)$/i, '')
+        .trim()
+      const cleanVehicleStop = vehicleStop
+        .replace(/\s+(station|stop|st)$/i, '')
+        .trim()
+      const cleanMatch =
+        cleanVehicleStop === cleanStopName && cleanStopName.length >= 3
+
+      // Only allow these two types of matches - no fuzzy matching
+      const nameMatches = exactMatch || cleanMatch
+
+      // Must have actual destination/ETA info and name must match exactly
+      const hasETA = vehicle.properties.stop_eta
+
+      // Only show vehicles that have ETA info AND exact name matches
+      return nameMatches && hasETA
+    })
+    .slice(0, 3)
 }
 
 export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
@@ -214,24 +346,25 @@ export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
       if (incomingVehicles.length > 0) {
         vehicleInfo = '<br/><br/><b>Incoming Vehicles:</b>'
         incomingVehicles.forEach((vehicle) => {
-          const route = vehicle.properties.route || 'Unknown'
-          const eta = vehicle.properties.stop_eta || 'Unknown'
+          const route = vehicle.properties.route || 'Unknown Route'
+          const eta = vehicle.properties.stop_eta
+            ? ` - ETA: ${vehicle.properties.stop_eta}`
+            : ''
+          const status = vehicle.properties.status
+            ? ` (${vehicle.properties.status})`
+            : ''
           const headsign =
             vehicle.properties.headsign ||
             vehicle.properties.stop ||
             'Unknown destination'
           const vehicleCoords = vehicle.geometry.coordinates
           if (vehicleCoords && vehicleCoords.length >= 2) {
-            vehicleInfo += `<br/>• <a href="#" onclick="window.moveMapToStop(${vehicleCoords[1]}, ${vehicleCoords[0]}); return false;" class="popup-link">${route}</a> to ${headsign} - ETA: ${eta}`
+            vehicleInfo += `<br/>• <a href="#" onclick="window.moveMapToStop(${vehicleCoords[1]}, ${vehicleCoords[0]}); return false;" class="popup-link">${route}</a> to ${headsign}${eta}${status}`
           } else {
-            vehicleInfo += `<br/>• <span class="popup-link">${route}</span> to ${headsign} - ETA: ${eta}`
+            vehicleInfo += `<br/>• <span class="popup-link">${route}</span> to ${headsign}${eta}${status}`
           }
         })
-      } else {
-        vehicleInfo =
-          '<br/><br/><small>No incoming vehicles currently tracked</small>'
       }
-
       layer.bindPopup(`<b>${stopName} Stop</b>${vehicleInfo}`)
     } else {
       const update_time = new Date(
@@ -264,15 +397,30 @@ export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
       }
 
       let stopDisplay = feature.properties.stop || ''
-      if (feature.properties.stop && feature.properties['stop-coordinates']) {
-        const coords = feature.properties['stop-coordinates']
-        if (coords && coords.length >= 2) {
-          const lat = coords[1]
-          const lng = coords[0]
-          stopDisplay = `<a href="#" onclick="window.moveMapToStop(${lat}, ${lng}); return false;" class="popup-link">${feature.properties.stop}</a>`
+      if (feature.properties.stop) {
+        // Don't create stop links for Amtrak trains since their stop data isn't reliable
+        const isAmtrak =
+          feature.properties.route &&
+          (feature.properties.route.toLowerCase().includes('amtrak') ||
+            feature.properties.route.toLowerCase().includes('acela') ||
+            feature.properties.route
+              .toLowerCase()
+              .includes('northeast regional'))
+
+        if (!isAmtrak) {
+          let coords = feature.properties['stop-coordinates']
+
+          // Fallback to vehicle coordinates if stop coordinates are missing
+          if (!coords || coords.length < 2) {
+            coords = feature.geometry.coordinates
+          }
+
+          if (coords && coords.length >= 2) {
+            const lat = coords[1]
+            const lng = coords[0]
+            stopDisplay = `<a href="#" onclick="window.moveMapToStop(${lat}, ${lng}); return false;" class="popup-link">${feature.properties.stop}</a>`
+          }
         }
-      } else if (feature.properties.stop) {
-        stopDisplay = feature.properties.stop
       }
 
       const popup = L.popup({
