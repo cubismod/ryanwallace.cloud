@@ -152,7 +152,8 @@ export function updateVehicleFeatures(features: VehicleFeature[]): void {
         layer.feature &&
         layer.feature.properties['marker-symbol'] === 'building'
       ) {
-        const stopName = layer.feature.properties.name || 'Unknown Stop'
+        const stopName =
+          layer.feature.properties.name.replace('stop', '') || 'Unknown Stop'
         const incomingVehicles = getIncomingVehicles(stopName)
 
         let vehicleInfo = ''
