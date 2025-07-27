@@ -58,8 +58,35 @@ export function updateMarkers(features: VehicleFeature[]): void {
         platform_prediction = `<br />Platform Prediction: ${feature.properties['platform_prediction']}`
       }
 
+      let stopDisplay = feature.properties.stop || ''
+      if (feature.properties.stop) {
+        // Don't create stop links for Amtrak trains since their stop data isn't reliable
+        const isAmtrak =
+          feature.properties.route &&
+          (feature.properties.route.toLowerCase().includes('amtrak') ||
+            feature.properties.route.toLowerCase().includes('acela') ||
+            feature.properties.route
+              .toLowerCase()
+              .includes('northeast regional'))
+
+        if (!isAmtrak) {
+          let coords = feature.properties['stop-coordinates']
+
+          // Fallback to vehicle coordinates if stop coordinates are missing
+          if (!coords || coords.length < 2) {
+            coords = feature.geometry.coordinates
+          }
+
+          if (coords && coords.length >= 2) {
+            const lat = coords[1]
+            const lng = coords[0]
+            stopDisplay = `<a href="#" onclick="window.moveMapToStop(${lat}, ${lng}); return false;" class="popup-link">${feature.properties.stop}</a>`
+          }
+        }
+      }
+
       const popupContent = `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
-        <br />Stop: ${feature.properties.stop || ''}
+        <br />Stop: ${stopDisplay}
         <br />Status: ${niceStatus(feature.properties.status || '')}
         ${eta}${speed}${occupancy}${platform_prediction}
         <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`
