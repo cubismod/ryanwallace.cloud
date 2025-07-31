@@ -306,7 +306,7 @@ async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   if (minTime.hour() > 2) {
     const maxTime = moment()
       .tz('America/New_York')
-      .add(2, 'hour')
+      .add(1, 'hour')
       .add(30, 'minutes')
     timeFilter = `&filter[min_time]=${minTime.format('HH:mm')}&filter[max_time]=${maxTime.format('HH:mm')}`
   }
