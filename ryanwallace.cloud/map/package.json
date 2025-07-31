@@ -32,7 +32,7 @@
     "parcel": "2.15.4",
     "prettier": "3.6.2",
     "prettier-config-standard": "7.0.0",
-    "typescript": "5.8.3"
+    "typescript": "5.9.2"
   },
   "scripts": {
     "build": "parcel build src/index.html src/track.ts --public-url /map/",
