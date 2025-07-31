@@ -10,6 +10,9 @@ declare const $: {
 export function fetchAmtrakData(bos_url: string): void {
   $.getJSON(`${bos_url}/trains/geojson`, function (data: any) {
     if (data && data.features) {
+      // Clear existing Amtrak markers before adding new ones
+      layerGroups.amtrak.clearLayers()
+
       L.geoJSON(data, {
         pointToLayer: (feature: any, latlng: L.LatLng) => {
           const transformedFeature: VehicleFeature = {
