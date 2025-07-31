@@ -1,4 +1,5 @@
 import * as L from 'leaflet'
+import 'leaflet.markercluster'
 import { VehicleFeature } from './types'
 import { niceStatus } from './utils'
 import { pointToLayer, onEachFeature, createIconForFeature } from './markers'

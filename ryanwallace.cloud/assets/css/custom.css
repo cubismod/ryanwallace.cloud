@@ -36,10 +36,6 @@ pre {
     sans-serif;
 }
 
-.content div {
-  color: #1e0624;
-}
-
 /* From https: //raw.githubusercontent.com/brunob/leaflet.fullscreen/refs/heads/master/Control.FullScreen.css
     https: //github.com/brunob/leaflet.fullscreen/blob/master/LICENSE.md
 */
@@ -137,10 +133,6 @@ pre {
   color: black;
   font-weight: bold;
   padding: 5px;
-}
-
-.content div {
-  color: inherit !important;
 }
 
 .ci {
@@ -715,4 +707,66 @@ body.dark-theme .popup-link {
 
 body.dark-theme .popup-link:hover {
   color: #4b5563;
+}
+
+/* Custom cluster styles for MBTA transit lines */
+
+.marker-cluster-icon {
+  border-radius: 50%;
+  align-items: center;
+}
+
+.marker-cluster-icon div {
+  width: 40px;
+  height: 40px;
+  opacity: 1;
+  display: flex;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  align-items: center;
+}
+
+/* Red Line clusters */
+.marker-cluster-red {
+  background-color: #fa2d27;
+}
+
+/* Blue Line clusters */
+.marker-cluster-blue {
+  background-color: #2f5da6;
+}
+
+/* Green Line clusters */
+.marker-cluster-green {
+  background-color: #008150;
+}
+
+/* Orange Line clusters */
+.marker-cluster-orange {
+  background-color: #fd8a03;
+}
+
+/* Silver Line clusters */
+.marker-cluster-silver {
+  background-color: #9a9c9d;
+}
+
+/* Commuter Rail clusters */
+.marker-cluster-commuter {
+  background-color: #7b388c;
+}
+
+/* Amtrak clusters */
+.marker-cluster-amtrak {
+  background-color: #004887;
+}
+
+.leaflet-control-layers-overlays {
+  color: black !important;
+}
+
+.leaflet-popup-content {
+  color: black !important;
 }
