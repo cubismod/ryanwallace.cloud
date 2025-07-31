@@ -301,7 +301,7 @@ async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
 
 async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   const stopIds = STOP_IDS.join(',')
-  const minTime = moment().tz('America/New_York').add(30, 'minutes')
+  const minTime = moment().tz('America/New_York')
   let timeFilter = ''
   if (minTime.hour() > 2) {
     const maxTime = moment()
@@ -359,6 +359,9 @@ function restructureData(
     trackPredictionMap.set(key, tp)
   })
 
+  // Track processed trips to prevent duplicates between predictions and schedules
+  const processedTrips = new Set<string>()
+
   // Process MBTA predictions
   for (const prediction of mbtaPredictions) {
     const departureTime =
@@ -371,6 +374,7 @@ function restructureData(
     const stopId = fullStationName(prediction.relationships.stop.data.id)
     const routeId = prediction.relationships.route.data.id
     const directionId = prediction.attributes.direction_id
+    const tripId = prediction.relationships.trip.data.id
 
     // skip inbound arrivals for terminal stations
     if (stopId.includes('place-north') && directionId === 0) continue
@@ -381,6 +385,9 @@ function restructureData(
     const trackPrediction = trackPredictionMap.get(trackKey)
 
     if (trackPrediction?.confidence_score) {
+      const tripKey = `${tripId}-${stopId}-${departureTime}`
+      processedTrips.add(tripKey)
+
       const row: PredictionRow = {
         station: getStopName(stopId),
         time: depDate,
@@ -397,7 +404,7 @@ function restructureData(
     }
   }
 
-  // Process MBTA schedules
+  // Process MBTA schedules (only if not already processed as predictions)
   for (const schedule of mbtaSchedules) {
     const departureTime =
       schedule.attributes.departure_time || schedule.attributes.arrival_time
@@ -409,6 +416,11 @@ function restructureData(
     const stopId = fullStationName(schedule.relationships.stop.data.id)
     const routeId = schedule.relationships.route.data.id
     const directionId = schedule.attributes.direction_id
+    const tripId = schedule.relationships.trip.data.id
+
+    // Skip if this trip was already processed as a prediction
+    const tripKey = `${tripId}-${stopId}-${departureTime}`
+    if (processedTrips.has(tripKey)) continue
 
     // Try to find matching track prediction
     const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
