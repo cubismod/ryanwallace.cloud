@@ -186,6 +186,13 @@ interface PredictionRow {
   realtime: boolean
 }
 
+interface PredictionStats {
+  generated: number
+  notGenerated: number
+  total: number
+  fetchDuration: number
+}
+
 declare global {
   interface Window {
     $: typeof import('jquery')
@@ -510,8 +517,43 @@ function updateTable(rows: PredictionRow[]): void {
   })
 }
 
+function updateStats(stats: PredictionStats): void {
+  const generatedElement = document.getElementById('predictions-generated')
+  const notGeneratedElement = document.getElementById(
+    'predictions-not-generated'
+  )
+  const totalElement = document.getElementById('predictions-total')
+  const durationElement = document.getElementById('fetch-duration')
+
+  // Use shorter text on mobile screens
+  const isMobile = window.innerWidth <= 768
+
+  if (generatedElement) {
+    generatedElement.textContent = isMobile
+      ? `Generated: ${stats.generated}`
+      : `Predictions Generated: ${stats.generated}`
+  }
+  if (notGeneratedElement) {
+    notGeneratedElement.textContent = isMobile
+      ? `Failed: ${stats.notGenerated}`
+      : `No Prediction Found: ${stats.notGenerated}`
+  }
+  if (totalElement) {
+    totalElement.textContent = isMobile
+      ? `Total: ${stats.total}`
+      : `Total Requests: ${stats.total}`
+  }
+  if (durationElement) {
+    const seconds = (stats.fetchDuration / 1000).toFixed(1)
+    durationElement.textContent = isMobile
+      ? `${seconds}s`
+      : `Fetch Time: ${seconds}s`
+  }
+}
+
 async function refreshPredictions(): Promise<void> {
   try {
+    const startTime = performance.now()
     showLoading()
     console.log('Fetching predictions...')
     const mbtaPredictions = await fetchMBTAPredictions()
@@ -557,13 +599,31 @@ async function refreshPredictions(): Promise<void> {
       .filter((response) => response.success)
       .map((response) => response.prediction)
 
+    const endTime = performance.now()
+    const fetchDuration = endTime - startTime
+
+    // Calculate stats
+    const stats: PredictionStats = {
+      generated: trackPredictionResponses.filter((response) => response.success)
+        .length,
+      notGenerated: trackPredictionResponses.filter(
+        (response) => !response.success
+      ).length,
+      total: trackPredictionResponses.length,
+      fetchDuration: fetchDuration
+    }
+
     const rows = restructureData(
       mbtaPredictions,
       mbtaSchedules,
       trackPredictions
     )
     updateTable(rows)
+    updateStats(stats)
     console.log(`Updated table with ${rows.length} predictions and schedules`)
+    console.log(
+      `Stats: ${stats.generated} generated, ${stats.notGenerated} not generated, ${stats.total} total`
+    )
   } catch (error) {
     hideLoading()
     console.error('Error refreshing predictions:', error)
