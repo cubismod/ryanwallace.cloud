@@ -173,8 +173,7 @@ export function updateVehicleFeatures(features: VehicleFeature[]): void {
             }
           })
         } else {
-          vehicleInfo =
-            '<br/><br/><small>No incoming vehicles currently tracked</small>'
+          vehicleInfo = ''
         }
 
         const newContent = `<b>${stopName} Stop</b>${vehicleInfo}`
@@ -228,8 +227,7 @@ export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
           }
         })
       } else {
-        vehicleInfo =
-          '<br/><br/><small>No incoming vehicles currently tracked</small>'
+        vehicleInfo = ''
       }
 
       layer.bindPopup(`<b>${stopName} Stop</b>${vehicleInfo}`)

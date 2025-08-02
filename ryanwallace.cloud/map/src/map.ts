@@ -70,7 +70,7 @@ window.moveMapToStop = (lat: number, lng: number): void => {
 }
 
 function annotate_map(): void {
-  $.getJSON(vehicles_url, function (data: any) {
+  $.getJSON(`${vehicles_url}/vehicles`, function (data: any) {
     updateVehicleFeatures(data.features || [])
 
     // Update vehicle markers efficiently
