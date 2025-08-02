@@ -557,37 +557,46 @@ async function refreshPredictions(): Promise<void> {
     const mbtaSchedules = await fetchMBTASchedules()
 
     // Prepare batch requests for track predictions
-    const predictionRequests: PredictionRequest[] = []
+    const predictionRequestsMap = new Map<string, PredictionRequest>()
 
     // Add requests for MBTA predictions
     for (const prediction of mbtaPredictions) {
-      predictionRequests.push({
+      const departureTime =
+        prediction.attributes.departure_time ||
+        prediction.attributes.arrival_time
+      if (!departureTime) continue
+
+      const key = `${prediction.relationships.stop.data.id}-${prediction.relationships.route.data.id}-${prediction.relationships.trip.data.id}-${departureTime}`
+      predictionRequestsMap.set(key, {
         station_id: prediction.relationships.stop.data.id,
         route_id: prediction.relationships.route.data.id,
         trip_id: prediction.relationships.trip.data.id,
         headsign: prediction.relationships.route.data.id,
         direction_id: prediction.attributes.direction_id,
-        scheduled_time:
-          prediction.attributes.departure_time ||
-          prediction.attributes.arrival_time ||
-          new Date().toISOString()
+        scheduled_time: departureTime
       })
     }
 
-    // Add requests for schedules
+    // Add requests for schedules (only if not already present)
     for (const schedule of mbtaSchedules) {
-      predictionRequests.push({
-        station_id: schedule.relationships.stop.data.id,
-        route_id: schedule.relationships.route.data.id,
-        trip_id: schedule.relationships.trip.data.id,
-        headsign: schedule.relationships.route.data.id,
-        direction_id: schedule.attributes.direction_id,
-        scheduled_time:
-          schedule.attributes.departure_time ||
-          schedule.attributes.arrival_time ||
-          new Date().toISOString()
-      })
+      const departureTime =
+        schedule.attributes.departure_time || schedule.attributes.arrival_time
+      if (!departureTime) continue
+
+      const key = `${schedule.relationships.stop.data.id}-${schedule.relationships.route.data.id}-${schedule.relationships.trip.data.id}-${departureTime}`
+      if (!predictionRequestsMap.has(key)) {
+        predictionRequestsMap.set(key, {
+          station_id: schedule.relationships.stop.data.id,
+          route_id: schedule.relationships.route.data.id,
+          trip_id: schedule.relationships.trip.data.id,
+          headsign: schedule.relationships.route.data.id,
+          direction_id: schedule.attributes.direction_id,
+          scheduled_time: departureTime
+        })
+      }
     }
+
+    const predictionRequests = Array.from(predictionRequestsMap.values())
 
     // Fetch all track predictions in a single batch request
     const trackPredictionResponses =
@@ -599,22 +608,21 @@ async function refreshPredictions(): Promise<void> {
     const endTime = performance.now()
     const fetchDuration = endTime - startTime
 
-    // Calculate stats
-    const stats: PredictionStats = {
-      generated: trackPredictionResponses.filter((response) => response.success)
-        .length,
-      notGenerated: trackPredictionResponses.filter(
-        (response) => !response.success
-      ).length,
-      total: trackPredictionResponses.length,
-      fetchDuration: fetchDuration
-    }
-
     const rows = restructureData(
       mbtaPredictions,
       mbtaSchedules,
       trackPredictions
     )
+
+    // Calculate stats based on actual displayed predictions
+    const displayedPredictions = rows.length
+    const totalRequests = predictionRequests.length
+    const stats: PredictionStats = {
+      generated: displayedPredictions,
+      notGenerated: totalRequests - displayedPredictions,
+      total: totalRequests,
+      fetchDuration: fetchDuration
+    }
     updateTable(rows)
     updateStats(stats)
     console.log(`Updated table with ${rows.length} predictions and schedules`)
