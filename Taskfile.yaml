@@ -14,6 +14,10 @@ tasks:
       - yarn build
       - yarn clean
       - yarn move
+  clean:
+    dir: ryanwallace.cloud/map
+    cmds:
+      - yarn clean
   format:
     cmds:
       - npx prettier --write .
