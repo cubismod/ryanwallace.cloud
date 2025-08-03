@@ -1,46 +1,38 @@
-export interface ConnectionInfo {
-  effectiveType: 'slow' | '4g' | '5g' | 'unknown'
-  downlink: number // Mbps
-  rtt: number // Round trip time in ms
-  saveData: boolean // User has data saver enabled
-  isSlowConnection: boolean
-  shouldSkipOverpass: boolean
-}
+import {
+  ConnectionInfo,
+  ConnectionThresholds,
+  NetworkInformation,
+  NavigatorWithConnection,
+  ConnectionSpeedMeasurement,
+  EffectiveConnectionType,
+  NetworkAPIEffectiveType,
+  UserConnectionPreference,
+  ConnectionDetectorAPI
+} from './types/connection'
+import { ConnectionError, logError } from './types/errors'
 
 // Modern connection thresholds
-const SLOW_CONNECTION_THRESHOLDS = {
+const SLOW_CONNECTION_THRESHOLDS: ConnectionThresholds = {
   RTT_THRESHOLD: 800, // ms - higher latency indicates congested or distant connection
   DOWNLINK_THRESHOLD: 2.0, // Mbps - minimum for comfortable background data loading
   MEASUREMENT_TIMEOUT: 3000 // ms - shorter timeout for faster detection
 }
 
-// Network Information API (experimental, available in some browsers)
-interface NetworkInformation extends EventTarget {
-  readonly effectiveType: '2g' | '3g' | '4g' | 'slow-2g'
-  readonly downlink: number
-  readonly rtt: number
-  readonly saveData: boolean
-}
-
-interface NavigatorWithConnection extends Navigator {
-  connection?: NetworkInformation
-  mozConnection?: NetworkInformation
-  webkitConnection?: NetworkInformation
-}
-
 export function getConnectionInfo(): ConnectionInfo {
-  const nav = navigator as NavigatorWithConnection
-  const connection = nav.connection || nav.mozConnection || nav.webkitConnection
+  const nav: NavigatorWithConnection = navigator as NavigatorWithConnection
+  const connection: NetworkInformation | undefined =
+    nav.connection || nav.mozConnection || nav.webkitConnection
 
   if (connection) {
     // Use Network Information API if available
-    const apiEffectiveType = connection.effectiveType || 'unknown'
-    const downlink = connection.downlink || 0
-    const rtt = connection.rtt || 0
-    const saveData = connection.saveData || false
+    const apiEffectiveType: NetworkAPIEffectiveType =
+      connection.effectiveType || 'unknown'
+    const downlink: number = connection.downlink || 0
+    const rtt: number = connection.rtt || 0
+    const saveData: boolean = connection.saveData || false
 
     // Map legacy API values to modern classifications
-    let effectiveType: 'slow' | '4g' | '5g' | 'unknown'
+    let effectiveType: EffectiveConnectionType
     if (
       apiEffectiveType === 'slow-2g' ||
       apiEffectiveType === '2g' ||
@@ -54,7 +46,7 @@ export function getConnectionInfo(): ConnectionInfo {
       effectiveType = 'unknown'
     }
 
-    const isSlowConnection =
+    const isSlowConnection: boolean =
       effectiveType === 'slow' ||
       downlink < SLOW_CONNECTION_THRESHOLDS.DOWNLINK_THRESHOLD ||
       rtt > SLOW_CONNECTION_THRESHOLDS.RTT_THRESHOLD ||
@@ -75,68 +67,73 @@ export function getConnectionInfo(): ConnectionInfo {
 }
 
 function estimateConnectionSpeed(): ConnectionInfo {
-  const userAgent = navigator.userAgent.toLowerCase()
+  const userAgent: string = navigator.userAgent.toLowerCase()
 
   // Check for potential connection quality indicators
-  const isMobile = /mobile|android|iphone|ipad|blackberry/.test(userAgent)
-  const isOffline = 'onLine' in navigator && !navigator.onLine
+  const isMobile: boolean = /mobile|android|iphone|ipad|blackberry/.test(
+    userAgent
+  )
+  const isOffline: boolean = 'onLine' in navigator && !navigator.onLine
 
   // Check for device/browser hints about reduced functionality
-  const hasReducedMotion = window.matchMedia?.(
-    '(prefers-reduced-motion: reduce)'
-  ).matches
-  const hasReducedData = window.matchMedia?.(
-    '(prefers-reduced-data: reduce)'
-  ).matches
+  const hasReducedMotion: boolean =
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  const hasReducedData: boolean =
+    window.matchMedia?.('(prefers-reduced-data: reduce)').matches ?? false
 
   // Conservative approach for older or resource-constrained devices
-  const estimatedSlow =
+  const estimatedSlow: boolean =
     isOffline ||
     hasReducedData ||
     (isMobile && (hasReducedMotion || userAgent.includes('lite')))
 
+  const effectiveType: EffectiveConnectionType = estimatedSlow ? 'slow' : '4g'
+  const downlink: number = estimatedSlow ? 1.5 : 8.0
+  const rtt: number = estimatedSlow ? 600 : 200
+  const saveData: boolean = hasReducedData || isOffline
+
   return {
-    effectiveType: estimatedSlow ? 'slow' : '4g',
-    downlink: estimatedSlow ? 1.5 : 8.0,
-    rtt: estimatedSlow ? 600 : 200,
-    saveData: hasReducedData || isOffline,
+    effectiveType,
+    downlink,
+    rtt,
+    saveData,
     isSlowConnection: estimatedSlow,
     shouldSkipOverpass: estimatedSlow
   }
 }
 
 // Performance-based connection speed test
-export async function measureConnectionSpeed(): Promise<{
-  downloadSpeed: number // Mbps
-  latency: number // ms
-  isSlowConnection: boolean
-}> {
+export async function measureConnectionSpeed(): Promise<ConnectionSpeedMeasurement> {
   try {
     // Use a small image from the same domain to test speed
-    const testUrl = '/map/images/icons/bus-yellow.svg?' + Date.now()
-    const startTime = performance.now()
+    const testUrl: string = '/map/images/icons/bus-yellow.svg?' + Date.now()
+    const startTime: number = performance.now()
 
-    const response = await fetch(testUrl, {
+    const response: Response = await fetch(testUrl, {
       cache: 'no-cache',
       signal: AbortSignal.timeout(
         SLOW_CONNECTION_THRESHOLDS.MEASUREMENT_TIMEOUT
       )
     })
 
-    const endTime = performance.now()
-    const latency = endTime - startTime
+    const endTime: number = performance.now()
+    const latency: number = endTime - startTime
 
     if (!response.ok) {
-      throw new Error('Network test failed')
+      throw new ConnectionError(
+        'Network test failed',
+        'speed_measurement',
+        `HTTP_${response.status}`
+      )
     }
 
-    const blob = await response.blob()
-    const sizeInBytes = blob.size
-    const sizeInMegabits = (sizeInBytes * 8) / (1024 * 1024)
-    const timeInSeconds = latency / 1000
-    const downloadSpeed = sizeInMegabits / timeInSeconds
+    const blob: Blob = await response.blob()
+    const sizeInBytes: number = blob.size
+    const sizeInMegabits: number = (sizeInBytes * 8) / (1024 * 1024)
+    const timeInSeconds: number = latency / 1000
+    const downloadSpeed: number = sizeInMegabits / timeInSeconds
 
-    const isSlowConnection =
+    const isSlowConnection: boolean =
       downloadSpeed < SLOW_CONNECTION_THRESHOLDS.DOWNLINK_THRESHOLD ||
       latency > SLOW_CONNECTION_THRESHOLDS.RTT_THRESHOLD
 
@@ -146,7 +143,7 @@ export async function measureConnectionSpeed(): Promise<{
       isSlowConnection
     }
   } catch (error) {
-    console.warn('Connection speed measurement failed:', error)
+    logError(error, 'measureConnectionSpeed')
     // Conservative fallback
     return {
       downloadSpeed: 1.0,
@@ -168,7 +165,9 @@ export function shouldDisableOverpass(): boolean {
 
   // Check localStorage for user preference
   try {
-    const userPreference = localStorage.getItem('mbta-disable-overpass')
+    const userPreference: string | null = localStorage.getItem(
+      'mbta-disable-overpass'
+    )
     if (userPreference === 'true') {
       console.log('Overpass disabled by user preference')
       return true
@@ -180,11 +179,11 @@ export function shouldDisableOverpass(): boolean {
       return false
     }
   } catch (error) {
-    // localStorage might not be available
+    logError(error, 'shouldDisableOverpass:localStorage')
   }
 
   // Check connection quality
-  const connectionInfo = getConnectionInfo()
+  const connectionInfo: ConnectionInfo = getConnectionInfo()
   if (connectionInfo.shouldSkipOverpass) {
     console.log(`Overpass disabled due to connection quality:`, {
       effectiveType: connectionInfo.effectiveType,
@@ -206,28 +205,32 @@ export function setOverpassPreference(enabled: boolean): void {
       `Overpass ${enabled ? 'enabled' : 'disabled'} by user preference`
     )
   } catch (error) {
-    console.warn('Failed to save Overpass preference:', error)
+    logError(error, 'setOverpassPreference')
   }
 }
 
-export function getOverpassPreference(): boolean | null {
+export function getOverpassPreference(): UserConnectionPreference {
   try {
-    const preference = localStorage.getItem('mbta-disable-overpass')
+    const preference: string | null = localStorage.getItem(
+      'mbta-disable-overpass'
+    )
     if (preference === 'true') return false // disabled
     if (preference === 'false') return true // enabled
     return null // no preference set
   } catch (error) {
+    logError(error, 'getOverpassPreference')
     return null
   }
 }
 
 // Add to global window for debugging
 if (typeof window !== 'undefined') {
-  ;(window as any).connectionDetector = {
+  const connectionDetectorAPI: ConnectionDetectorAPI = {
     getInfo: getConnectionInfo,
     measureSpeed: measureConnectionSpeed,
     shouldDisable: shouldDisableOverpass,
     setPreference: setOverpassPreference,
     getPreference: getOverpassPreference
   }
+  ;(window as any).connectionDetector = connectionDetectorAPI
 }

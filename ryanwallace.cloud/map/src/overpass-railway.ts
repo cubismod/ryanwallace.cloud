@@ -1,35 +1,28 @@
 import * as L from 'leaflet'
-import { shouldDisableOverpass, getConnectionInfo } from './connection-detector'
+import { shouldDisableOverpass } from './connection-detector'
+import {
+  OverpassElement,
+  OverpassResponse,
+  RailwayTrack,
+  BoundingBox,
+  CacheData,
+  CacheInfo,
+  RailwayType,
+  RailwayConfig,
+  LoadingCallbackFunction
+} from './types/railway'
+import {
+  CacheError,
+  ValidationError,
+  NetworkError,
+  logError
+} from './types/errors'
 
-export interface OverpassElement {
-  type: 'way'
-  id: number
-  geometry: Array<{ lat: number; lon: number }>
-  tags: Record<string, string>
-}
-
-export interface OverpassResponse {
-  version: number
-  generator: string
-  elements: OverpassElement[]
-}
-
-export interface RailwayTrack {
-  id: number
-  geometry: L.LatLng[]
-  railway: string
-  usage?: string
-  service?: string
-  operator?: string
-  electrified?: string
-  maxspeed?: string
-  gauge?: string
-}
-
-const OVERPASS_ENDPOINT = 'https://overpass.private.coffee/api/interpreter'
+const OVERPASS_ENDPOINT: string =
+  'https://overpass.private.coffee/api/interpreter'
 
 // Boston metropolitan area bounding box
-const BOSTON_BBOX = {
+const BOSTON_BBOX: BoundingBox = {
   south: 42.1,
   west: -71.3,
   north: 42.6,
@@ -37,25 +30,110 @@ const BOSTON_BBOX = {
 }
 
 // Cache configuration
-const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
-const CACHE_VERSION = 'v1.0'
-const CACHE_KEY = `mbta-railway-tracks-${CACHE_VERSION}`
-const MAX_CACHE_SIZE = 5 * 1024 * 1024 // 5MB
+const RAILWAY_CONFIG: RailwayConfig = {
+  cacheKey: 'mbta-railway-tracks-v1.0',
+  cacheDuration: 24 * 60 * 60 * 1000, // 24 hours
+  maxCacheSize: 5 * 1024 * 1024, // 5MB
+  version: 'v1.0',
+  endpoint: OVERPASS_ENDPOINT,
+  bbox: BOSTON_BBOX
+}
 
 // In-memory cache for railway data
 let cachedRailwayTracks: RailwayTrack[] | null = null
 let cacheTimestamp: number | null = null
-let isLoading = false
+let isLoading: boolean = false
 let loadingPromise: Promise<RailwayTrack[]> | null = null
 
 // Track loading callbacks for progressive enhancement
-const loadingCallbacks: Array<(tracks: RailwayTrack[]) => void> = []
+const loadingCallbacks: LoadingCallbackFunction[] = []
 
-interface CacheData {
-  tracks: RailwayTrack[]
-  timestamp: number
-  version: string
-  bbox: typeof BOSTON_BBOX
+// Security validation functions
+function validateOverpassResponse(data: unknown): data is OverpassResponse {
+  if (typeof data !== 'object' || data === null) {
+    return false
+  }
+
+  const response = data as Record<string, unknown>
+
+  // Check required fields
+  if (
+    typeof response.version !== 'number' ||
+    typeof response.generator !== 'string' ||
+    !Array.isArray(response.elements)
+  ) {
+    return false
+  }
+
+  // Validate elements array
+  for (const element of response.elements) {
+    if (!validateOverpassElement(element)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+function validateOverpassElement(element: unknown): element is OverpassElement {
+  if (typeof element !== 'object' || element === null) {
+    return false
+  }
+
+  const el = element as Record<string, unknown>
+
+  // Check required fields
+  if (
+    el.type !== 'way' ||
+    typeof el.id !== 'number' ||
+    !Array.isArray(el.geometry) ||
+    typeof el.tags !== 'object' ||
+    el.tags === null
+  ) {
+    return false
+  }
+
+  // Validate geometry points
+  for (const point of el.geometry) {
+    if (typeof point !== 'object' || point === null) {
+      return false
+    }
+    const pt = point as Record<string, unknown>
+    if (typeof pt.lat !== 'number' || typeof pt.lon !== 'number') {
+      return false
+    }
+    // Validate coordinate ranges
+    if (pt.lat < -90 || pt.lat > 90 || pt.lon < -180 || pt.lon > 180) {
+      return false
+    }
+  }
+
+  return true
+}
+
+function sanitizeOverpassResponse(data: OverpassResponse): OverpassResponse {
+  return {
+    version: data.version,
+    generator: data.generator,
+    elements: data.elements
+      .filter(
+        (element) => element.type === 'way' && element.geometry.length >= 2
+      )
+      .map((element) => ({
+        type: element.type,
+        id: element.id,
+        geometry: element.geometry.map((point) => ({
+          lat: Math.max(-90, Math.min(90, point.lat)),
+          lon: Math.max(-180, Math.min(180, point.lon))
+        })),
+        tags: Object.fromEntries(
+          Object.entries(element.tags).map(([key, value]) => [
+            key.slice(0, 100), // Limit key length
+            String(value).slice(0, 500) // Limit value length and ensure string
+          ])
+        )
+      }))
+  }
 }
 
 function saveToLocalStorage(tracks: RailwayTrack[]): void {
@@ -63,53 +141,72 @@ function saveToLocalStorage(tracks: RailwayTrack[]): void {
     const cacheData: CacheData = {
       tracks,
       timestamp: Date.now(),
-      version: CACHE_VERSION,
-      bbox: BOSTON_BBOX
+      version: RAILWAY_CONFIG.version,
+      bbox: RAILWAY_CONFIG.bbox
     }
 
-    const serialized = JSON.stringify(cacheData)
+    const serialized: string = JSON.stringify(cacheData)
 
     // Check cache size
-    if (serialized.length > MAX_CACHE_SIZE) {
-      console.warn('Railway tracks cache too large, skipping localStorage save')
-      return
+    if (serialized.length > RAILWAY_CONFIG.maxCacheSize) {
+      throw new CacheError(
+        `Cache data too large: ${serialized.length} bytes exceeds limit of ${RAILWAY_CONFIG.maxCacheSize}`,
+        'save',
+        'SIZE_LIMIT_EXCEEDED'
+      )
     }
 
-    localStorage.setItem(CACHE_KEY, serialized)
+    localStorage.setItem(RAILWAY_CONFIG.cacheKey, serialized)
     console.log(
       `Saved ${tracks.length} railway tracks to localStorage (${(serialized.length / 1024).toFixed(1)}KB)`
     )
   } catch (error) {
-    console.warn('Failed to save railway tracks to localStorage:', error)
+    logError(error, 'saveToLocalStorage')
   }
 }
 
 function loadFromLocalStorage(): RailwayTrack[] | null {
   try {
-    const cached = localStorage.getItem(CACHE_KEY)
+    const cached: string | null = localStorage.getItem(RAILWAY_CONFIG.cacheKey)
     if (!cached) {
       return null
     }
 
     const cacheData: CacheData = JSON.parse(cached)
 
+    // Validate cache structure
+    if (
+      !cacheData.tracks ||
+      !Array.isArray(cacheData.tracks) ||
+      typeof cacheData.timestamp !== 'number' ||
+      typeof cacheData.version !== 'string'
+    ) {
+      throw new CacheError(
+        'Invalid cache data structure',
+        'load',
+        'INVALID_STRUCTURE'
+      )
+    }
+
     // Validate cache version
-    if (cacheData.version !== CACHE_VERSION) {
+    if (cacheData.version !== RAILWAY_CONFIG.version) {
       console.log('Railway tracks cache version mismatch, clearing cache')
       clearLocalStorageCache()
       return null
     }
 
     // Check cache age
-    const age = Date.now() - cacheData.timestamp
-    if (age > CACHE_DURATION) {
+    const age: number = Date.now() - cacheData.timestamp
+    if (age > RAILWAY_CONFIG.cacheDuration) {
       console.log('Railway tracks cache expired, clearing cache')
       clearLocalStorageCache()
       return null
     }
 
     // Validate bbox (in case we change the area)
-    if (JSON.stringify(cacheData.bbox) !== JSON.stringify(BOSTON_BBOX)) {
+    if (
+      JSON.stringify(cacheData.bbox) !== JSON.stringify(RAILWAY_CONFIG.bbox)
+    ) {
       console.log('Railway tracks cache bbox changed, clearing cache')
       clearLocalStorageCache()
       return null
@@ -120,7 +217,7 @@ function loadFromLocalStorage(): RailwayTrack[] | null {
     )
     return cacheData.tracks
   } catch (error) {
-    console.warn('Failed to load railway tracks from localStorage:', error)
+    logError(error, 'loadFromLocalStorage')
     clearLocalStorageCache()
     return null
   }
@@ -128,22 +225,20 @@ function loadFromLocalStorage(): RailwayTrack[] | null {
 
 function clearLocalStorageCache(): void {
   try {
-    localStorage.removeItem(CACHE_KEY)
+    localStorage.removeItem(RAILWAY_CONFIG.cacheKey)
     // Also clear any old cache versions
     for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
+      const key: string | null = localStorage.key(i)
       if (key && key.startsWith('mbta-railway-tracks-')) {
         localStorage.removeItem(key)
       }
     }
   } catch (error) {
-    console.warn('Failed to clear localStorage cache:', error)
+    logError(error, 'clearLocalStorageCache')
   }
 }
 
-export function onRailwayTracksLoaded(
-  callback: (tracks: RailwayTrack[]) => void
-): void {
+export function onRailwayTracksLoaded(callback: LoadingCallbackFunction): void {
   if (cachedRailwayTracks) {
     // Tracks already loaded, call immediately
     callback(cachedRailwayTracks)
@@ -154,11 +249,11 @@ export function onRailwayTracksLoaded(
 }
 
 function notifyLoadingCallbacks(tracks: RailwayTrack[]): void {
-  loadingCallbacks.forEach((callback) => {
+  loadingCallbacks.forEach((callback: LoadingCallbackFunction) => {
     try {
       callback(tracks)
     } catch (error) {
-      console.warn('Error in railway tracks loading callback:', error)
+      logError(error, 'notifyLoadingCallbacks')
     }
   })
   loadingCallbacks.length = 0 // Clear callbacks after notification
@@ -176,7 +271,25 @@ export function getRailwayTracksSync(): RailwayTrack[] {
   return cachedRailwayTracks || []
 }
 
-export function buildOverpassQuery(bbox = BOSTON_BBOX): string {
+export function buildOverpassQuery(
+  bbox: BoundingBox = RAILWAY_CONFIG.bbox
+): string {
+  // Validate bounding box
+  if (
+    bbox.south >= bbox.north ||
+    bbox.west >= bbox.east ||
+    bbox.south < -90 ||
+    bbox.north > 90 ||
+    bbox.west < -180 ||
+    bbox.east > 180
+  ) {
+    throw new ValidationError(
+      'Invalid bounding box coordinates',
+      'bbox',
+      'INVALID_BBOX'
+    )
+  }
+
   return `
     [out:json][timeout:30];
     (
@@ -207,7 +320,7 @@ export async function fetchRailwayTracks(
   // Check in-memory cache first
   if (!forceRefresh && cachedRailwayTracks && cacheTimestamp) {
     const age = Date.now() - cacheTimestamp
-    if (age < CACHE_DURATION) {
+    if (age < RAILWAY_CONFIG.cacheDuration) {
       console.log('Using in-memory cached railway tracks')
       return cachedRailwayTracks
     }
@@ -249,24 +362,58 @@ export async function fetchRailwayTracks(
 async function performFetch(): Promise<RailwayTrack[]> {
   try {
     console.log('Fetching railway tracks from Overpass API...')
-    const query = buildOverpassQuery()
+    const query: string = buildOverpassQuery()
 
-    const response = await fetch(OVERPASS_ENDPOINT, {
+    const response: Response = await fetch(RAILWAY_CONFIG.endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
-      body: `data=${encodeURIComponent(query)}`
+      body: `data=${encodeURIComponent(query)}`,
+      signal: AbortSignal.timeout(30000) // 30 second timeout
     })
 
     if (!response.ok) {
-      throw new Error(
-        `Overpass API error: ${response.status} ${response.statusText}`
+      throw new NetworkError(
+        `Overpass API error: ${response.status} ${response.statusText}`,
+        response.status,
+        RAILWAY_CONFIG.endpoint,
+        'OVERPASS_HTTP_ERROR'
       )
     }
 
-    const data: OverpassResponse = await response.json()
-    const tracks = convertOverpassToRailwayTracks(data)
+    // Validate response content type
+    const contentType: string = response.headers.get('content-type') ?? ''
+    if (!contentType.includes('application/json')) {
+      throw new ValidationError(
+        `Invalid response content type: ${contentType}`,
+        'content-type',
+        'INVALID_CONTENT_TYPE'
+      )
+    }
+
+    const rawData: unknown = await response.json()
+
+    // Validate and sanitize response
+    if (!validateOverpassResponse(rawData)) {
+      throw new ValidationError(
+        'Invalid Overpass API response structure',
+        'response',
+        'INVALID_RESPONSE_STRUCTURE'
+      )
+    }
+
+    const sanitizedData: OverpassResponse = sanitizeOverpassResponse(rawData)
+    const tracks: RailwayTrack[] = convertOverpassToRailwayTracks(sanitizedData)
+
+    // Validate track count is reasonable
+    if (tracks.length > 10000) {
+      throw new ValidationError(
+        `Unexpectedly large number of tracks: ${tracks.length}`,
+        'track_count',
+        'EXCESSIVE_TRACK_COUNT'
+      )
+    }
 
     // Update both caches
     cachedRailwayTracks = tracks
@@ -276,7 +423,7 @@ async function performFetch(): Promise<RailwayTrack[]> {
     console.log(`Fetched ${tracks.length} railway tracks from Overpass API`)
     return tracks
   } catch (error) {
-    console.error('Failed to fetch railway tracks:', error)
+    logError(error, 'performFetch')
     // Return cached data if available, otherwise empty array
     return cachedRailwayTracks || []
   }
@@ -313,21 +460,23 @@ export function convertOverpassToRailwayTracks(
 
 export function filterTracksByType(
   tracks: RailwayTrack[],
-  type: 'heavy_rail' | 'light_rail' | 'subway'
+  type: RailwayType
 ): RailwayTrack[] {
   switch (type) {
     case 'heavy_rail':
       return tracks.filter(
-        (track) =>
+        (track: RailwayTrack) =>
           track.railway === 'rail' &&
           track.usage !== 'industrial' &&
           track.service !== 'siding' &&
           track.service !== 'yard'
       )
     case 'light_rail':
-      return tracks.filter((track) => track.railway === 'light_rail')
+      return tracks.filter(
+        (track: RailwayTrack) => track.railway === 'light_rail'
+      )
     case 'subway':
-      return tracks.filter((track) => track.railway === 'subway')
+      return tracks.filter((track: RailwayTrack) => track.railway === 'subway')
     default:
       return tracks
   }
@@ -337,6 +486,15 @@ export function getTracksForRoute(
   tracks: RailwayTrack[],
   route: string
 ): RailwayTrack[] {
+  // Validate route parameter
+  if (typeof route !== 'string' || route.length === 0) {
+    throw new ValidationError(
+      'Invalid route parameter',
+      'route',
+      'INVALID_ROUTE'
+    )
+  }
+
   // Map MBTA routes to railway types
   if (route.startsWith('CR-')) {
     return filterTracksByType(tracks, 'heavy_rail')
@@ -375,27 +533,23 @@ export function refreshRailwayTracks(): Promise<RailwayTrack[]> {
   return fetchRailwayTracks(true)
 }
 
-export function getCacheInfo(): {
-  hasMemoryCache: boolean
-  hasLocalStorageCache: boolean
-  age?: number
-  trackCount?: number
-  cacheSize?: string
-} {
-  const hasMemoryCache = !!(cachedRailwayTracks && cacheTimestamp)
-  const age = cacheTimestamp ? Date.now() - cacheTimestamp : undefined
+export function getCacheInfo(): CacheInfo {
+  const hasMemoryCache: boolean = !!(cachedRailwayTracks && cacheTimestamp)
+  const age: number | undefined = cacheTimestamp
+    ? Date.now() - cacheTimestamp
+    : undefined
 
-  let hasLocalStorageCache = false
-  let cacheSize = undefined
+  let hasLocalStorageCache: boolean = false
+  let cacheSize: string | undefined = undefined
 
   try {
-    const cached = localStorage.getItem(CACHE_KEY)
+    const cached: string | null = localStorage.getItem(RAILWAY_CONFIG.cacheKey)
     hasLocalStorageCache = !!cached
     if (cached) {
       cacheSize = `${(cached.length / 1024).toFixed(1)}KB`
     }
   } catch (error) {
-    // localStorage might not be available
+    logError(error, 'getCacheInfo')
   }
 
   return {
