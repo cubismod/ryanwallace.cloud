@@ -3,13 +3,6 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    paths:
-      - "ryanwallace.cloud/map/src/**/*.ts"
-      - "ryanwallace.cloud/content/**/*.md"
-      - "ryanwallace.cloud/hugo.toml"
-      - "Taskfile.yaml"
-      - "Dockerfile"
 
 jobs:
   claude-review:
