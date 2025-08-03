@@ -5,18 +5,18 @@ on:
     types: [opened, synchronize]
     # Optional: Only run on specific file changes
     # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    #   - "ryanwallace.cloud/map/src/**/*.ts"
+    #   - "ryanwallace.cloud/content/**/*.md"
+    #   - "ryanwallace.cloud/hugo.toml"
+    #   - "Taskfile.yaml"
+    #   - "Dockerfile"
 
 jobs:
   claude-review:
     # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    if: |
+      (github.actor != 'cubis-renovate[bot]') &&
+      (github.event.pull_request.draft == false || github.event.pull_request == null)
     
     runs-on: ubuntu-latest
     permissions:
@@ -39,15 +39,41 @@ jobs:
 
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
+
+          max_turns: 5
+          model: "claude-3-5-haiku-latest"
           
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            Please review this pull request for the personal blog and MBTA tracking application. Focus on:
+            - For TypeScript files (map/src/): Type safety, Leaflet integration, and real-time data handling
+            - For Markdown files (content/posts/): Content quality, formatting, and Hugo front matter
+            - For Hugo templates: Template syntax, performance, and accessibility, and Hugo front matter
+            - For Taskfile.yaml: Task dependencies and build process efficiency
+            - For Dockerfile: Multi-stage build optimization and security
+            - For general: Security concerns (API keys, data validation), performance implications, and code maintainability
+            **Hugo Site (Markdown/Hugo templates):**
+            - Content quality and structure
+            - Hugo template syntax and best practices
+            - Site configuration and performance
+            
+            **TypeScript MBTA Map Application:**
+            - Type safety and interface definitions
+            - Leaflet.js integration and geospatial data handling
+            - Real-time data processing efficiency
+            - Memory management for vehicle tracking
+            - Error handling for API failures
+            
+            **Build System & Infrastructure:**
+            - Taskfile.yaml task definitions
+            - Multi-stage Docker build optimization
+            - Hugo + Parcel integration
+            - Static asset management
+            
+            **General:**
+            - Security concerns (API keys, data validation)
+            - Performance implications
+            - Code maintainability
             
             Be constructive and helpful in your feedback.
 
@@ -57,10 +83,11 @@ jobs:
           # Optional: Customize review based on file types
           # direct_prompt: |
           #   Review this PR focusing on:
-          #   - For TypeScript files: Type safety and proper interface usage
-          #   - For API endpoints: Security, input validation, and error handling
-          #   - For React components: Performance, accessibility, and best practices
-          #   - For tests: Coverage, edge cases, and test quality
+          #   - For TypeScript files (map/src/): Type safety, Leaflet integration, and real-time data handling
+          #   - For Markdown files (content/posts/): Content quality, formatting, and Hugo front matter
+          #   - For Hugo templates: Template syntax, performance, and accessibility
+          #   - For Taskfile.yaml: Task dependencies and build process efficiency
+          #   - For Dockerfile: Multi-stage build optimization and security
           
           # Optional: Different prompts for different authors
           # direct_prompt: |
@@ -69,7 +96,7 @@ jobs:
           #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
           
           # Optional: Add specific tools for running tests or linting
-          # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
+          # allowed_tools: "Bash(task typecheck),Bash(task format),Bash(task build)"
           
           # Optional: Skip review for certain conditions
           # if: |
