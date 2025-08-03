@@ -2,11 +2,35 @@ import * as L from 'leaflet'
 import { VehicleFeature } from './types'
 import { niceStatus } from './utils'
 import { incrementMapItem } from './vehicle-counter'
+import { snapVehicleToRoute, getShapesFromLayerGroup } from './geometry-utils'
+import { getShapesLayerGroupForRoute } from './layer-groups'
 
 export function pointToLayer(
   feature: VehicleFeature,
   latlng: L.LatLng
 ): L.Marker {
+  let adjustedLatLng = latlng
+
+  if (
+    feature.properties.route &&
+    feature.properties['marker-symbol'] !== 'building'
+  ) {
+    try {
+      const shapesGroup = getShapesLayerGroupForRoute(feature.properties.route)
+      const routeShapes = getShapesFromLayerGroup(shapesGroup)
+
+      adjustedLatLng = snapVehicleToRoute(
+        latlng,
+        routeShapes,
+        feature.properties.status,
+        feature.properties.route,
+        feature.properties.direction
+      )
+    } catch (error) {
+      console.warn('Error snapping vehicle to route:', error)
+      adjustedLatLng = latlng
+    }
+  }
   let icon_size = 28
   let icon = 'bus-yellow.svg'
   let opacity = 1.0
@@ -81,7 +105,7 @@ export function pointToLayer(
     iconSize: L.point(icon_size, icon_size)
   })
 
-  return L.marker(latlng, {
+  return L.marker(adjustedLatLng, {
     icon: leafletIcon,
     title: `${feature.id} ${feature.properties.route} ${status} ${station}`,
     opacity: opacity,
