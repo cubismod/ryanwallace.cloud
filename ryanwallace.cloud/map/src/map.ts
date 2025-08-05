@@ -14,6 +14,7 @@ import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
 // Import modules
 import { setCookie, getCookie, return_colors } from './utils'
 import { pointToLayer, onEachFeature, updateVehicleFeatures } from './markers'
+import { setupProgressiveEnhancement } from './geometry-utils'
 import {
   layerGroups,
   shapesLayerGroups,
@@ -142,6 +143,9 @@ function annotate_map(): void {
 }
 
 annotate_map()
+
+// Set up progressive enhancement for railway tracks
+setupProgressiveEnhancement()
 
 // Load saved refresh rate from cookie or default to 15 seconds
 const savedRefreshRate = getCookie('refresh-rate')

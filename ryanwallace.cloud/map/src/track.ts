@@ -314,7 +314,7 @@ async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
     const maxTime = moment().tz('America/New_York').add(2, 'hour')
     timeFilter = `&filter[min_time]=${minTime.format('HH:mm')}&filter[max_time]=${maxTime.format('HH:mm')}`
   }
-  const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time${timeFilter}`
+  const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&page[limit]=75&filter[route_type]=2&sort=departure_time${timeFilter}`
 
   return new Promise((resolve, reject) => {
     $.getJSON(url, (data: MBTAScheduleResponse) => {

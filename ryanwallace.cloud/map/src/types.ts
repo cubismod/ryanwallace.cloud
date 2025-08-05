@@ -21,6 +21,7 @@ export interface VehicleFeature {
     name?: string
     headsign?: string
     platform_prediction?: string
+    direction?: number
   }
 }
 
