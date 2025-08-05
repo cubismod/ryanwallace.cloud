@@ -2,8 +2,9 @@ import * as L from 'leaflet'
 import { VehicleFeature } from './types'
 import { niceStatus } from './utils'
 import { incrementMapItem } from './vehicle-counter'
-import { snapVehicleToRoute, getShapesFromLayerGroup } from './geometry-utils'
-import { getShapesLayerGroupForRoute } from './layer-groups'
+// import { getShapesFromLayerGroup } from './geometry-utils'
+// import { getShapesLayerGroupForRoute } from './layer-groups'
+import { calculateElfScore, getElfScoreDisplay } from './elf-score'
 
 export function pointToLayer(
   feature: VehicleFeature,
@@ -11,26 +12,28 @@ export function pointToLayer(
 ): L.Marker {
   let adjustedLatLng = latlng
 
-  if (
-    feature.properties.route &&
-    feature.properties['marker-symbol'] !== 'building'
-  ) {
-    try {
-      const shapesGroup = getShapesLayerGroupForRoute(feature.properties.route)
-      const routeShapes = getShapesFromLayerGroup(shapesGroup)
+  // Temporarily disable vehicle snapping to fix positioning issues
+  // The snapVehicleToRoute function was missing, causing coordinate problems
+  // if (
+  //   feature.properties.route &&
+  //   feature.properties['marker-symbol'] !== 'building'
+  // ) {
+  //   try {
+  //     const shapesGroup = getShapesLayerGroupForRoute(feature.properties.route)
+  //     const routeShapes = getShapesFromLayerGroup(shapesGroup)
 
-      adjustedLatLng = snapVehicleToRoute(
-        latlng,
-        routeShapes,
-        feature.properties.status,
-        feature.properties.route,
-        feature.properties.direction
-      )
-    } catch (error) {
-      console.warn('Error snapping vehicle to route:', error)
-      adjustedLatLng = latlng
-    }
-  }
+  //     adjustedLatLng = snapVehicleToRoute(
+  //       latlng,
+  //       routeShapes,
+  //       feature.properties.status,
+  //       feature.properties.route,
+  //       feature.properties.direction
+  //     )
+  //   } catch (error) {
+  //     console.warn('Error snapping vehicle to route:', error)
+  //     adjustedLatLng = latlng
+  //   }
+  // }
   let icon_size = 28
   let icon = 'bus-yellow.svg'
   let opacity = 1.0
@@ -297,12 +300,27 @@ export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
         stopDisplay = feature.properties.stop
       }
 
+      // Create dynamic popup content that updates based on current elf mode state
       const popup = L.popup({
-        content: `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
+        content: () => {
+          const elfModeEnabled =
+            (document.getElementById('show-elf-mode') as HTMLInputElement)
+              ?.checked || false
+
+          let elfScoreHtml = ''
+          if (elfModeEnabled) {
+            const elfScore = calculateElfScore(feature)
+            const elfDisplay = getElfScoreDisplay(elfScore)
+            elfScoreHtml = `<br />Elf Score: ${elfDisplay}`
+          }
+
+          return `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
         <br />Stop: ${stopDisplay}
         <br />Status: ${niceStatus(feature.properties.status || '')}
+        ${elfScoreHtml}
         ${eta}${speed}${occupancy}${platform_prediction}
-        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`,
+        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`
+        },
         autoPan: true,
         closeOnEscapeKey: true
       })

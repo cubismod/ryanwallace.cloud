@@ -918,3 +918,505 @@ body.dark-theme .prediction-stats span:not(:last-child):after {
     border-color: var(--link-color, #28a745);
   }
 }
+
+/* Elf Score Sparkle Effects */
+@keyframes sparkle {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px #ff0080,
+      0 0 16px #ff0080,
+      0 0 24px #ff0080;
+    transform: scale(1);
+  }
+  25% {
+    box-shadow:
+      0 0 12px #8a2be2,
+      0 0 20px #8a2be2,
+      0 0 28px #8a2be2;
+    transform: scale(1.05);
+  }
+  50% {
+    box-shadow:
+      0 0 10px #ff6347,
+      0 0 18px #ff6347,
+      0 0 26px #ff6347;
+    transform: scale(1.02);
+  }
+  75% {
+    box-shadow:
+      0 0 14px #87ceeb,
+      0 0 22px #87ceeb,
+      0 0 30px #87ceeb;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes legendarySparkle {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px #ff0080,
+      0 0 16px #ff0080;
+    transform: scale(1);
+    filter: hue-rotate(0deg);
+  }
+  25% {
+    box-shadow:
+      0 0 10px #8a2be2,
+      0 0 18px #8a2be2;
+    transform: scale(1.02);
+    filter: hue-rotate(90deg);
+  }
+  50% {
+    box-shadow:
+      0 0 12px #00ff80,
+      0 0 20px #00ff80;
+    transform: scale(1.03);
+    filter: hue-rotate(180deg);
+  }
+  75% {
+    box-shadow:
+      0 0 10px #ff8000,
+      0 0 18px #ff8000;
+    transform: scale(1.02);
+    filter: hue-rotate(270deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes glow {
+  0% {
+    filter: brightness(1.3) saturate(1.2) hue-rotate(0deg);
+  }
+  25% {
+    filter: brightness(1.4) saturate(1.4) hue-rotate(90deg);
+  }
+  50% {
+    filter: brightness(1.5) saturate(1.6) hue-rotate(180deg);
+  }
+  75% {
+    filter: brightness(1.4) saturate(1.4) hue-rotate(270deg);
+  }
+  100% {
+    filter: brightness(1.3) saturate(1.2) hue-rotate(360deg);
+  }
+}
+
+@keyframes trans-pride {
+  0% {
+    filter: brightness(1.4) saturate(1.8);
+    box-shadow:
+      0 0 15px #5bcefa,
+      0 0 30px #f5a9b8,
+      0 0 45px #ffffff;
+  }
+  33% {
+    filter: brightness(1.6) saturate(2);
+    box-shadow:
+      0 0 20px #f5a9b8,
+      0 0 35px #ffffff,
+      0 0 50px #5bcefa;
+  }
+  66% {
+    filter: brightness(1.5) saturate(1.9);
+    box-shadow:
+      0 0 18px #ffffff,
+      0 0 32px #5bcefa,
+      0 0 48px #f5a9b8;
+  }
+  100% {
+    filter: brightness(1.4) saturate(1.8);
+    box-shadow:
+      0 0 15px #5bcefa,
+      0 0 30px #f5a9b8,
+      0 0 45px #ffffff;
+  }
+}
+
+@keyframes trans-sparkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.1) rotate(90deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05) rotate(180deg);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.08) rotate(270deg);
+    opacity: 0.9;
+  }
+}
+
+/* Elf score classes for markers - simple color tinting that actually works */
+.leaflet-marker-pane .elf-low img {
+  filter: hue-rotate(220deg) saturate(1.2) brightness(1.05) !important;
+}
+
+.leaflet-marker-pane .elf-medium img {
+  filter: hue-rotate(15deg) saturate(1.3) brightness(1.1) !important;
+}
+
+.leaflet-marker-pane .elf-high img {
+  filter: hue-rotate(300deg) saturate(1.4) brightness(1.2) !important;
+}
+
+.leaflet-marker-pane .elf-legendary img {
+  filter: hue-rotate(320deg) saturate(1.6) brightness(1.3) contrast(1.1) !important;
+}
+
+.leaflet-marker-pane .elf-trans-pride img {
+  filter: hue-rotate(200deg) saturate(1.8) brightness(1.4) contrast(1.2) !important;
+}
+
+/* Simplified elf classes - focus on what actually works: color tinting */
+
+/* Trans Pride and other elf effects are now handled via inline styles for reliability */
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-marker-pane .elf-low,
+  .leaflet-marker-pane .elf-low img,
+  .leaflet-marker-pane .elf-medium,
+  .leaflet-marker-pane .elf-medium img,
+  .leaflet-marker-pane .elf-high,
+  .leaflet-marker-pane .elf-high img,
+  .leaflet-marker-pane .elf-legendary,
+  .leaflet-marker-pane .elf-legendary img,
+  .leaflet-marker-pane .elf-trans-pride,
+  .leaflet-marker-pane .elf-trans-pride img,
+  .elf-low,
+  .elf-medium,
+  .elf-high,
+  .elf-legendary,
+  .elf-trans-pride {
+    animation: none !important;
+  }
+
+  .leaflet-marker-pane .elf-medium,
+  .leaflet-marker-pane .elf-medium img,
+  .leaflet-marker-pane .elf-high,
+  .leaflet-marker-pane .elf-high img,
+  .elf-medium,
+  .elf-high {
+    filter: brightness(1.1) saturate(1.1) !important;
+  }
+
+  .leaflet-marker-pane .elf-legendary,
+  .leaflet-marker-pane .elf-legendary img,
+  .elf-legendary {
+    filter: brightness(1.2) saturate(1.3) !important;
+  }
+
+  .leaflet-marker-pane .elf-trans-pride,
+  .leaflet-marker-pane .elf-trans-pride img,
+  .elf-trans-pride {
+    filter: brightness(1.3) saturate(1.5) !important;
+  }
+}
+
+/* Elf Search Feature */
+.control-group {
+  position: relative;
+}
+
+.elf-search-button {
+  background: linear-gradient(135deg, #ff0080, #8a2be2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 0, 128, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.elf-search-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(255, 0, 128, 0.6);
+  background: linear-gradient(135deg, #ff0080, #8a2be2, #00ff80);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.elf-search-button:before {
+  content: "✨";
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.elf-search-button:active {
+  transform: translateY(-1px);
+}
+
+.elf-search-results {
+  position: absolute;
+  top: 50px;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border: 3px solid #ff0080;
+  border-radius: 15px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.2);
+  z-index: 1000;
+  max-height: 500px;
+  overflow: hidden;
+  animation: elf-results-appear 0.3s ease-out;
+}
+
+.elf-results-list {
+  padding: 0;
+  margin: 0;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar styling */
+.elf-results-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.elf-results-list::-webkit-scrollbar-track {
+  background: rgba(255, 0, 128, 0.1);
+  border-radius: 4px;
+}
+
+.elf-results-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #ff0080, #8a2be2);
+  border-radius: 4px;
+}
+
+.elf-results-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #ff0080, #8a2be2, #00ff80);
+}
+
+@keyframes elf-results-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.elf-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #ff0080, #8a2be2);
+  color: white !important;
+  font-weight: bold;
+  font-size: 16px;
+  border-radius: 12px 12px 0 0;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.elf-results-header span {
+  color: white !important;
+}
+
+.elf-results-header:before {
+  content: "🏳️‍⚧️ ";
+  margin-right: 8px;
+}
+
+.elf-search-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.elf-search-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
+
+.elf-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 0, 128, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.elf-result-item:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 0, 128, 0.15),
+    rgba(138, 43, 226, 0.15)
+  );
+  transform: translateX(4px);
+  border-left: 4px solid #ff0080;
+}
+
+.elf-result-item:last-child {
+  border-bottom: none;
+}
+
+.elf-result-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.elf-result-route {
+  font-weight: bold;
+  color: #333;
+  font-size: 16px;
+}
+
+.elf-result-details {
+  font-size: 13px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.elf-result-reasoning {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+  font-style: italic;
+  line-height: 1.3;
+  max-width: 300px;
+}
+
+.elf-result-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.elf-score-badge {
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.elf-score-trans-pride {
+  background: linear-gradient(
+    135deg,
+    #5bcefa,
+    #f5a9b8,
+    #ffffff,
+    #f5a9b8,
+    #5bcefa
+  );
+  animation: trans-sparkle 1.8s ease-in-out infinite;
+  font-weight: bold;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+}
+
+.elf-score-legendary {
+  background: linear-gradient(135deg, #ff0080, #8a2be2);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.elf-score-high {
+  background: #d63384 !important;
+  color: #fff !important;
+}
+
+.elf-score-medium {
+  background: #ff6347 !important;
+  color: #fff !important;
+}
+
+.elf-score-low {
+  background: #4682b4 !important;
+  color: #fff !important;
+}
+
+.elf-score-percentage {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Dark theme support for elf search */
+body.dark-theme .elf-search-results {
+  background: rgba(20, 20, 30, 0.95);
+  backdrop-filter: blur(15px);
+  border-color: #ff0080;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 0, 128, 0.3);
+}
+
+body.dark-theme .elf-result-item {
+  border-bottom-color: rgba(255, 0, 128, 0.3);
+}
+
+body.dark-theme .elf-result-item:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 0, 128, 0.2),
+    rgba(138, 43, 226, 0.2)
+  );
+}
+
+body.dark-theme .elf-result-route {
+  color: #fff;
+}
+
+body.dark-theme .elf-result-details {
+  color: #ccc;
+}
+
+body.dark-theme .elf-result-reasoning {
+  color: #aaa;
+}
+
+body.dark-theme .elf-score-percentage {
+  color: #fff;
+  font-weight: bold;
+}
+
+body.dark-theme .elf-score-high {
+  background: #d63384;
+  color: #fff;
+}

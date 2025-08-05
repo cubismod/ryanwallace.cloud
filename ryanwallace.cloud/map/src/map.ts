@@ -20,7 +20,12 @@ import {
   shapesLayerGroups,
   getShapesLayerGroupForRoute
 } from './layer-groups'
-import { updateMarkers } from './marker-manager'
+import {
+  updateMarkers,
+  refreshAllElfClasses,
+  findTopElfTrains,
+  jumpToElfTrain
+} from './marker-manager'
 import { updateTable } from './table-manager'
 import { alerts } from './alerts'
 import { fetchAmtrakData } from './amtrak'
@@ -524,5 +529,101 @@ document
     toggleLocationWatch(target.checked)
     setCookie('follow-location', target.checked.toString())
   })
+
+// Load saved elf mode setting from cookie
+const savedElfMode = getCookie('show-elf-mode')
+const elfModeElement = document.getElementById(
+  'show-elf-mode'
+) as HTMLInputElement
+if (elfModeElement) {
+  const defaultElfMode = savedElfMode === 'true'
+  elfModeElement.checked = defaultElfMode
+}
+
+// Handle elf mode toggle
+document
+  .getElementById('show-elf-mode')!
+  .addEventListener('change', (event: Event) => {
+    const target = event.target as HTMLInputElement
+    setCookie('show-elf-mode', target.checked.toString())
+    // Refresh all marker classes immediately
+    if (vehicleDataCache && vehicleDataCache.features) {
+      refreshAllElfClasses(vehicleDataCache.features)
+    }
+    // Force popup refresh by clearing cache and updating
+    vehicleDataCache = null
+    lastVehicleUpdate = 0
+    annotate_map()
+  })
+
+// Handle elf search functionality
+document.getElementById('elf-search-btn')!.addEventListener('click', () => {
+  if (!vehicleDataCache || !vehicleDataCache.features) {
+    console.warn('No vehicle data available for elf search')
+    return
+  }
+
+  const resultsDiv = document.getElementById('elf-search-results')!
+  const resultsList = document.getElementById('elf-results-list')!
+
+  // Show results panel
+  resultsDiv.style.display = 'block'
+
+  // Find top elf trains
+  const topElves = findTopElfTrains(vehicleDataCache.features)
+
+  // Clear previous results
+  resultsList.innerHTML = ''
+
+  if (topElves.length === 0) {
+    resultsList.innerHTML =
+      '<div style="padding: 15px; text-align: center; color: #666;">No trains found with elf energy! 🥺</div>'
+    return
+  }
+
+  // Populate results
+  topElves.forEach((result, index) => {
+    const item = document.createElement('div')
+    item.className = 'elf-result-item'
+
+    const route = result.feature.properties.route || 'Unknown'
+    const headsign =
+      result.feature.properties.headsign ||
+      result.feature.properties.stop ||
+      'Unknown destination'
+    const stop = result.feature.properties.stop || 'Unknown stop'
+    const scoreLevel = result.elfScore.level.toLowerCase()
+    const scorePercentage = Math.round(result.elfScore.score)
+
+    item.innerHTML = `
+        <div class="elf-result-info">
+          <div class="elf-result-route">${index + 1}. ${route} to ${headsign}</div>
+          <div class="elf-result-details">Stop: ${stop}</div>
+          <div class="elf-result-reasoning">${result.elfScore.reasoning}</div>
+        </div>
+        <div class="elf-result-score">
+          <div class="elf-score-badge elf-score-${scoreLevel}">${result.elfScore.level}</div>
+          <div class="elf-score-percentage">${scorePercentage}% elf</div>
+        </div>
+      `
+
+    // Add click handler to jump to train
+    item.addEventListener('click', () => {
+      jumpToElfTrain(result, map)
+      // Hide search results after selection
+      resultsDiv.style.display = 'none'
+      // Scroll back to map element
+      document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
+    })
+
+    resultsList.appendChild(item)
+  })
+})
+
+// Handle elf search close button
+document.getElementById('elf-search-close')!.addEventListener('click', () => {
+  const resultsDiv = document.getElementById('elf-search-results')!
+  resultsDiv.style.display = 'none'
+})
 
 alerts(vehicles_url)
