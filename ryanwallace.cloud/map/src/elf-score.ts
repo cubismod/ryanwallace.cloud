@@ -144,15 +144,15 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
       lng: -71.4128,
       radius: 10,
       strength: 0.9
-    }, // Vibrant queer scene
+    }, // I'm not sure if this is a good idea, but it's a good idea!
     {
       name: 'Worcester',
       lat: 42.2626,
       lng: -71.8023,
       radius: 8,
       strength: 0.8
-    }, // College town energy
-    { name: 'Salem', lat: 42.5195, lng: -70.8967, radius: 6, strength: 0.85 }, // Witchy queer vibes
+    },
+    { name: 'Salem', lat: 42.5195, lng: -70.8967, radius: 6, strength: 0.85 }, // You ever see an elf on a witch's broom?
     {
       name: 'Northampton',
       lat: 42.3251,
@@ -160,7 +160,7 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
       radius: 8,
       strength: 1.0
     }, // Lesbian capital gets full strength, also this logic applies to amtrak!
-    { name: 'Lowell', lat: 42.6334, lng: -71.3162, radius: 7, strength: 0.75 } // Mill city with growing arts scene
+    { name: 'Lowell', lat: 42.6334, lng: -71.3162, radius: 7, strength: 0.75 } // There's a Lot to Like About Lowell (tm) like elves!
   ]
 
   // Calculate distance to nearest elf hub using Turf.js
