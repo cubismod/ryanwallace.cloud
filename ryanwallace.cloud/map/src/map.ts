@@ -24,10 +24,19 @@ import { updateMarkers } from './marker-manager'
 import { updateTable } from './table-manager'
 import { alerts } from './alerts'
 import { fetchAmtrakData } from './amtrak'
+import { getConnectionInfo, shouldDisableOverpass } from './connection-detector'
 
-// Extend jQuery to include getJSON method
+// Extend jQuery to include getJSON method with Promise support
 declare const $: {
-  getJSON: (url: string, callback: (data: any) => void) => void
+  getJSON: (
+    url: string,
+    callback?: (data: any) => void
+  ) => {
+    done: (callback: (data: any) => void) => any
+    fail: (
+      callback: (jqXHR: any, textStatus: string, errorThrown?: string) => void
+    ) => any
+  }
 }
 
 // Extend window to include moveMapToStop function and buildingMarkers
@@ -57,6 +66,10 @@ const bos_url: string = 'https://bos.ryanwallace.cloud'
 
 let baseLayerLoaded: boolean = false
 let buildingMarkers: L.GeoJSON | null = null
+let lastVehicleUpdate: number = 0
+let vehicleDataCache: any = null
+let adaptiveRefreshRate: number = 15
+let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
 
 document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
 
@@ -71,7 +84,39 @@ window.moveMapToStop = (lat: number, lng: number): void => {
 }
 
 function annotate_map(): void {
-  $.getJSON(`${vehicles_url}/vehicles`, function (data: any) {
+  const now = Date.now()
+
+  // Use cached data if recent enough
+  if (vehicleDataCache && now - lastVehicleUpdate < CACHE_DURATION) {
+    processVehicleData(vehicleDataCache)
+    return
+  }
+
+  $.getJSON(`${vehicles_url}/vehicles`)
+    .done(function (data: any) {
+      vehicleDataCache = data
+      lastVehicleUpdate = now
+      processVehicleData(data)
+    })
+    .fail(function (_jqXHR: any, textStatus: string, errorThrown: string) {
+      console.warn('Failed to fetch vehicle data:', textStatus, errorThrown)
+      // Use cached data if available as fallback
+      if (vehicleDataCache) {
+        console.log('Using cached vehicle data as fallback')
+        processVehicleData(vehicleDataCache)
+      }
+    })
+
+  // Only load shapes once
+  loadShapesOnce()
+
+  // Fetch Amtrak data from BOS API (with error handling in fetchAmtrakData)
+  fetchAmtrakData(bos_url)
+}
+
+function processVehicleData(data: any): void {
+  // Use requestAnimationFrame for smoother updates
+  requestAnimationFrame(() => {
     updateVehicleFeatures(data.features || [])
 
     // Update vehicle markers efficiently
@@ -91,53 +136,79 @@ function annotate_map(): void {
     }
 
     console.log('Map loaded')
-    window.setTimeout(() => {
-      updateTable()
-    }, 100)
+    // Use debounced table update
+    debounceUpdateTable()
   })
+}
 
-  // Fetch Amtrak data from BOS API
-  fetchAmtrakData(bos_url)
+// Debounced table update function
+let tableUpdateTimeout: number | null = null
+function debounceUpdateTable(): void {
+  if (tableUpdateTimeout) {
+    window.clearTimeout(tableUpdateTimeout)
+  }
+  tableUpdateTimeout = window.setTimeout(() => {
+    updateTable()
+    tableUpdateTimeout = null
+  }, 150)
+}
+
+function loadShapesOnce(): void {
   if (!baseLayerLoaded) {
+    // Skip shapes loading on slow connections to improve performance
+    if (shouldDisableOverpass()) {
+      console.log('Skipping shapes loading due to slow connection')
+      baseLayerLoaded = true
+      return
+    }
+
     Object.values(shapesLayerGroups).forEach((group) => {
       group.clearLayers()
     })
 
-    $.getJSON(`${vehicles_url}/shapes`, function (data) {
-      L.geoJSON(data, {
-        style: (feature) => {
-          if (feature && feature.geometry.type === 'LineString') {
-            var weight = 4
-            if (
-              feature.properties.route?.startsWith('CR') ||
-              feature.properties.route?.startsWith('SL')
-            ) {
-              weight = 3
+    $.getJSON(`${vehicles_url}/shapes`)
+      .done(function (data: any) {
+        // Batch DOM operations
+        map.eachLayer(() => {}) // Force layer update batching
+
+        L.geoJSON(data, {
+          style: (feature) => {
+            if (feature && feature.geometry.type === 'LineString') {
+              var weight = 4
+              if (
+                feature.properties.route?.startsWith('CR') ||
+                feature.properties.route?.startsWith('SL')
+              ) {
+                weight = 3
+              }
+              if (
+                parseInt(feature.properties.route || '') ==
+                parseInt(feature.properties.route || '')
+              ) {
+                weight = 2
+              }
+              return {
+                color: return_colors(feature.properties.route || ''),
+                weight: weight
+              }
             }
-            if (
-              parseInt(feature.properties.route || '') ==
-              parseInt(feature.properties.route || '')
-            ) {
-              weight = 2
+            return {}
+          },
+          onEachFeature: (feature, layer) => {
+            if (feature.properties.route) {
+              const shapesGroup = getShapesLayerGroupForRoute(
+                feature.properties.route
+              )
+              shapesGroup.addLayer(layer)
             }
-            return {
-              color: return_colors(feature.properties.route || ''),
-              weight: weight
-            }
+            onEachFeature(feature as any, layer)
           }
-          return {}
-        },
-        onEachFeature: (feature, layer) => {
-          if (feature.properties.route) {
-            const shapesGroup = getShapesLayerGroupForRoute(
-              feature.properties.route
-            )
-            shapesGroup.addLayer(layer)
-          }
-          onEachFeature(feature as any, layer)
-        }
+        })
       })
-    })
+      .fail(function (_jqXHR: any, textStatus: string) {
+        console.warn('Failed to load shapes data:', textStatus)
+        // Continue without shapes - vehicles will still work
+      })
     baseLayerLoaded = true
   }
 }
@@ -147,13 +218,62 @@ annotate_map()
 // Set up progressive enhancement for railway tracks
 setupProgressiveEnhancement()
 
-// Load saved refresh rate from cookie or default to 15 seconds
+// Adaptive refresh rate based on connection quality
+function getAdaptiveRefreshRate(): number {
+  const connectionInfo = getConnectionInfo()
+  const savedRefreshRate = getCookie('refresh-rate')
+  const userRefreshRate = savedRefreshRate ? parseInt(savedRefreshRate) : 15
+
+  // Adjust cache duration and refresh rate based on connection
+  if (connectionInfo.isSlowConnection) {
+    CACHE_DURATION = 10000 // 10 seconds cache for slow connections
+    return Math.max(userRefreshRate, 30) // Minimum 30s refresh for slow connections
+  } else if (connectionInfo.effectiveType === '5g') {
+    CACHE_DURATION = 3000 // 3 seconds cache for fast connections
+    return Math.max(userRefreshRate, 5) // Allow faster refresh for 5G
+  }
+
+  CACHE_DURATION = 5000 // Default 5 seconds
+  return userRefreshRate
+}
+
+// Load saved refresh rate from cookie or default to adaptive rate
 const savedRefreshRate = getCookie('refresh-rate')
-const defaultRefreshRate = savedRefreshRate ? parseInt(savedRefreshRate) : 15
-let intervalID: number = window.setInterval(
-  annotate_map,
-  defaultRefreshRate * 1000
-)
+adaptiveRefreshRate = getAdaptiveRefreshRate()
+const defaultRefreshRate = savedRefreshRate
+  ? parseInt(savedRefreshRate)
+  : adaptiveRefreshRate
+
+// Use smarter refresh logic - pause when tab is not visible
+let intervalID: number | null = null
+let isTabVisible = true
+
+// Pause updates when tab is not visible to save resources
+document.addEventListener('visibilitychange', () => {
+  isTabVisible = !document.hidden
+  if (isTabVisible && !intervalID) {
+    startUpdateInterval()
+    annotate_map() // Immediate update when tab becomes visible
+  } else if (!isTabVisible && intervalID) {
+    stopUpdateInterval()
+  }
+})
+
+function startUpdateInterval(): void {
+  if (intervalID) return
+  const currentRefreshRate = getAdaptiveRefreshRate()
+  intervalID = window.setInterval(annotate_map, currentRefreshRate * 1000)
+}
+
+function stopUpdateInterval(): void {
+  if (intervalID) {
+    window.clearInterval(intervalID)
+    intervalID = null
+  }
+}
+
+// Start initial interval
+startUpdateInterval()
 
 // Set the refresh rate input to the saved value
 const refreshRateElement = document.getElementById(
@@ -161,6 +281,25 @@ const refreshRateElement = document.getElementById(
 ) as HTMLInputElement
 if (refreshRateElement) {
   refreshRateElement.value = defaultRefreshRate.toString()
+
+  // Add connection info display and update min value
+  const connectionInfo = getConnectionInfo()
+  const minRefreshRate = getAdaptiveRefreshRate()
+
+  // Set minimum value on the input to guide users
+  refreshRateElement.min = minRefreshRate.toString()
+
+  if (connectionInfo.isSlowConnection) {
+    const label = refreshRateElement.parentElement?.querySelector('label')
+    if (label) {
+      label.textContent += ` (Slow connection - min ${minRefreshRate}s)`
+    }
+    // If current value is below minimum, update it
+    if (parseInt(refreshRateElement.value) < minRefreshRate) {
+      refreshRateElement.value = minRefreshRate.toString()
+      setCookie('refresh-rate', minRefreshRate.toString())
+    }
+  }
 }
 
 L.easyButton({
@@ -311,11 +450,18 @@ map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
 document
   .getElementById('refresh-rate')!
   .addEventListener('change', (event: Event) => {
-    window.clearInterval(intervalID)
+    stopUpdateInterval()
     const target = event.target as HTMLInputElement
     const newVal = parseInt(target.value)
     if (newVal) {
-      intervalID = window.setInterval(annotate_map, newVal * 1000)
+      // Clear cache when refresh rate changes
+      vehicleDataCache = null
+      lastVehicleUpdate = 0
+      adaptiveRefreshRate = Math.max(newVal, getAdaptiveRefreshRate())
+
+      if (isTabVisible) {
+        startUpdateInterval()
+      }
       setCookie('refresh-rate', newVal.toString())
     }
   })
