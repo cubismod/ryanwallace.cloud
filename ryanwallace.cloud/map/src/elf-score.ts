@@ -310,25 +310,25 @@ function generateElfReasoning(
     return 'Trans Pride Day brings maximum elf energy'
   } else if (factors.transPrideBonus > 1.3) {
     return 'Pride month magic enhances elf detection'
-  } else if (factors.distanceFromNearestHub <= 1) {
-    return 'Deep in elf territory with high queer density'
   } else if (routeLower.includes('green')) {
-    return 'Green Line passes through Jamaica Plain elf epicenter'
+    return 'Green Line passes through Somerville elf epicenter'
   } else if (routeLower.includes('red')) {
     return 'Red Line connects Harvard and Davis Square elf hubs'
   } else if (routeLower.includes('orange')) {
-    return 'Orange Line crosses diverse elf communities'
+    return 'Orange Line features incredible amounts of elf energy in JP'
   } else if (
     (factors.dayOfWeek === 5 || factors.dayOfWeek === 6) &&
     (factors.hour >= 22 || factors.hour <= 3)
   ) {
     return 'Peak weekend night hours for elf activity'
   } else if (factors.hour >= 18 || factors.hour <= 2) {
-    return 'Prime evening hours for queer social energy'
+    return 'Prime evening hours for mischielf'
   } else if (factors.distanceFromNearestHub <= 15) {
-    return 'Within greater Boston elf metropolitan area'
+    return 'Commuter Rail is a great way to find elves'
   } else if (factors.occupancyBonus > 1.1) {
     return 'Crowded car increases elf encounter probability'
+  } else if (factors.distanceFromNearestHub <= 1) {
+    return 'Deep in elf territory with high queer density'
   } else {
     return 'Standard elf detection conditions apply. No purchase necessary.'
   }
