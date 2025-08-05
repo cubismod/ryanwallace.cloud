@@ -15,35 +15,65 @@ function createClusterIcon(
   })
 }
 
-export const layerGroups = {
-  red: L.markerClusterGroup({
-    maxClusterRadius: 40,
-    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'red')
-  }),
-  blue: L.markerClusterGroup({
-    maxClusterRadius: 40,
-    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'blue')
-  }),
-  green: L.markerClusterGroup({
-    maxClusterRadius: 50,
-    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'green')
-  }),
-  orange: L.markerClusterGroup({
-    maxClusterRadius: 40,
-    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'orange')
-  }),
-  silver: L.markerClusterGroup({
-    maxClusterRadius: 50,
-    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'silver')
-  }),
-  commuter: L.markerClusterGroup({
-    maxClusterRadius: 80,
-    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'commuter')
-  }),
-  amtrak: L.markerClusterGroup({
-    maxClusterRadius: 80,
-    iconCreateFunction: (cluster) => createClusterIcon(cluster, 'amtrak')
+function setupClusterEvents(
+  clusterGroup: L.MarkerClusterGroup
+): L.MarkerClusterGroup {
+  // Handle elf effects when markers become unclustered
+  clusterGroup.on('spiderfied', (event: any) => {
+    // When cluster opens (spiderfies), apply elf effects to individual markers
+    const { applyStoredElfEffects } = require('./marker-manager')
+    event.markers.forEach((marker: L.Marker) => {
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => applyStoredElfEffects(marker), 10)
+    })
   })
+
+  return clusterGroup
+}
+
+export const layerGroups = {
+  red: setupClusterEvents(
+    L.markerClusterGroup({
+      maxClusterRadius: 40,
+      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'red')
+    })
+  ),
+  blue: setupClusterEvents(
+    L.markerClusterGroup({
+      maxClusterRadius: 40,
+      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'blue')
+    })
+  ),
+  green: setupClusterEvents(
+    L.markerClusterGroup({
+      maxClusterRadius: 50,
+      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'green')
+    })
+  ),
+  orange: setupClusterEvents(
+    L.markerClusterGroup({
+      maxClusterRadius: 40,
+      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'orange')
+    })
+  ),
+  silver: setupClusterEvents(
+    L.markerClusterGroup({
+      maxClusterRadius: 50,
+      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'silver')
+    })
+  ),
+  commuter: setupClusterEvents(
+    L.markerClusterGroup({
+      maxClusterRadius: 80,
+      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'commuter')
+    })
+  ),
+  amtrak: setupClusterEvents(
+    L.markerClusterGroup({
+      maxClusterRadius: 80,
+      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'amtrak')
+    })
+  )
 }
 
 export const shapesLayerGroups = {

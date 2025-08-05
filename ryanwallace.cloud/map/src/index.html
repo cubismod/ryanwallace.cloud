@@ -120,6 +120,34 @@
       >Mapbox Maki Icons</a
     >
   </p>
+
+  <div class="control-group" style="margin-top: 20px">
+    <label for="show-elf-mode">🧝‍♀️ Show Elf Scores:</label>
+    <label class="toggle-switch">
+      <input type="checkbox" id="show-elf-mode" name="show-elf-mode" />
+      <span class="slider"></span>
+    </label>
+    <small style="display: block; margin-top: 5px; color: #666">
+      Find queer, trans, and non-binary elves on transit! 🏳️‍⚧️✨
+    </small>
+  </div>
+
+  <div class="control-group" style="margin-top: 15px">
+    <button id="elf-search-btn" class="elf-search-button">
+      🔍 Find Best Elf Trains
+    </button>
+    <div
+      id="elf-search-results"
+      class="elf-search-results"
+      style="display: none"
+    >
+      <div class="elf-results-header">
+        <span>🧝‍♀️ Top Elf Trains</span>
+        <button id="elf-search-close" class="elf-search-close">×</button>
+      </div>
+      <div id="elf-results-list" class="elf-results-list"></div>
+    </div>
+  </div>
 </div>
 
 <table id="alerts" class="display compact"></table>

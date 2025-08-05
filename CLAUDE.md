@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `yarn build` - Build with Parcel bundler
   - `yarn tsc --noEmit` - Type check without emitting files
   - `yarn prettier --write .` - Format code
+- Use `task build` instead of `yarn build` for this repo
 
 ## Architecture Overview
 
