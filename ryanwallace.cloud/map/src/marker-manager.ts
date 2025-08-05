@@ -10,13 +10,15 @@ import { calculateElfScore } from './elf-score'
 export let currentMarkers: Map<string | number, L.Marker> = new Map()
 
 // Helper function to convert hex color to RGB
-function hexToRgb(hex: string): { r: number, g: number, b: number } {
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : { r: 123, g: 56, b: 140 } // Default purple if parsing fails
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      }
+    : { r: 123, g: 56, b: 140 } // Default purple if parsing fails
 }
 
 // Function to apply stored elf effects when marker becomes unclustered
@@ -36,7 +38,7 @@ export function applyStoredElfEffects(marker: L.Marker): void {
     return
   }
 
-  const { elfScore, elfClass } = elfData
+  const { elfScore, elfClass, feature } = elfData
 
   // The marker element IS the icon element (it's the <img> itself)
   const iconElement = markerElement as HTMLElement
@@ -52,11 +54,11 @@ export function applyStoredElfEffects(marker: L.Marker): void {
 
     // Apply halos colored to match vehicle route (more visible)
     let boxShadow = ''
-    
+
     // Get route color from vehicle properties
     const routeColor = feature.properties['marker-color'] || '#7B388C'
     const routeColorRgb = hexToRgb(routeColor)
-    
+
     if (elfScore.level === 'Trans Pride') {
       // Trans pride gets special colors regardless of route
       boxShadow = `0 0 12px rgba(91, 206, 250, 0.8), 0 0 24px rgba(245, 169, 184, 0.6)`
@@ -153,11 +155,11 @@ function applyElfClasses(marker: L.Marker, feature: VehicleFeature): void {
 
       // Apply halos colored to match vehicle route (more visible)
       let boxShadow = ''
-      
+
       // Get route color from vehicle properties
       const routeColor = feature.properties['marker-color'] || '#7B388C'
       const routeColorRgb = hexToRgb(routeColor)
-      
+
       if (elfScore.level === 'Trans Pride') {
         // Trans pride gets special colors regardless of route
         boxShadow = `0 0 12px rgba(91, 206, 250, 0.8), 0 0 24px rgba(245, 169, 184, 0.6)`
@@ -251,11 +253,11 @@ export function updateMarkers(features: VehicleFeature[]): void {
       }
 
       // Create dynamic popup content that updates based on current elf mode state
-      existingMarker.setPopupContent(() => {
+      const createPopupContent = () => {
         const elfModeEnabled =
           (document.getElementById('show-elf-mode') as HTMLInputElement)
             ?.checked || false
-        
+
         let elfScoreHtml = ''
         if (elfModeEnabled) {
           const elfScore = calculateElfScore(feature)
@@ -263,13 +265,20 @@ export function updateMarkers(features: VehicleFeature[]): void {
           const elfDisplay = getElfScoreDisplay(elfScore)
           elfScoreHtml = `<br />Elf Score: ${elfDisplay}`
         }
-        
+
         return `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
         <br />Stop: ${feature.properties.stop || ''}
         <br />Status: ${niceStatus(feature.properties.status || '')}
         ${elfScoreHtml}
         ${eta}${speed}${occupancy}${platform_prediction}
         <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`
+      }
+
+      existingMarker.setPopupContent(createPopupContent())
+
+      // Update popup content when it opens to ensure elf mode state is current
+      existingMarker.on('popupopen', () => {
+        existingMarker.getPopup()?.setContent(createPopupContent())
       })
 
       const newIcon = createIconForFeature(feature)

@@ -306,14 +306,14 @@ export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
           const elfModeEnabled =
             (document.getElementById('show-elf-mode') as HTMLInputElement)
               ?.checked || false
-          
+
           let elfScoreHtml = ''
           if (elfModeEnabled) {
             const elfScore = calculateElfScore(feature)
             const elfDisplay = getElfScoreDisplay(elfScore)
             elfScoreHtml = `<br />Elf Score: ${elfDisplay}`
           }
-          
+
           return `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
         <br />Stop: ${stopDisplay}
         <br />Status: ${niceStatus(feature.properties.status || '')}
