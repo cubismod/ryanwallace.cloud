@@ -135,7 +135,7 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
       name: 'Jamaica Plain',
       lat: 42.3098,
       lng: -71.1198,
-      radius: 4,
+      radius: 7,
       strength: 1.1
     }, // Always has elves
     {
