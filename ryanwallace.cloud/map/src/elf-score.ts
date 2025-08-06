@@ -139,12 +139,75 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
       strength: 1.1
     }, // Always has elves
     {
+      name: 'South Station',
+      lat: 42.3519,
+      lng: -71.0552,
+      radius: 4,
+      strength: 1.1
+    }, // Major transit hub - elves transferring everywhere
+    {
+      name: 'North Station',
+      lat: 42.3657,
+      lng: -71.0611,
+      radius: 4,
+      strength: 1.05
+    }, // Commuter rail and Orange/Green line hub
+    {
+      name: 'Back Bay Station',
+      lat: 42.3477,
+      lng: -71.0755,
+      radius: 3,
+      strength: 1.0
+    }, // Orange line and commuter rail intersection
+    {
+      name: 'Porter Square',
+      lat: 42.3884,
+      lng: -71.1193,
+      radius: 3,
+      strength: 1.15
+    }, // Red line meets commuter rail - peak elf energy
+    {
+      name: 'Davis Square',
+      lat: 42.3967,
+      lng: -71.1224,
+      radius: 4,
+      strength: 1.2
+    }, // Red line in heart of Somerville elf territory
+    {
+      name: 'Forest Hills',
+      lat: 42.3006,
+      lng: -71.1138,
+      radius: 3,
+      strength: 0.95
+    }, // Orange line terminal with bus connections
+    {
+      name: 'Alewife',
+      lat: 42.3956,
+      lng: -71.1416,
+      radius: 3,
+      strength: 0.9
+    }, // Red line northern terminus
+    {
+      name: 'Braintree',
+      lat: 42.2078,
+      lng: -71.0011,
+      radius: 3,
+      strength: 0.8
+    }, // Red line southern terminus
+    {
+      name: 'Oak Grove',
+      lat: 42.4369,
+      lng: -71.0714,
+      radius: 3,
+      strength: 0.8
+    }, // Orange line northern terminus
+    {
       name: 'Providence',
       lat: 41.824,
       lng: -71.4128,
       radius: 10,
       strength: 0.9
-    }, // I'm not sure if this is a good idea, but it's a good idea!
+    },
     {
       name: 'Worcester',
       lat: 42.2626,
