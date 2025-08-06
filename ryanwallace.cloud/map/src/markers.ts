@@ -2,8 +2,8 @@ import * as L from 'leaflet'
 import { VehicleFeature } from './types'
 import { niceStatus } from './utils'
 import { incrementMapItem } from './vehicle-counter'
-// import { getShapesFromLayerGroup } from './geometry-utils'
-// import { getShapesLayerGroupForRoute } from './layer-groups'
+import { getShapesFromLayerGroup, snapVehicleToRoute } from './geometry-utils'
+import { getShapesLayerGroupForRoute } from './layer-groups'
 import { calculateElfScore, getElfScoreDisplay } from './elf-score'
 
 export function pointToLayer(
@@ -12,28 +12,27 @@ export function pointToLayer(
 ): L.Marker {
   let adjustedLatLng = latlng
 
-  // Temporarily disable vehicle snapping to fix positioning issues
-  // The snapVehicleToRoute function was missing, causing coordinate problems
-  // if (
-  //   feature.properties.route &&
-  //   feature.properties['marker-symbol'] !== 'building'
-  // ) {
-  //   try {
-  //     const shapesGroup = getShapesLayerGroupForRoute(feature.properties.route)
-  //     const routeShapes = getShapesFromLayerGroup(shapesGroup)
+  // Enable vehicle snapping to improve positioning accuracy
+  if (
+    feature.properties.route &&
+    feature.properties['marker-symbol'] !== 'building'
+  ) {
+    try {
+      const shapesGroup = getShapesLayerGroupForRoute(feature.properties.route)
+      const routeShapes = getShapesFromLayerGroup(shapesGroup)
 
-  //     adjustedLatLng = snapVehicleToRoute(
-  //       latlng,
-  //       routeShapes,
-  //       feature.properties.status,
-  //       feature.properties.route,
-  //       feature.properties.direction
-  //     )
-  //   } catch (error) {
-  //     console.warn('Error snapping vehicle to route:', error)
-  //     adjustedLatLng = latlng
-  //   }
-  // }
+      adjustedLatLng = snapVehicleToRoute(
+        latlng,
+        routeShapes,
+        feature.properties.status,
+        feature.properties.route,
+        feature.properties.direction
+      )
+    } catch (error) {
+      console.warn('Error snapping vehicle to route:', error)
+      adjustedLatLng = latlng
+    }
+  }
   let icon_size = 28
   let icon = 'bus-yellow.svg'
   let opacity = 1.0
