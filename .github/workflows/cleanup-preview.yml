@@ -28,7 +28,13 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const prNumber = context.event.number;
+            // Get PR number from the event payload
+            const prNumber = context.event.pull_request?.number || context.event.number;
+            
+            if (!prNumber) {
+              console.log('No PR number found in event context, skipping cleanup comment');
+              return;
+            }
             
             // Comment on the PR that the preview has been cleaned up
             const comment = `## 🧹 Preview Cleaned Up
@@ -38,11 +44,15 @@ jobs:
             ---
             *This cleanup was performed automatically by GitHub Actions*`;
             
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: comment
-            });
-            
-            console.log(`Preview cleanup completed for PR #${prNumber}`);
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: comment
+              });
+              
+              console.log(`Preview cleanup completed for PR #${prNumber}`);
+            } catch (error) {
+              console.log(`Failed to comment on PR #${prNumber}:`, error.message);
+            }
