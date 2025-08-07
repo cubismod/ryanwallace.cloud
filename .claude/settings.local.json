@@ -4,8 +4,7 @@
       "mcp__code-index-mcp__search_code_advanced",
       "mcp__code-index-mcp__set_project_path",
       "Bash(yarn tsc:*)",
-      "Bash(yarn format)",
-      "Bash(task dev)"
+      "Bash(yarn format)"
     ],
     "deny": []
   }
