@@ -87,10 +87,9 @@ jobs:
               return;
             }
             
-            const previewUrl = `https://ryanwallace.cloud/preview/${prNumber}/`;
+            const previewUrl = `https://gh.ryanwallace.cloud/preview/${prNumber}/`;
             
-            const comment = `## 🚀 Preview Deployed!
-            
+            const comment = `
             Your changes have been deployed to a preview environment.
             
             **Preview URL:** [${previewUrl}](${previewUrl})
@@ -110,7 +109,7 @@ jobs:
               
               const existingComment = comments.find(comment => 
                 comment.user.login === 'github-actions[bot]' && 
-                comment.body.includes('Preview Deployed!')
+                comment.body.includes('Preview URL:')
               );
               
               if (existingComment) {
