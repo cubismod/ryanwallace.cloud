@@ -60,8 +60,8 @@ var map = L.map('map', {
   maxZoom: 50,
   fullscreenControlOptions: {
     position: 'topleft',
-    title: 'Fullscreen',
-    forcePseudoFullscreen: true
+    title: 'Fullscreen'
+    // forcePseudoFullscreen: true
   }
 }).setView([42.36565, -71.05236], 13)
 
@@ -76,12 +76,42 @@ let vehicleDataCache: any = null
 let adaptiveRefreshRate: number = 15
 let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
 
+// Loading state management
+let mapLoading = true
+let mapInitialized = false
+
 document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
 
 new MaptilerLayer({
   apiKey: process.env.MT_KEY || '',
   style: 'streets-v2'
 }).addTo(map)
+
+// Loading overlay functions
+function showMapLoading(): void {
+  const mapElement = document.getElementById('map')
+  if (mapElement && !mapElement.querySelector('.map-loading-overlay')) {
+    const loadingOverlay = document.createElement('div')
+    loadingOverlay.className = 'map-loading-overlay'
+    loadingOverlay.innerHTML = `
+      <div class="map-loading-spinner">
+        <div class="map-spinner"></div>
+      </div>
+    `
+    ;(mapElement as HTMLElement).style.position = 'relative'
+    mapElement.appendChild(loadingOverlay)
+  }
+}
+
+function hideMapLoading(): void {
+  const loadingOverlay = document.querySelector('.map-loading-overlay')
+  if (loadingOverlay) {
+    ;(loadingOverlay as HTMLElement).style.opacity = '0'
+    setTimeout(() => {
+      loadingOverlay.remove()
+    }, 300)
+  }
+}
 
 // Global function to move map to stop coordinates
 window.moveMapToStop = (lat: number, lng: number): void => {
@@ -90,6 +120,11 @@ window.moveMapToStop = (lat: number, lng: number): void => {
 
 function annotate_map(): void {
   const now = Date.now()
+
+  // Show loading overlay on first load
+  if (mapLoading && !mapInitialized) {
+    showMapLoading()
+  }
 
   // Use cached data if recent enough
   if (vehicleDataCache && now - lastVehicleUpdate < CACHE_DURATION) {
@@ -141,6 +176,14 @@ function processVehicleData(data: any): void {
     }
 
     console.log('Map loaded')
+
+    // Hide loading overlay when map is ready
+    if (mapLoading) {
+      mapLoading = false
+      mapInitialized = true
+      hideMapLoading()
+    }
+
     // Use debounced table update
     debounceUpdateTable()
   })
