@@ -4,6 +4,10 @@ dotenv:
   - ryanwallace.cloud/map/.env
 
 tasks:
+  nofastrender:
+    dir: ryanwallace.cloud
+    cmds:
+      - hugo server -D --disableFastRender
   dev:
     dir: ryanwallace.cloud
     cmds:
@@ -18,6 +22,10 @@ tasks:
     dir: ryanwallace.cloud/map
     cmds:
       - yarn clean
+  formattheme:
+    dir: ryanwallace.cloud/themes/poison
+    cmds:
+      - npx prettier --write .
   format:
     cmds:
       - npx prettier --write .
@@ -25,3 +33,7 @@ tasks:
     dir: ryanwallace.cloud/map
     cmds:
       - yarn tsc --noEmit
+  cleanpublic:
+    dir: ryanwallace.cloud
+    cmds:
+      - rm -rf public/
