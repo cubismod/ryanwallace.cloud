@@ -1,36 +1,26 @@
-baseURL = 'https://ryanwallace.cloud'
+# Preview configuration for PR deployments
+baseURL = '/preview/{{ .Env.PR_NUMBER }}/'
 languageCode = 'en-us'
-title = 'ryanwallace.cloud'
+title = 'ryanwallace.cloud (Preview)'
 theme = "poison"
 pygmentsCodefences = true
 pygmentsUseClasses = true
 copyright = "Ryan Wallace"
 pluralizelisttitles = false
 
-# Environment-specific configuration
-[params]
-# Default environment
-environment = "production"
-
 # Preview environment settings
-[params.preview]
+[params]
 environment = "preview"
 enableAnalytics = false
 enableComments = false
 
-# Production environment settings  
-[params.production]
-environment = "production"
-enableAnalytics = true
-enableComments = true
-
 [params.author]
 about = "Greater Boston SRE"
 
-footerCopyright = "Ryan Wallace"
+footerCopyright = "Ryan Wallace (Preview)"
 brand_image = "/images/brand-image.jpeg"
 
-brand = "Ryan Wallace"
+brand = "Ryan Wallace (Preview)"
 github_url = "https://github.com/cubismod"
 linkedin_url = "https://www.linkedin.com/in/ryanswallace/"
 
