@@ -30,11 +30,11 @@ jobs:
           fetch-depth: 0
           submodules: true
 
-      - name: Restore cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ryanwallace.cloud/
-          key: ryanwallace-cloud-preview-${{ github.event.number }}
+      # - name: Restore cache
+      #   uses: actions/cache/restore@v4
+      #   with:
+      #     path: ryanwallace.cloud/
+      #     key: ryanwallace-cloud-preview-${{ github.event.number }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -65,11 +65,11 @@ jobs:
           HUGO_ENVIRONMENT: preview
           HUGO_ENV: preview
 
-      - name: Save cache
-        uses: actions/cache/save@v4
-        with:
-          path: ryanwallace.cloud/
-          key: ryanwallace-cloud-preview-${{ github.event.number }}
+      # - name: Save cache
+      #   uses: actions/cache/save@v4
+      #   with:
+      #     path: ryanwallace.cloud/
+      #     key: ryanwallace-cloud-preview-${{ github.event.number }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
