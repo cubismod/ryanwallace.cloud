@@ -12,13 +12,7 @@ pluralizelisttitles = false
 # Default environment
 environment = "production"
 
-# Preview environment settings
-[params.preview]
-environment = "preview"
-enableAnalytics = false
-enableComments = false
-
-# Production environment settings  
+# Production environment settings
 [params.production]
 environment = "production"
 enableAnalytics = true
@@ -40,8 +34,8 @@ sidebar_bg_color = "#2f0d38"
 content_bg_color_dark = "#1e0624"
 
 menu = [
-  { Name = "About", URL = "/about/" },
-  { Name = "Posts", URL = "/posts/", Pre = "Recent", HasChildren = true, Limit = 5 },
+    { Name = "About", URL = "/about/" },
+    { Name = "Posts", URL = "/posts/", Pre = "Recent", HasChildren = true, Limit = 5 },
 ]
 
 [privacy]

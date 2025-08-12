@@ -29,6 +29,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Restore cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ryanwallace.cloud/
+          key: ryanwallace-cloud-preview-${{ github.event.number }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,18 +45,12 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
-          hugo-version: "latest"
+          hugo-version: "0.148.2"
           extended: true
 
       - name: Install dependencies
         working-directory: ryanwallace.cloud/map
         run: yarn install --frozen-lockfile
-
-      - name: Restore cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ryanwallace.cloud/
-          key: ryanwallace-cloud-preview
 
       - name: Build map assets
         working-directory: ryanwallace.cloud/map
@@ -68,7 +68,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ryanwallace.cloud/
-          key: ryanwallace-cloud-preview
+          key: ryanwallace-cloud-preview-${{ github.event.number }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
