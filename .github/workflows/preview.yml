@@ -59,7 +59,7 @@ jobs:
       - name: Build Hugo site
         working-directory: ryanwallace.cloud
         run: |
-          hugo --minify --gc --config hugo.preview.toml
+          hugo --cleanDestinationDir --minify --gc --config hugo.preview.toml
         env:
           HUGO_ENVIRONMENT: preview
           HUGO_ENV: preview
@@ -86,15 +86,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Get PR number from the event payload
-            const prNumber = ${{ github.event.number }};
-
-            if (!prNumber) {
-              console.log('No PR number found in event context, skipping preview comment');
-              return;
-            }
-
-            const previewUrl = `https://gh.ryanwallace.cloud/preview/${prNumber}/`;
+            const previewUrl = `https://gh.ryanwallace.cloud`;
 
             const comment = `
             Your changes have been deployed to a preview environment.
