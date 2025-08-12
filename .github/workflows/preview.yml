@@ -56,6 +56,8 @@ jobs:
       - name: Build map assets
         working-directory: ryanwallace.cloud/map
         run: yarn clean && yarn build && yarn move && yarn title
+        env:
+          MT_KEY: ${{ secrets.MT_KEY }}
 
       - name: Build Hugo site
         working-directory: ryanwallace.cloud
