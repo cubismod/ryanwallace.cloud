@@ -60,7 +60,7 @@ jobs:
       - name: Build Hugo site
         working-directory: ryanwallace.cloud
         run: |
-          hugo --cleanDestinationDir --minify --gc --config hugo.preview.toml
+          hugo --cleanDestinationDir --minify --gc --baseURL https://gh.ryanwallace.cloud
         env:
           HUGO_ENVIRONMENT: preview
           HUGO_ENV: preview

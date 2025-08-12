@@ -7,20 +7,11 @@ pygmentsUseClasses = true
 copyright = "Ryan Wallace"
 pluralizelisttitles = false
 
-# Environment-specific configuration
-[params]
-# Default environment
-environment = "production"
-
-# Production environment settings
-[params.production]
-environment = "production"
-enableAnalytics = true
-enableComments = true
-
 [params.author]
 about = "Greater Boston SRE"
 
+[params]
+environment = "production"
 footerCopyright = "Ryan Wallace"
 brand_image = "/images/brand-image.jpeg"
 
