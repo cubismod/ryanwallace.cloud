@@ -36,8 +36,12 @@ p,
 div,
 span,
 li,
-a:not(.sidebar-nav-item) {
-  font-family: "Inter", sans-serif !important;
+a:not(.sidebar-nav-item || .post-title || .page-title) {
+  font-family: "Inter", sans-serif;
+}
+
+html {
+    font-family: "Inter", sans-serif;
 }
 
 h1,
@@ -197,6 +201,13 @@ body.dark-theme .sidebar-nav-item:hover {
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Enforce Quicksand on all headings site-wide */
+:where(h1, h2, h3, h4, h5, h6),
+:where(.post-title, .page-title, .masthead-title) {
+  font-family: "Quicksand", sans-serif !important;
+  font-weight: 600 !important;
 }
 
 body.dark-theme .content pre {
