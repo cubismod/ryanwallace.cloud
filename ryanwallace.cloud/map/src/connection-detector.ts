@@ -41,7 +41,7 @@ export function getConnectionInfo(): ConnectionInfo {
       effectiveType = 'slow'
     } else if (apiEffectiveType === '4g') {
       // Distinguish between regular 4G and fast 4G/5G based on speeds
-      effectiveType = downlink > 10 ? '5g' : '4g'
+      effectiveType = downlink > 20 ? '5g' : '4g'
     } else {
       effectiveType = 'unknown'
     }

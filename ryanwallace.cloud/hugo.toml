@@ -7,11 +7,11 @@ pygmentsUseClasses = true
 copyright = "Ryan Wallace"
 pluralizelisttitles = false
 
-
 [params.author]
 about = "Greater Boston SRE"
 
 [params]
+environment = "production"
 footerCopyright = "Ryan Wallace"
 brand_image = "/images/brand-image.jpeg"
 
@@ -34,8 +34,8 @@ sidebar_a_color = "#CDD6F4"
 sidebar_socials_color = "#F5E0DC"
 
 menu = [
-  { Name = "About", URL = "/about/" },
-  { Name = "Posts", URL = "/posts/", Pre = "Recent", HasChildren = true, Limit = 5 },
+    { Name = "About", URL = "/about/" },
+    { Name = "Posts", URL = "/posts/", Pre = "Recent", HasChildren = true, Limit = 5 },
 ]
 
 [privacy]

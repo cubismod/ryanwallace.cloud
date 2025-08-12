@@ -37,3 +37,9 @@ tasks:
     dir: ryanwallace.cloud
     cmds:
       - rm -rf public/
+  nocache:
+    dir: ryanwallace.cloud/map
+    cmds:
+      - yarn build:nocache
+      - yarn clean
+      - yarn move

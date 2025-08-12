@@ -82,10 +82,17 @@ let mapInitialized = false
 
 document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
 
-new MaptilerLayer({
-  apiKey: process.env.MT_KEY || '',
-  style: 'streets-v2'
-}).addTo(map)
+if (process.env.NODE_ENV === 'production') {
+  new MaptilerLayer({
+    apiKey: process.env.MT_KEY || '',
+    style: 'streets-v2'
+  }).addTo(map)
+} else {
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map)
+}
 
 // Loading overlay functions
 function showMapLoading(): void {
