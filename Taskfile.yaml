@@ -25,3 +25,9 @@ tasks:
     dir: ryanwallace.cloud/map
     cmds:
       - yarn tsc --noEmit
+  nocache:
+    dir: ryanwallace.cloud/map
+    cmds:
+      - yarn build:nocache
+      - yarn clean
+      - yarn move

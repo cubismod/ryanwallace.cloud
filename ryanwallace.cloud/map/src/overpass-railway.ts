@@ -1,7 +1,6 @@
 import * as L from 'leaflet'
 import { shouldDisableOverpass } from './connection-detector'
 import {
-  OverpassElement,
   OverpassResponse,
   RailwayTrack,
   BoundingBox,
@@ -11,12 +10,7 @@ import {
   RailwayConfig,
   LoadingCallbackFunction
 } from './types/railway'
-import {
-  CacheError,
-  ValidationError,
-  NetworkError,
-  logError
-} from './types/errors'
+import { CacheError, ValidationError, logError } from './types/errors'
 
 const OVERPASS_ENDPOINT: string =
   'https://overpass.private.coffee/api/interpreter'
@@ -48,93 +42,51 @@ let loadingPromise: Promise<RailwayTrack[]> | null = null
 // Track loading callbacks for progressive enhancement
 const loadingCallbacks: LoadingCallbackFunction[] = []
 
-// Security validation functions
-function validateOverpassResponse(data: unknown): data is OverpassResponse {
-  if (typeof data !== 'object' || data === null) {
-    return false
-  }
+// Single worker instance for Overpass fetches
+let railwayWorker: Worker | null = null
 
-  const response = data as Record<string, unknown>
-
-  // Check required fields
-  if (
-    typeof response.version !== 'number' ||
-    typeof response.generator !== 'string' ||
-    !Array.isArray(response.elements)
-  ) {
-    return false
-  }
-
-  // Validate elements array
-  for (const element of response.elements) {
-    if (!validateOverpassElement(element)) {
-      return false
-    }
-  }
-
-  return true
+function getRailwayWorker(): Worker {
+  if (railwayWorker) return railwayWorker
+  railwayWorker = new Worker(
+    new URL('./overpass-railway.worker.ts', import.meta.url),
+    { type: 'module' }
+  )
+  return railwayWorker
 }
 
-function validateOverpassElement(element: unknown): element is OverpassElement {
-  if (typeof element !== 'object' || element === null) {
-    return false
-  }
-
-  const el = element as Record<string, unknown>
-
-  // Check required fields
-  if (
-    el.type !== 'way' ||
-    typeof el.id !== 'number' ||
-    !Array.isArray(el.geometry) ||
-    typeof el.tags !== 'object' ||
-    el.tags === null
-  ) {
-    return false
-  }
-
-  // Validate geometry points
-  for (const point of el.geometry) {
-    if (typeof point !== 'object' || point === null) {
-      return false
+function workerFetchOverpass(): Promise<OverpassResponse> {
+  return new Promise((resolve, reject) => {
+    const worker = getRailwayWorker()
+    const onMessage = (evt: MessageEvent) => {
+      const data = evt.data
+      if (!data || typeof data !== 'object') return
+      if (data.type === 'success') {
+        cleanup()
+        resolve(data.data as OverpassResponse)
+      } else if (data.type === 'error') {
+        cleanup()
+        reject(new Error(String(data.error)))
+      }
     }
-    const pt = point as Record<string, unknown>
-    if (typeof pt.lat !== 'number' || typeof pt.lon !== 'number') {
-      return false
+    const onError = (err: ErrorEvent) => {
+      cleanup()
+      reject(new Error(err.message))
     }
-    // Validate coordinate ranges
-    if (pt.lat < -90 || pt.lat > 90 || pt.lon < -180 || pt.lon > 180) {
-      return false
+    const cleanup = () => {
+      worker.removeEventListener('message', onMessage as EventListener)
+      worker.removeEventListener('error', onError as EventListener)
     }
-  }
-
-  return true
+    worker.addEventListener('message', onMessage as EventListener)
+    worker.addEventListener('error', onError as EventListener)
+    worker.postMessage({
+      type: 'fetch',
+      endpoint: RAILWAY_CONFIG.endpoint,
+      bbox: RAILWAY_CONFIG.bbox
+    })
+  })
 }
 
-function sanitizeOverpassResponse(data: OverpassResponse): OverpassResponse {
-  return {
-    version: data.version,
-    generator: data.generator,
-    elements: data.elements
-      .filter(
-        (element) => element.type === 'way' && element.geometry.length >= 2
-      )
-      .map((element) => ({
-        type: element.type,
-        id: element.id,
-        geometry: element.geometry.map((point) => ({
-          lat: Math.max(-90, Math.min(90, point.lat)),
-          lon: Math.max(-180, Math.min(180, point.lon))
-        })),
-        tags: Object.fromEntries(
-          Object.entries(element.tags).map(([key, value]) => [
-            key.slice(0, 100), // Limit key length
-            String(value).slice(0, 500) // Limit value length and ensure string
-          ])
-        )
-      }))
-  }
-}
+// Security validation is performed within the worker before returning data.
 
 function saveToLocalStorage(tracks: RailwayTrack[]): void {
   try {
@@ -361,50 +313,9 @@ export async function fetchRailwayTracks(
 
 async function performFetch(): Promise<RailwayTrack[]> {
   try {
-    console.log('Fetching railway tracks from Overpass API...')
-    const query: string = buildOverpassQuery()
-
-    const response: Response = await fetch(RAILWAY_CONFIG.endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-      },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: AbortSignal.timeout(30000) // 30 second timeout
-    })
-
-    if (!response.ok) {
-      throw new NetworkError(
-        `Overpass API error: ${response.status} ${response.statusText}`,
-        response.status,
-        RAILWAY_CONFIG.endpoint,
-        'OVERPASS_HTTP_ERROR'
-      )
-    }
-
-    // Validate response content type
-    const contentType: string = response.headers.get('content-type') ?? ''
-    if (!contentType.includes('application/json')) {
-      throw new ValidationError(
-        `Invalid response content type: ${contentType}`,
-        'content-type',
-        'INVALID_CONTENT_TYPE'
-      )
-    }
-
-    const rawData: unknown = await response.json()
-
-    // Validate and sanitize response
-    if (!validateOverpassResponse(rawData)) {
-      throw new ValidationError(
-        'Invalid Overpass API response structure',
-        'response',
-        'INVALID_RESPONSE_STRUCTURE'
-      )
-    }
-
-    const sanitizedData: OverpassResponse = sanitizeOverpassResponse(rawData)
-    const tracks: RailwayTrack[] = convertOverpassToRailwayTracks(sanitizedData)
+    console.log('Fetching railway tracks from Overpass API via worker...')
+    const overpassData: OverpassResponse = await workerFetchOverpass()
+    const tracks: RailwayTrack[] = convertOverpassToRailwayTracks(overpassData)
 
     // Validate track count is reasonable
     if (tracks.length > 10000) {
@@ -577,7 +488,7 @@ export function initializeRailwayTracks(): void {
     fetchRailwayTracks().catch((error) => {
       console.warn('Background railway tracks loading failed:', error)
     })
-  }, 100) // Small delay to ensure map loads first
+  }, 100)
 }
 
 // Legacy promise for backward compatibility
