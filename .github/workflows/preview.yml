@@ -54,7 +54,7 @@ jobs:
 
       - name: Build map assets
         working-directory: ryanwallace.cloud/map
-        run: yarn build
+        run: yarn clean && yarn build && yarn move && yarn title
 
       - name: Build Hugo site
         working-directory: ryanwallace.cloud
