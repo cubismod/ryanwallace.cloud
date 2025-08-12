@@ -78,10 +78,17 @@ let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
 
 document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
 
-new MaptilerLayer({
-  apiKey: process.env.MT_KEY || '',
-  style: 'streets-v2'
-}).addTo(map)
+if (process.env.NODE_ENV === 'production') {
+  new MaptilerLayer({
+    apiKey: process.env.MT_KEY || '',
+    style: 'streets-v2'
+  }).addTo(map)
+} else {
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map)
+}
 
 // Global function to move map to stop coordinates
 window.moveMapToStop = (lat: number, lng: number): void => {
