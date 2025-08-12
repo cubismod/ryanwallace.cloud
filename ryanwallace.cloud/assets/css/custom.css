@@ -2483,6 +2483,10 @@ h6:hover {
   overflow: hidden;
 }
 
+.sidebar {
+  overflow-x: hidden;
+}
+
 .bl::after,
 .gl::after,
 .rl::after,
