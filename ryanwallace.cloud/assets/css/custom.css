@@ -2354,6 +2354,37 @@ textarea:focus {
   left: 100%;
 }
 
+/* ===== Dark theme sidebar tuning ===== */
+/* Softer shimmer, lower contrast for dark sidebar */
+body.dark-theme .sidebar-nav-item::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+}
+
+/* Hover/active states that suit darker backgrounds */
+body.dark-theme .sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .sidebar-nav-item:focus,
+body.dark-theme .sidebar-nav-item.active {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+/* Keep link color readable on hover within dark sidebar */
+body.dark-theme .sidebar-nav-item:hover a,
+body.dark-theme .sidebar-nav-item:focus a,
+body.dark-theme .sidebar-nav-item.active a {
+  color: var(--sidebar-a-color);
+}
+
 /* Enhanced code block animations */
 .content pre {
   transition: all 0.2s ease;
@@ -2517,6 +2548,41 @@ h6:hover {
 .sl:hover::after {
   opacity: 1;
   transform: scale(1);
+}
+
+/* ===== Light mode legibility tweaks ===== */
+/* Use stronger text color for small/muted elements in light mode (content area only) */
+body:not(.dark-theme) .reading-time,
+body:not(.dark-theme) .last-updated {
+  color: var(--muted-text-color);
+}
+
+/* Ensure sidebar footer remains readable against sidebar background */
+body:not(.dark-theme) .sidebar .footnote {
+  color: #ffffff;
+}
+
+/* Increase contrast for footnotes in main content area */
+body:not(.dark-theme) .content .footnote {
+  color: var(--text-color);
+}
+
+body.dark-theme .content .footnote {
+  color: var(--text-color);
+}
+
+/* Sidebar footnote links should stand out with brand link color */
+body:not(.dark-theme) .sidebar .footnote a,
+body.dark-theme .sidebar .footnote a {
+  color: white;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 2px;
+}
+
+body:not(.dark-theme) .sidebar .footnote a:hover,
+body.dark-theme .sidebar .footnote a:hover {
+  text-decoration-thickness: 3px;
 }
 
 /* Smooth loading animations */

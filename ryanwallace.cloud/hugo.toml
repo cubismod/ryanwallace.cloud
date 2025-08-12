@@ -26,12 +26,17 @@ sidebar_bg_color = "#6C7086"
 sidebar_bg_color_dark = "#11111B"
 content_bg_color_dark = "#1E1E2E"
 content_bg_color = "#EFF1F5"
-text_color = "#4C4F69"
+text_color = "#2B2F3A"
 text_color_dark = "#CDD6F4"
 sidebar_h1_color = "#CDD6F4"
 sidebar_p_color = "#BAC2DE"
-sidebar_a_color = "#CDD6F4"
+sidebar_a_color = "#FFFFFF"
 sidebar_socials_color = "#F5E0DC"
+
+# Improve light-mode legibility
+list_color = "#3A3E4A"
+date_color = "#525766"
+muted_text_color = "#525766"
 
 menu = [
     { Name = "About", URL = "/about/" },
