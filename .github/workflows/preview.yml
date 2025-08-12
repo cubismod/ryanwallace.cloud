@@ -59,14 +59,12 @@ jobs:
       - name: Build Hugo site
         working-directory: ryanwallace.cloud
         run: |
-          # Set PR number for the preview URL
-          export PR_NUMBER=${{ github.event.number }}
-
+          PREVIEW_FOLDER=preview/$PR_NUMBER
           # Build with preview configuration
           hugo --minify --gc --config hugo.preview.toml
 
-          mkdir $PR_NUMBER
-          cp -r public/* $PR_NUMBER/
+          mkdir $PREVIEW_FOLDER
+          cp -r public/* $PREVIEW_FOLDER/
         env:
           HUGO_ENVIRONMENT: preview
           HUGO_ENV: preview

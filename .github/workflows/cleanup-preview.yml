@@ -32,7 +32,8 @@ jobs:
       - name: Remove old artifacts
         working-directory: ryanwallace.cloud/map
         run: |
-          rm -rf $PR_NUMBER/*
+          PREVIEW_FOLDER=preview/$PR_NUMBER
+          rm -rf $PREVIEW_FOLDER/*
         env:
           HUGO_ENVIRONMENT: preview
           HUGO_ENV: preview
