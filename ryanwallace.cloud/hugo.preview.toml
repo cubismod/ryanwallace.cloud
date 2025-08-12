@@ -1,5 +1,5 @@
 # Preview configuration for PR deployments
-baseURL = 'https://gh.ryanwallace.cloud/preview/{{ .Env.PR_NUMBER }}/'
+baseURL = 'https://gh.ryanwallace.cloud'
 languageCode = 'en-us'
 title = 'ryanwallace.cloud (Preview)'
 theme = "poison"
