@@ -66,6 +66,7 @@ jobs:
         env:
           HUGO_ENVIRONMENT: preview
           HUGO_ENV: preview
+          MT_KEY: ${{ secrets.MT_KEY }}
 
       # - name: Save cache
       #   uses: actions/cache/save@v4
