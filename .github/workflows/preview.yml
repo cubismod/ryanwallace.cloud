@@ -63,7 +63,7 @@ jobs:
           # Build with preview configuration
           hugo --minify --gc --config hugo.preview.toml
 
-          mkdir $PREVIEW_FOLDER
+          mkdir -p $PREVIEW_FOLDER
           cp -r public/* $PREVIEW_FOLDER/
         env:
           HUGO_ENVIRONMENT: preview
