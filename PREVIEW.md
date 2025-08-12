@@ -15,11 +15,13 @@ When a pull request is created or updated (excluding those from `cubis-renovate[
 ## Preview URLs
 
 Preview URLs follow this pattern:
+
 ```
 https://{owner}.github.io/{repo}/preview/{pr-number}/
 ```
 
 For example:
+
 ```
 https://cubismod.github.io/ryanwallace.cloud/preview/123/
 ```
@@ -62,6 +64,7 @@ The preview environment includes:
 ### Build Failures
 
 Common issues:
+
 - **Node.js dependencies**: Ensure `yarn.lock` is up to date
 - **Hugo build errors**: Check for syntax errors in content
 - **Asset compilation**: Verify map assets build correctly
@@ -84,6 +87,7 @@ hugo server --config hugo.preview.toml
 ## Configuration
 
 The preview system uses:
+
 - `hugo.preview.toml` - Preview-specific Hugo configuration
 - `.github/workflows/preview.yml` - Preview deployment workflow
 - `.github/workflows/cleanup-preview.yml` - Cleanup workflow
@@ -94,4 +98,3 @@ The preview system uses:
 - No sensitive data is exposed in preview environments
 - Analytics and tracking are disabled in previews
 - Previews are automatically cleaned up when PRs are closed
-

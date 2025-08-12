@@ -58,6 +58,7 @@ jobs:
         run: yarn clean && yarn build && yarn move && yarn title
         env:
           MT_KEY: ${{ secrets.MT_KEY }}
+          NODE_ENV: development
 
       - name: Build Hugo site
         working-directory: ryanwallace.cloud
