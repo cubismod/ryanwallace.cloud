@@ -58,17 +58,20 @@ var map = L.map('map', {
   fullscreenControl: true,
   preferCanvas: true,
   maxZoom: 50,
+
   fullscreenControlOptions: {
     position: 'topleft',
-    title: 'Fullscreen'
-    // forcePseudoFullscreen: true
+    title: 'Fullscreen',
+    forcePseudoFullscreen: true
+    // fullscreenElement: true
   }
 }).setView([42.36565, -71.05236], 13)
 
-// map.on('fullscreenchange', function () {
-//   let canvas = document.getElementById('leaflet-zoom-animated')
-//   if (map.isFullscreen()) {
-//     canvas?.setAttribute('width', value)
+// map.on('enterFullscreen', function () {
+//   let elements = document.getElementsByClassName('leaflet-zoom-animated')
+//   for (const element of elements) {
+//     console.debug(element.tagName)
+//     if (element.tagName === 'CANVAS') element.setAttribute('height', '100%')
 //   }
 // })
 
