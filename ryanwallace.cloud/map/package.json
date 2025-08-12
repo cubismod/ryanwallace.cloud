@@ -40,7 +40,7 @@
   },
   "scripts": {
     "build": "parcel build src/index.html src/track.ts --public-url /map/",
-    "move": "mkdir -p ../static/map; mkdir -p ../content/map; mv dist/*.css* ../static/map/; mv dist/*.js* ../static/map/; mv dist/*.html ../content/map/ ",
+    "move": "mkdir -p ../static/map; mkdir -p ../content/map; mv dist/* ../content/map/",
     "title": "cat head.md ../content/map/index.html >  temp; mv temp ../content/map/index.html",
     "clean": "rm -f ../content/map/*; rm -f ../static/map/*",
     "format": "prettier --write \"src/**/*.{ts,js,json,html,css}\"",
