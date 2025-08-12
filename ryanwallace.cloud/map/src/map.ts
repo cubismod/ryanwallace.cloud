@@ -65,6 +65,13 @@ var map = L.map('map', {
   }
 }).setView([42.36565, -71.05236], 13)
 
+// map.on('fullscreenchange', function () {
+//   let canvas = document.getElementById('leaflet-zoom-animated')
+//   if (map.isFullscreen()) {
+//     canvas?.setAttribute('width', value)
+//   }
+// })
+
 const vehicles_url: string =
   process.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
 const bos_url: string = 'https://bos.ryanwallace.cloud'
