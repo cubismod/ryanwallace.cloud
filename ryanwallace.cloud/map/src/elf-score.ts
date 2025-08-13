@@ -116,13 +116,13 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
 
   // Major elf hubs in New England with their coordinates and influence radius
   const elfHubs = [
-    { name: 'Boston', lat: 42.3601, lng: -71.0589, radius: 15, strength: 1.0 },
+    { name: 'Boston', lat: 42.3601, lng: -71.0589, radius: 15, strength: 1.14 },
     {
       name: 'Somerville',
       lat: 42.3876,
       lng: -71.0995,
       radius: 5,
-      strength: 1.2
+      strength: 1.3
     }, // LEGENDARY elf density
     {
       name: 'Cambridge',
@@ -136,7 +136,7 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
       lat: 42.3098,
       lng: -71.1198,
       radius: 7,
-      strength: 1.1
+      strength: 1.14
     }, // Always has elves
     {
       name: 'South Station',
@@ -178,7 +178,7 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
       lat: 42.3006,
       lng: -71.1138,
       radius: 3,
-      strength: 0.95
+      strength: 1.1
     }, // Orange line terminal with bus connections
     {
       name: 'Alewife',
@@ -199,21 +199,21 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
       lat: 42.4369,
       lng: -71.0714,
       radius: 3,
-      strength: 0.8
+      strength: 0.9
     }, // Orange line northern terminus
     {
       name: 'Providence',
       lat: 41.824,
       lng: -71.4128,
       radius: 10,
-      strength: 0.9
+      strength: 1.05
     },
     {
       name: 'Worcester',
       lat: 42.2626,
       lng: -71.8023,
-      radius: 8,
-      strength: 0.8
+      radius: 15,
+      strength: 0.987
     },
     { name: 'Salem', lat: 42.5195, lng: -70.8967, radius: 6, strength: 0.85 }, // You ever see an elf on a witch's broom?
     {
@@ -222,8 +222,15 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
       lng: -72.6412,
       radius: 8,
       strength: 1.0
-    }, // Lesbian capital gets full strength, also this logic applies to amtrak!
-    { name: 'Lowell', lat: 42.6334, lng: -71.3162, radius: 7, strength: 0.75 } // There's a Lot to Like About Lowell (tm) like elves!
+    },
+    { name: 'Lowell', lat: 42.6334, lng: -71.3162, radius: 7, strength: 0.75 },
+    {
+      name: "Dani's Queer Bar",
+      lat: 42.34856413442277,
+      lng: -71.08430581021743,
+      radius: 1,
+      strangth: 1.96
+    }
   ]
 
   // Calculate distance to nearest elf hub using Turf.js

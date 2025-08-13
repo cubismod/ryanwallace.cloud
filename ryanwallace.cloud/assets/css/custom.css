@@ -36,12 +36,12 @@ p,
 div,
 span,
 li,
-a:not(.sidebar-nav-item || .post-title || .page-title) {
+a:not(.sidebar-nav-item||.post-title||.page-title) {
   font-family: "Inter", sans-serif;
 }
 
 html {
-    font-family: "Inter", sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 h1,
