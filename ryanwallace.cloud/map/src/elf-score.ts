@@ -245,7 +245,7 @@ export function calculateElfScore(vehicle: VehicleFeature): ElfScore {
     if (distanceToHub <= hub.radius) {
       // Within radius: linear decrease from full strength to base
       const proximityRatio = 1 - distanceToHub / hub.radius
-      hubEffect = 0.4 + (hub.strength - 0.4) * proximityRatio
+      hubEffect = 0.4 + (hub.strength || 1 - 0.4) * proximityRatio
     }
 
     // Use the strongest hub effect (closest/best hub)

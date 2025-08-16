@@ -86,6 +86,132 @@ let vehicleDataCache: any = null
 let adaptiveRefreshRate: number = 15
 let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
 
+// Elf emoji marker layer and helpers
+let elfEmojiLayer: L.LayerGroup | null = null
+let elfEmojiMoveHandlersAttached = false
+let elfEmojiRegenTimeout: number | null = null
+let elfEmojiStyleInjected = false
+
+// Emoji variants (gender-neutral, woman, and man elves with all skin tones)
+const ELF_EMOJIS = [
+  '🧝',
+  '🧝🏻',
+  '🧝🏼',
+  '🧝🏽',
+  '🧝🏾',
+  '🧝🏿',
+  '🧝‍♀️',
+  '🧝🏻‍♀️',
+  '🧝🏼‍♀️',
+  '🧝🏽‍♀️',
+  '🧝🏾‍♀️',
+  '🧝🏿‍♀️',
+  '🧝‍♂️',
+  '🧝🏻‍♂️',
+  '🧝🏼‍♂️',
+  '🧝🏽‍♂️',
+  '🧝🏾‍♂️',
+  '🧝🏿‍♂️'
+]
+function getRandomElfEmoji(): string {
+  const idx = Math.floor(Math.random() * ELF_EMOJIS.length)
+  return ELF_EMOJIS[idx]
+}
+
+function randomInRange(min: number, max: number): number {
+  return Math.random() * (max - min) + min
+}
+
+function clearElfEmojiMarkers(): void {
+  if (elfEmojiLayer) {
+    elfEmojiLayer.clearLayers()
+  }
+}
+
+function detachElfEmojiHandlers(): void {
+  if (elfEmojiMoveHandlersAttached) {
+    map.off('moveend', handleElfEmojiRegen)
+    map.off('zoomend', handleElfEmojiRegen)
+    elfEmojiMoveHandlersAttached = false
+  }
+}
+
+function handleElfEmojiRegen(): void {
+  if (elfEmojiRegenTimeout) {
+    window.clearTimeout(elfEmojiRegenTimeout)
+  }
+  // Debounce to avoid excessive redraws while panning
+  elfEmojiRegenTimeout = window.setTimeout(() => {
+    populateElfEmojiMarkers()
+  }, 250)
+}
+
+function populateElfEmojiMarkers(): void {
+  if (!elfEmojiLayer) return
+  clearElfEmojiMarkers()
+
+  const bounds = map.getBounds()
+  const south = bounds.getSouth()
+  const north = bounds.getNorth()
+  const west = bounds.getWest()
+  const east = bounds.getEast()
+
+  // Scale count a bit with zoom, but keep it lightweight
+  const zoom = map.getZoom()
+  const baseCount = 18
+  const extra = Math.max(0, Math.floor((zoom - 11) * 6))
+  const count = Math.min(100, baseCount + extra)
+
+  for (let i = 0; i < count; i++) {
+    const lat = randomInRange(south, north)
+    const lng = randomInRange(west, east)
+    const emoji = getRandomElfEmoji()
+    const icon = L.divIcon({
+      className: 'elf-emoji-marker',
+      html: `<span class="elf-emoji-span">${emoji}</span>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    })
+    const m = L.marker([lat, lng], { icon, interactive: true }).addTo(
+      elfEmojiLayer
+    )
+    m.on('click', () => {
+      const el = m.getElement() as HTMLElement | null
+      if (!el) return
+      // restart animation
+      el.classList.remove('spinning')
+      // force reflow to allow retrigger
+      void el.offsetWidth
+      el.classList.add('spinning')
+      window.setTimeout(() => {
+        if (el && el.classList) el.classList.remove('spinning')
+      }, 1200)
+    })
+  }
+}
+
+function enableElfEmojiMode(): void {
+  if (!elfEmojiLayer) {
+    elfEmojiLayer = L.layerGroup().addTo(map)
+  }
+  ensureElfEmojiStyles()
+  populateElfEmojiMarkers()
+  if (!elfEmojiMoveHandlersAttached) {
+    map.on('moveend', handleElfEmojiRegen)
+    map.on('zoomend', handleElfEmojiRegen)
+    elfEmojiMoveHandlersAttached = true
+  }
+}
+
+function disableElfEmojiMode(): void {
+  clearElfEmojiMarkers()
+  detachElfEmojiHandlers()
+  if (elfEmojiLayer) {
+    map.removeLayer(elfEmojiLayer)
+    elfEmojiLayer = null
+  }
+}
+
 // Loading state management
 let mapLoading = true
 let mapInitialized = false
@@ -598,6 +724,10 @@ const elfModeElement = document.getElementById(
 if (elfModeElement) {
   const defaultElfMode = savedElfMode === 'true'
   elfModeElement.checked = defaultElfMode
+  // Initialize emoji overlay if enabled from saved state
+  if (defaultElfMode) {
+    enableElfEmojiMode()
+  }
 }
 
 // Handle elf mode toggle
@@ -610,11 +740,37 @@ document
     if (vehicleDataCache && vehicleDataCache.features) {
       refreshAllElfClasses(vehicleDataCache.features)
     }
+    // Toggle elf emoji scatter overlay
+    if (target.checked) {
+      enableElfEmojiMode()
+    } else {
+      disableElfEmojiMode()
+    }
     // Force popup refresh by clearing cache and updating
     vehicleDataCache = null
     lastVehicleUpdate = 0
     annotate_map()
   })
+
+// Inject minimal CSS for emoji appearance and spin animation
+function ensureElfEmojiStyles(): void {
+  if (elfEmojiStyleInjected) return
+  const style = document.createElement('style')
+  style.id = 'elf-emoji-style'
+  style.textContent = `
+    .elf-emoji-marker { cursor: pointer; pointer-events: auto; }
+    .elf-emoji-marker .elf-emoji-span {
+      font-size: 18px;
+      display: inline-block;
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.35));
+      will-change: transform;
+    }
+    .elf-emoji-marker.spinning .elf-emoji-span { animation: elf-spin 0.8s linear infinite; }
+    @keyframes elf-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  `
+  document.head.appendChild(style)
+  elfEmojiStyleInjected = true
+}
 
 // Handle elf search functionality
 document.getElementById('elf-search-btn')!.addEventListener('click', () => {
