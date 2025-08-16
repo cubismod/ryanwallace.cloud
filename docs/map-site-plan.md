@@ -1,6 +1,6 @@
 # Map/Tracking Site — Planning and Architecture (Next.js 15 + shadcn/ui + Tailwind v4)
 
-This document is the single source of truth for creating a new, dedicated mapping/tracking website from the custom code currently living in `ryanwallace.cloud/map/src/`. It guides both me (as the primary user) and future Codex sessions to plan, build, migrate, and maintain the site with clarity and repeatability.
+This document is the single source of truth for creating a new, dedicated mapping/tracking website from the custom code currently living in `ryanwallace.cloud/map/src/`. It guides both me (as the primary user) and future Codex/Claude/Other LLM sessions to plan, build, migrate, and maintain the site with clarity and repeatability.
 
 Goals:
 
@@ -517,7 +517,7 @@ export async function GET(_req: NextRequest) {
 
 ---
 
-## 23) Notes for Future Codex Sessions
+## 23) Notes for Future Codex/Claude/Other LLM Sessions
 
 - Always consult this doc before implementing changes. Update it if plans change.
 - Prefer small, well-scoped PRs. Avoid mixing migration with new features.
