@@ -82,7 +82,7 @@ Either way, a `packages/map-core` module is recommended to encapsulate transit d
 
 Scaffold Next.js 15 app with Tailwind v4 and shadcn/ui.
 
-1) Create project
+1. Create project
 
 ```bash
 # choose your package manager; examples use pnpm
@@ -91,7 +91,7 @@ pnpm dlx create-next-app@latest map-site \
 cd map-site
 ```
 
-2) Add Tailwind v4
+2. Add Tailwind v4
 
 ```bash
 pnpm add -D tailwindcss postcss autoprefixer
@@ -124,24 +124,24 @@ export default {
 import type { Config } from "tailwindcss";
 
 export default {
-  content: ["./app/**/*.{ts,tsx,mdx}", "./components/**/*.{ts,tsx}"]
+  content: ["./app/**/*.{ts,tsx,mdx}", "./components/**/*.{ts,tsx}"],
 } satisfies Config;
 ```
 
-3) Initialize shadcn/ui (Tailwind v4)
+3. Initialize shadcn/ui (Tailwind v4)
 
 ```bash
 pnpm dlx shadcn@latest init --tailwind v4 --components "button,card,input,label,dropdown-menu,dialog,toast,separator,tabs,tooltip,badge,sheet,progress,toggle,checkbox"
 ```
 
-4) Add base utilities
+4. Add base utilities
 
 ```bash
 pnpm add zod zustand leaflet
 pnpm add -D @types/leaflet vitest @testing-library/react @testing-library/jest-dom jsdom playwright @playwright/test
 ```
 
-5) App Router skeleton
+5. App Router skeleton
 
 Two primary pages for MVP: a live map and a commuter rail track predictor. Each page is based on the existing HTML sources in this repo.
 
@@ -187,7 +187,10 @@ Create provider interfaces for each data group and keep caching centralized.
 // lib/providers/types.ts
 export interface TransitProvider {
   vehicles(params?: { routeId?: string }): Promise<Vehicle[]>;
-  predictions(params: { stopId?: string; routeId?: string }): Promise<Prediction[]>;
+  predictions(params: {
+    stopId?: string;
+    routeId?: string;
+  }): Promise<Prediction[]>;
   alerts(): Promise<Alert[]>;
   routes(): Promise<Route[]>;
   stops(params?: { routeId?: string }): Promise<Stop[]>;
@@ -369,14 +372,14 @@ primary_region = "bos"
 
 ## 17) Migration Plan from `ryanwallace.cloud/map/src/`
 
-1) Inventory existing modules related to: live vehicle polling, alert handling, prediction logic, map rendering, and utilities.
-2) Extract reusable logic into `packages/map-core`:
+1. Inventory existing modules related to: live vehicle polling, alert handling, prediction logic, map rendering, and utilities.
+2. Extract reusable logic into `packages/map-core`:
    - Domain types, provider clients, normalizers, headway calculators, color/status mapping.
-3) Implement `MapProvider` + vehicle/route/stop layers; replace legacy map glue with components.
-4) Port UI to shadcn/ui equivalents; maintain keyboard/accessibility standards.
-5) Validate feature parity for MVP: live vehicles on /map, stop arrivals, route view, alerts.
-6) Compare outputs from old and new flows for consistency; fix deltas.
-7) Remove or archive legacy code once parity is met.
+3. Implement `MapProvider` + vehicle/route/stop layers; replace legacy map glue with components.
+4. Port UI to shadcn/ui equivalents; maintain keyboard/accessibility standards.
+5. Validate feature parity for MVP: live vehicles on /map, stop arrivals, route view, alerts.
+6. Compare outputs from old and new flows for consistency; fix deltas.
+7. Remove or archive legacy code once parity is met.
 
 ---
 
@@ -454,11 +457,14 @@ export function MapProvider({ children }: { children?: React.ReactNode }) {
       center: [42.3601, -71.0589], // Boston
       zoom: 12,
     });
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      maxZoom: 19,
-    }).addTo(map);
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 19,
+      },
+    ).addTo(map);
     mapRef.current = map;
     return () => map.remove();
   }, []);
@@ -564,7 +570,7 @@ Decision checklist:
 
 - [ ] Check domain availability and social handles for both.
 - [ ] Quick trademark/common-law sweep for conflicts.
-+- [ ] Draft minimal wordmarks (SVG) and favicon set; test legibility.
+      +- [ ] Draft minimal wordmarks (SVG) and favicon set; test legibility.
 - [ ] Choose finalist; register domain; add footer disclaimer.
 
 Assets drafted (initial wordmarks):

@@ -58,7 +58,7 @@ export function getConnectionInfo(): ConnectionInfo {
       rtt,
       saveData,
       isSlowConnection,
-      shouldSkipOverpass: isSlowConnection
+      shouldSkipOverpass: true // for the time being we're disabling this
     }
   }
 
