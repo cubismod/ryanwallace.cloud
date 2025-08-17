@@ -110,7 +110,7 @@ export default {
 ```
 
 ```css
-/* app/globals.css */
+/* src/app/globals.css */
 @import "tailwindcss";
 
 /* Optional: your CSS variables and base tokens */
@@ -124,14 +124,15 @@ export default {
 import type { Config } from "tailwindcss";
 
 export default {
-  content: ["./app/**/*.{ts,tsx,mdx}", "./components/**/*.{ts,tsx}"],
+  content: ["./src/app/**/*.{ts,tsx,mdx}", "./src/components/**/*.{ts,tsx}"],
 } satisfies Config;
 ```
 
 3. Initialize shadcn/ui (Tailwind v4)
 
 ```bash
-pnpm dlx shadcn@latest init --tailwind v4 --components "button,card,input,label,dropdown-menu,dialog,toast,separator,tabs,tooltip,badge,sheet,progress,toggle,checkbox"
+pnpm dlx shadcn@latest init
+pnpm dlx shadcn@latest add "button card input label dropdown-menu dialog sonner separator tabs tooltip badge sheet progress toggle checkbox"
 ```
 
 4. Add base utilities
@@ -141,7 +142,7 @@ pnpm add zod zustand leaflet
 pnpm add -D @types/leaflet vitest @testing-library/react @testing-library/jest-dom jsdom playwright @playwright/test
 ```
 
-5. App Router skeleton
+5. App Router skeleton (with `--src-dir`)
 
 Two primary pages for MVP: a live map and a commuter rail track predictor. Each page is based on the existing HTML sources in this repo.
 
@@ -149,18 +150,285 @@ Two primary pages for MVP: a live map and a commuter rail track predictor. Each 
 - Track page source: `ryanwallace.cloud/content/track/index.html` (and its `/map/track.js` module)
 
 ```
-app/
-  layout.tsx
-  page.tsx            # Landing → redirect to /map
-  map/page.tsx        # Live interactive map (reuse map HTML + TS)
-  track/page.tsx      # CR track predictions (reuse track HTML + JS)
-  api/
-    vehicles/route.ts     # Optional SSE/poll proxy with caching
-    predictions/route.ts  # Optional cache-normalized predictions
-    alerts/route.ts       # Optional cache-normalized alerts
-components/             # UI + map widgets
-lib/                    # providers, cache, schemas, utils
+src/
+  app/
+    layout.tsx
+    page.tsx            # Home (hero + embedded map)
+    map/page.tsx        # Live interactive map (reuse map HTML + TS)
+    track/page.tsx      # CR track predictions (reuse track HTML + JS)
+    api/
+      vehicles/route.ts     # Optional SSE/poll proxy with caching
+      predictions/route.ts  # Optional cache-normalized predictions
+      alerts/route.ts       # Optional cache-normalized alerts
+  components/             # UI + map widgets
+    map/                  # map components including leaflet
+    elf/                  # elf related logic
+    alerts/               # alert components including datatables
+    predictions/          # components for displaying predictions
+  lib/                    # providers, cache, schemas, utils
 ```
+
+---
+
+## 5a) Folder Organization (Next.js conventions)
+
+High-level folders for a Next.js App Router project. If you used `--src-dir`, prepend `src/` to these (for example, `src/app`, `src/lib`). No specific filenames yet — just where categories of logic live.
+
+Top-level:
+
+- `app/`: route segments and server entry (RSC-first)
+- `components/`: reusable UI and client-side widgets
+- `lib/`: domain logic, providers, transforms, state, and utilities
+- `public/`: static assets (icons, images, worker bundles if needed)
+- `styles/` (optional): non-Tailwind CSS modules or tokens
+- `tests/` and `e2e/`: unit and Playwright tests
+
+Inside `app/`:
+
+- `layout` and `page` for root
+- `map/` and `track/` route segments (MVP)
+- `routes/[id]/` and `stops/[id]/` for detail pages
+- `api/` for any proxy/caching handlers (vehicles, predictions, alerts, sse)
+
+Inside `components/`:
+
+- `map/`: Leaflet host, layer toggles, vehicle overlays, HUD
+- `alerts/`: banners, list/table views, severity chips
+- `predictions/`: arrivals/headway widgets and tables
+- `track/`: commuter-rail track-specific widgets
+- `common/`: shared UI primitives that are not part of shadcn/ui
+
+Inside `lib/`:
+
+- `core/`: domain types, zod schemas, constants (colors, route metadata)
+- `providers/`: API client(s) for IMT/MBTA and any Amtrak/Overpass sources
+- `transforms/`: mappers/normalizers and headway/status derivations
+- `cache/`: fetch wrappers, revalidate helpers, optional Redis bindings
+- `map/`: geometry helpers, clustering, color/bearing utilities
+- `stores/`: small client stores (map UI state, favorites) via Zustand
+- `utils/`: generic utilities (time/date, formatting, connection detection)
+- `workers/` (optional): web worker sources that are built and imported via bundler
+
+Mapping existing `ryanwallace.cloud/map/src/` logic to folders:
+
+- Map rendering glue (map initialization, layer wiring): `components/map/`
+- Marker and layer management, vehicle counters/HUD: `components/map/` (+ pure geometry/color helpers in `lib/map/`)
+- Alerts/predictions UI tables and chips: `components/alerts/` and `components/predictions/`
+- Domain and provider logic (alerts, vehicles, predictions, Amtrak): `lib/providers/`, `lib/transforms/`, `lib/core/`
+- Geometry utilities and line/shape helpers: `lib/map/`
+- Overpass-related parsing and background work: `lib/workers/` (or `public/` if shipping a plain worker bundle)
+- Connection/online detection and general helpers: `lib/utils/`
+- “Elf” scoring or metrics logic: `lib/transforms/` (UI in `components/` if needed)
+
+Notes:
+
+- Keep UI in `components/*` and pure logic in `lib/*` to enable reuse from server and client.
+- Prefer server data fetching in route segments; only move to `app/api/*` when proxying/caching is beneficial.
+- If you later adopt a monorepo, lift `lib/core`, `lib/providers`, and `lib/transforms` into a `packages/map-core` package and re-export to the app.
+
+---
+
+## 5b) Import Aliases (`@/`)
+
+Use `@/` to refer to `src/` everywhere to avoid brittle relative paths. `create-next-app` was initialized with `--import-alias "@/*"`, which configures `tsconfig.json` like this:
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+Alias usage examples:
+
+- `@/app/(routes)/map/page` — route modules
+- `@/components/map/MapProvider` — UI widgets and client components
+- `@/lib/core/types` — domain types and constants
+- `@/lib/providers/imt` — API clients
+- `@/lib/transforms/headways` — normalization and derivations
+- `@/lib/map/geometry` — geometry helpers
+- `@/lib/utils/time` — generic utilities
+- `@/lib/stores/map` — lightweight client stores
+
+Sample imports:
+
+```ts
+import { MapProvider } from "@/components/map/MapProvider";
+import { fetchVehicles } from "@/lib/providers/imt";
+import { computeHeadways } from "@/lib/transforms/headways";
+```
+
+Notes:
+
+- Keep imports stable with `@/…` across server and client files.
+- Avoid deep `../../..` relative paths; prefer the alias for clarity.
+
+---
+
+## 5c) Next.js Best Practices
+
+App Router and RSC
+
+- RSC-first: prefer server components; add `"use client"` only for interactive leaf nodes (map, toggles, HUD).
+- Co-location: route code in `src/app/**`, reusable UI in `src/components/**`, domain logic in `src/lib/**`.
+- Conventions: add `loading.tsx`, `error.tsx`, and `not-found.tsx` per segment where useful.
+- Typed Routes: enable Next 15 typed routes; prefer `Link` over imperative navigation.
+
+Data and Caching
+
+- Fetch on the server: call providers in RSC or Route Handlers; use `fetch` options (`revalidate`, `next: { tags }`).
+- Revalidate: call `revalidateTag`/`revalidatePath` from Server Actions or admin tools when refreshing cache.
+- Dynamics: opt into `export const dynamic = 'force-dynamic'` only when bypassing cache is necessary.
+- Runtime: set `export const runtime = 'nodejs'` for SSE/streams; `edge` for simple, latency-sensitive handlers.
+
+Client Components
+
+- Dynamic import heavy libs (Leaflet) with `ssr: false`; scope to `/map` pages.
+- Keep client state minimal; prefer `searchParams` and server data; use Zustand only for UI-local state.
+- Use `Suspense` to stream server-rendered parts; keep boundaries small and purposeful.
+
+API Route Handlers (`src/app/api/*`)
+
+- Validate inputs with `zod`; return typed JSON; small, focused handlers.
+- Set `Cache-Control` and tag responses; avoid duplicating server fetch logic already handled in RSC.
+- For SSE: heartbeat regularly, handle disconnects, guard with Node runtime.
+
+Performance
+
+- Minimize `use client` surface area and avoid importing server-only modules into client files.
+- Code split with `dynamic()` for infrequently used UI; group by route segment.
+- Fonts via `next/font`; images via `next/image`.
+- Map perf: reuse markers, update with `setLatLng`, throttle to ~1–2s, prefer Canvas rendering.
+
+Routing and SEO
+
+- `generateMetadata` per route; set base metadata in root `layout.tsx`.
+- Use `generateStaticParams` for highly trafficked static pages if applicable.
+- Let `Link` prefetch by default; disable prefetch on highly dynamic routes where wasteful.
+
+Security
+
+- Validate all external inputs with `zod` at edges (Route Handlers, Server Actions).
+- Configure CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and `Permissions-Policy`.
+- Validate `process.env` at boot via schema; never expose secrets to client.
+
+Styling
+
+- Tailwind v4 with small globals; CSS variables for tokens.
+- Use `clsx` + `tailwind-merge` for class composition.
+- Keep shadcn/ui wrappers minimal and accessible.
+
+Errors and Observability
+
+- Add granular `error.tsx` per segment; `global-error.tsx` at app root.
+- Structured server logs; add `instrumentation.ts` if you wire Sentry/OTLP.
+- Clearly show timestamps when UI renders stale-but-valid cached data.
+
+DX and Testing
+
+- Use `@/*` alias everywhere; lint with `eslint-config-next` and add rules to prevent client→server-only imports.
+- Unit test pure logic in `src/lib/**`; component test client widgets; Playwright smoke tests for `/map`, alerts, and `/stops/[id]`.
+
+---
+
+## 5d) ESLint Rule Suggestions
+
+Dependencies
+
+- `eslint`, `eslint-config-next` (or `@next/eslint-plugin-next`), `@typescript-eslint/eslint-plugin`, `@typescript-eslint/parser`
+- `eslint-plugin-import`, `eslint-import-resolver-typescript`, `eslint-plugin-promise`
+- Optional: `eslint-plugin-boundaries` for architectural layering
+
+Baseline config (`.eslintrc.json`)
+
+```json
+{
+  "root": true,
+  "extends": [
+    "next/core-web-vitals",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:import/recommended",
+    "plugin:import/typescript",
+    "plugin:promise/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "import", "promise"],
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "alwaysTryTypes": true,
+        "project": true
+      }
+    }
+  },
+  "rules": {
+    "import/order": [
+      "error",
+      {
+        "groups": [
+          ["builtin", "external"],
+          ["internal", "parent", "sibling", "index"],
+          ["type"]
+        ],
+        "pathGroups": [
+          { "pattern": "@/**", "group": "internal", "position": "before" }
+        ],
+        "newlines-between": "always",
+        "alphabetize": { "order": "asc", "caseInsensitive": true }
+      }
+    ],
+    "import/no-unresolved": "error",
+    "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }],
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@/lib/server/**"],
+            "message": "Do not import server-only modules into client components."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/components/**/*.{ts,tsx}", "src/**/?(*.)client.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              { "group": ["@/lib/server/**"], "message": "Server-only modules are not allowed in client code." }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/lib/**", "src/app/api/**"],
+      "rules": {
+        "no-console": ["warn", { "allow": ["warn", "error"] }]
+      }
+    }
+  ]
+}
+```
+
+Layering (optional, via `eslint-plugin-boundaries`)
+
+- Define layers: `app` (routes), `components` (UI), `lib` (domain), `lib/server` (server-only).
+- Forbid cross-layer leaks (e.g., `components` importing from `app`, or client importing `lib/server`).
+
+Runtime guards (complement to ESLint)
+
+- Import `server-only` in `src/lib/server/**` modules to throw if they reach the client.
+- Import `client-only` in client-only modules that should never be imported by the server.
 
 ---
 
@@ -237,7 +505,8 @@ export interface TransitProvider {
 
 ## 10) Routes and Features
 
-- `/map`: live vehicle map based on `ryanwallace.cloud/map/src/index.html` (refresh rate, follow-location toggle, vehicle counts, alerts table, optional “Elf” UI).
+- `/`: homepage with an accessible hero describing the app (what it tracks, coverage, freshness) and an embedded map component. The map is interactive but sized for the homepage; include a clear CTA to open the full-screen `/map` view. Add highlight cards (Vehicles, Predictions, Alerts) with live counts.
+- `/map`: full-screen/live vehicle map based on `ryanwallace.cloud/map/src/index.html` (refresh rate, follow-location toggle, vehicle counts, alerts table, optional “Elf” UI).
 - `/track`: commuter rail track predictions based on `ryanwallace.cloud/content/track/index.html` (stats header + predictions table).
 
 APIs (`app/api/*`) — optional, only if proxying/caching is beneficial:
@@ -246,6 +515,33 @@ APIs (`app/api/*`) — optional, only if proxying/caching is beneficial:
 - `GET /api/predictions` → cached snapshot for stop/route queries.
 - `GET /api/alerts` → cached alerts.
 - `GET /api/sse` → SSE stream of snapshots (fanout from cache).
+
+---
+
+## 10a) Homepage (Hero + Embedded Map)
+
+Purpose
+
+- Improve first impression, SEO, and navigation by presenting a clear value proposition and a live, embedded map on `/`.
+
+Composition
+
+- Hero section: concise H1 (“Unofficial real-time transit for Greater Boston”), supporting copy (what’s covered and freshness), primary CTA (“Open full map”), secondary CTA (“See alerts”).
+- Embedded map: use the same `MapProvider` but with a contained height (e.g., 60–70vh) and responsive layout. Include minimal controls (zoom, locate) and a route filter chip group. Provide a visible link/button to open `/map`.
+- Live stats: small cards showing counts (vehicles online, active alerts, average headway).
+- SEO elements: `generateMetadata` with descriptive title/description; OG/Twitter metadata and `opengraph-image.tsx` for a branded preview. Optional JSON-LD (`WebApplication`) with name, description, and URL.
+
+Implementation Notes
+
+- Componentization: build `HomeHero`, `HomeStats`, and `HomeMapEmbed` in `src/components/home/` and use them from `src/app/page.tsx`.
+- Map embed: lazy-load the Leaflet client bundle (`dynamic(..., { ssr: false })`) and defer rendering until in-viewport (IntersectionObserver) to reduce TTFB and CPU usage.
+- Data fetching: fetch counts on the server (RSC) with short revalidate windows; pass to client widgets as props.
+- Accessibility: ensure color contrast, visible focus states, and keyboard access to map controls; include “Skip to map” link.
+- Performance: throttle marker updates (~1–2s); pause updates when the tab is hidden; prefer Canvas rendering.
+
+Navigation
+
+- Prominent CTA to `/map` (full-screen), secondary links to `/routes`, and `/track` as the site grows.
 
 ---
 
@@ -439,7 +735,7 @@ Future ideas:
 Leaflet map provider sketch (client component):
 
 ```tsx
-// components/map/MapProvider.tsx
+// src/components/map/MapProvider.tsx
 "use client";
 import { useEffect, useRef } from "react";
 import L, { Map as LeafletMap } from "leaflet";
@@ -481,7 +777,7 @@ export function MapProvider({ children }: { children?: React.ReactNode }) {
 SSE snapshot route sketch:
 
 ```ts
-// app/api/sse/route.ts
+// src/app/api/sse/route.ts
 import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";

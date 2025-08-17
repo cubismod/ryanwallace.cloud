@@ -38,6 +38,7 @@
     "prettier-config-standard": "7.0.0",
     "typescript": "5.9.2"
   },
+  "packageManager": "yarn@1.22.22",
   "scripts": {
     "build": "parcel build src/index.html src/track.ts --public-url /map/",
     "build:nocache": "parcel build src/index.html src/track.ts --public-url /map/ --no-cache",
