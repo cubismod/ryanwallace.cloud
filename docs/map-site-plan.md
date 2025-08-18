@@ -12,7 +12,7 @@ Goals:
 
 ---
 
-## 1) Scope and Outcomes
+## 1) Scope and Outcomes — Status: Completed
 
 - Primary audience: Greater Boston riders and transit enthusiasts.
 - Core flows:
@@ -32,7 +32,7 @@ Success criteria:
 
 ---
 
-## 2) Tech Stack
+## 2) Tech Stack — Status: Completed
 
 - Framework: Next.js 15 (App Router), TypeScript, RSC + Server Actions.
 - UI: shadcn/ui components; Tailwind CSS v4; Radix primitives.
@@ -48,7 +48,7 @@ Success criteria:
 
 ---
 
-## 3) Repository Strategy
+## 3) Repository Strategy — Status: Completed
 
 Option A — Separate repo (recommended for clarity):
 
@@ -67,7 +67,7 @@ Either way, a `packages/map-core` module is recommended to encapsulate transit d
 
 ---
 
-## 4) High-Level Architecture
+## 4) High-Level Architecture — Status: Completed
 
 - RSC-first UI; client components for the interactive map and live widgets only.
 - Data providers to fetch MBTA vehicles, predictions, alerts, routes/stops, and shapes.
@@ -78,7 +78,7 @@ Either way, a `packages/map-core` module is recommended to encapsulate transit d
 
 ---
 
-## 5) Project Setup (Step-by-Step)
+## 5) Project Setup (Step-by-Step) — Status: Completed
 
 Scaffold Next.js 15 app with Tailwind v4 and shadcn/ui.
 
@@ -170,7 +170,7 @@ src/
 
 ---
 
-## 5a) Folder Organization (Next.js conventions)
+## 5a) Folder Organization (Next.js conventions) — Status: Completed
 
 High-level folders for a Next.js App Router project. If you used `--src-dir`, prepend `src/` to these (for example, `src/app`, `src/lib`). No specific filenames yet — just where categories of logic live.
 
@@ -228,7 +228,7 @@ Notes:
 
 ---
 
-## 5b) Import Aliases (`@/`)
+## 5b) Import Aliases (`@/`) — Status: Completed
 
 Use `@/` to refer to `src/` everywhere to avoid brittle relative paths. `create-next-app` was initialized with `--import-alias "@/*"`, which configures `tsconfig.json` like this:
 
@@ -269,7 +269,7 @@ Notes:
 
 ---
 
-## 5c) Next.js Best Practices
+## 5c) Next.js Best Practices — Status: Completed
 
 App Router and RSC
 
@@ -335,7 +335,7 @@ DX and Testing
 
 ---
 
-## 5d) ESLint Rule Suggestions
+## 5d) ESLint Rule Suggestions — Status: Completed
 
 Dependencies
 
