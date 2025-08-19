@@ -16,6 +16,7 @@ RUN --mount=type=secret,id=MT_KEY \
 FROM hugomods/hugo:0.148.2@sha256:3580c438a87d91fab06209c7e633bd2f8e9cccef2021743272293625f3c2119b AS builder
 WORKDIR /build
 
+ENV DISABLE_OVERPASS=true
 COPY --from=node /build .
 
 RUN hugo build --cleanDestinationDir --minify --gc
