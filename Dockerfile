@@ -1,12 +1,14 @@
 ARG caddy_version=2.10@sha256:133b5eb7ef9d42e34756ba206b06d84f4e3eb308044e268e182c2747083f09de
 ARG caddy_builder_version=2.10-builder@sha256:fe8d0d6cdbfd382197c4d715ffd5b41210165e2f64a81ce546ae63eeef35873a
 
+
 # node bundling
 FROM node:24.6.0@sha256:d2b6b5aedb5b729f68ee1129e0f5a5d4713d93f82448249e82241876d8e8d86e as node
 
 WORKDIR /build
 ADD ryanwallace.cloud .
 WORKDIR /build/map
+ENV DISABLE_OVERPASS=true
 RUN yarn
 # https://fly.io/docs/apps/build-secrets/
 RUN --mount=type=secret,id=MT_KEY \
@@ -16,7 +18,6 @@ RUN --mount=type=secret,id=MT_KEY \
 FROM hugomods/hugo:0.148.2@sha256:3580c438a87d91fab06209c7e633bd2f8e9cccef2021743272293625f3c2119b AS builder
 WORKDIR /build
 
-ENV DISABLE_OVERPASS=true
 COPY --from=node /build .
 
 RUN hugo build --cleanDestinationDir --minify --gc
