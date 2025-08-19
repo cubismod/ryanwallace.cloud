@@ -382,8 +382,14 @@ Baseline config (`.eslintrc.json`)
       }
     ],
     "import/no-unresolved": "error",
-    "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }],
-    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "@typescript-eslint/consistent-type-imports": [
+      "error",
+      { "prefer": "type-imports" }
+    ],
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+    ],
     "no-restricted-imports": [
       "error",
       {
@@ -404,7 +410,10 @@ Baseline config (`.eslintrc.json`)
           "error",
           {
             "patterns": [
-              { "group": ["@/lib/server/**"], "message": "Server-only modules are not allowed in client code." }
+              {
+                "group": ["@/lib/server/**"],
+                "message": "Server-only modules are not allowed in client code."
+              }
             ]
           }
         ]
@@ -432,7 +441,7 @@ Runtime guards (complement to ESLint)
 
 ---
 
-## 6) Domain Model and Types
+## 6) Domain Model and Types — Status: Completed
 
 - Entities
   - `Vehicle` { id, label, routeId, tripId?, directionId, lat, lon, bearing?, speed?, updatedAt, status? }
@@ -447,7 +456,7 @@ Runtime guards (complement to ESLint)
 
 ---
 
-## 7) Data Providers and Caching
+## 7) Data Providers and Caching — Status: Completed
 
 Create provider interfaces for each data group and keep caching centralized.
 
@@ -473,7 +482,7 @@ export interface TransitProvider {
 
 ---
 
-## 8) Mapping Layer
+## 8) Mapping Layer — Status: Completed
 
 - Leaflet as the mapping engine; reuse existing map code where possible.
 - `MapProvider` wraps Leaflet init; child components register layers.
@@ -500,6 +509,15 @@ export interface TransitProvider {
   - `RouteLegend` (colors and line badges)
   - `AlertBadge` (severity/status)
 - Keep components client-only only when needed; prefer server components elsewhere.
+
+## 9a) Shadcn components — Status: Completed
+
+- Use `src/pages/dashboard.tsx` as a basis for the UI.
+- The left sidebar should include the primary navigation menu:
+  - Home
+  - Map
+  - Track
+  - Alerts
 
 ---
 

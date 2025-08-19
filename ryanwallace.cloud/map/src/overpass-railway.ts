@@ -54,6 +54,12 @@ function getRailwayWorker(): Worker {
   return railwayWorker
 }
 
+// Explicit environment toggle to hard-disable Overpass features at build time
+const OVERPASS_DISABLED_ENV: boolean =
+  typeof process !== 'undefined' &&
+  !!process.env &&
+  process.env.DISABLE_OVERPASS === 'true'
+
 function workerFetchOverpass(): Promise<OverpassResponse> {
   return new Promise((resolve, reject) => {
     const worker = getRailwayWorker()
@@ -191,6 +197,15 @@ function clearLocalStorageCache(): void {
 }
 
 export function onRailwayTracksLoaded(callback: LoadingCallbackFunction): void {
+  // If disabled via environment, immediately invoke callback with empty data
+  if (OVERPASS_DISABLED_ENV) {
+    try {
+      callback([])
+    } catch (error) {
+      logError(error, 'onRailwayTracksLoaded:envDisabled')
+    }
+    return
+  }
   if (cachedRailwayTracks) {
     // Tracks already loaded, call immediately
     callback(cachedRailwayTracks)
@@ -212,14 +227,17 @@ function notifyLoadingCallbacks(tracks: RailwayTrack[]): void {
 }
 
 export function isRailwayTracksLoading(): boolean {
+  if (OVERPASS_DISABLED_ENV) return false
   return isLoading
 }
 
 export function hasRailwayTracks(): boolean {
+  if (OVERPASS_DISABLED_ENV) return false
   return !!cachedRailwayTracks
 }
 
 export function getRailwayTracksSync(): RailwayTrack[] {
+  if (OVERPASS_DISABLED_ENV) return []
   return cachedRailwayTracks || []
 }
 
@@ -258,6 +276,11 @@ export function buildOverpassQuery(
 export async function fetchRailwayTracks(
   forceRefresh = false
 ): Promise<RailwayTrack[]> {
+  // Hard-disable via environment variable
+  if (OVERPASS_DISABLED_ENV) {
+    console.log('Overpass railway tracks disabled via DISABLE_OVERPASS env')
+    return []
+  }
   // Check if Overpass should be disabled due to connection or preferences
   if (!forceRefresh && shouldDisableOverpass()) {
     console.log('Overpass railway tracks disabled for this connection')
@@ -433,6 +456,13 @@ export function convertTracksToPolylines(tracks: RailwayTrack[]): L.Polyline[] {
 
 // Cache management functions
 export function clearRailwayCache(): void {
+  if (OVERPASS_DISABLED_ENV) {
+    // Still clear any persisted cache in case it exists
+    clearLocalStorageCache()
+    cachedRailwayTracks = null
+    cacheTimestamp = null
+    return
+  }
   cachedRailwayTracks = null
   cacheTimestamp = null
   clearLocalStorageCache()
@@ -440,11 +470,24 @@ export function clearRailwayCache(): void {
 }
 
 export function refreshRailwayTracks(): Promise<RailwayTrack[]> {
+  if (OVERPASS_DISABLED_ENV) {
+    console.log('Overpass disabled; refresh is a no-op')
+    return Promise.resolve([])
+  }
   console.log('Manually refreshing railway tracks...')
   return fetchRailwayTracks(true)
 }
 
 export function getCacheInfo(): CacheInfo {
+  if (OVERPASS_DISABLED_ENV) {
+    return {
+      hasMemoryCache: false,
+      hasLocalStorageCache: false,
+      age: undefined,
+      trackCount: 0,
+      cacheSize: undefined
+    }
+  }
   const hasMemoryCache: boolean = !!(cachedRailwayTracks && cacheTimestamp)
   const age: number | undefined = cacheTimestamp
     ? Date.now() - cacheTimestamp
@@ -483,6 +526,10 @@ if (typeof window !== 'undefined') {
 
 // Initialize railway tracks in background - non-blocking
 export function initializeRailwayTracks(): void {
+  if (OVERPASS_DISABLED_ENV) {
+    // Skip initialization entirely when disabled via environment
+    return
+  }
   // Start background loading immediately but don't block module import
   setTimeout(() => {
     fetchRailwayTracks().catch((error) => {
@@ -495,4 +542,6 @@ export function initializeRailwayTracks(): void {
 export const railwayTracksPromise = fetchRailwayTracks()
 
 // Auto-initialize on module load
-initializeRailwayTracks()
+if (!OVERPASS_DISABLED_ENV) {
+  initializeRailwayTracks()
+}
