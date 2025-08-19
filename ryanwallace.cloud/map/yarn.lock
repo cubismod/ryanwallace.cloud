@@ -120,9 +120,9 @@
     quick-lru "^7.0.0"
 
 "@maptiler/leaflet-maptilersdk@^4.0.2":
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/@maptiler/leaflet-maptilersdk/-/leaflet-maptilersdk-4.1.0.tgz#333aea85922c24c12617028d91210136134f0fe3"
-  integrity sha512-o7ZohIaFgEpQpOziccEYYylkrySc3PiXa8/RISvhbuhNscUy0GCBcpSIRHVw7+WgBQC9T7ODYVcM7ABRjhZ1gQ==
+  version "4.1.1"
+  resolved "https://registry.yarnpkg.com/@maptiler/leaflet-maptilersdk/-/leaflet-maptilersdk-4.1.1.tgz#d42a1735ae1f25d6c0e39d3dedf6b9d49f470c51"
+  integrity sha512-vCE0K9mlVRyAJkWYOngiA1ZEI42eoWvZd21HLYZE/IU1T+OQc4K1bPoap/z0myAXDLxIJ4wlz+vchr5tKgo0uA==
   dependencies:
     "@maptiler/sdk" "^3.2.3"
     "@types/leaflet" "^1.9.16"
