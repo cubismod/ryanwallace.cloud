@@ -14,7 +14,6 @@ import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
 // Import modules
 import { setCookie, getCookie, return_colors } from './utils'
 import { pointToLayer, onEachFeature, updateVehicleFeatures } from './markers'
-import { setupProgressiveEnhancement } from './geometry-utils'
 import {
   layerGroups,
   shapesLayerGroups,
@@ -29,7 +28,6 @@ import {
 import { updateTable } from './table-manager'
 import { alerts } from './alerts'
 import { fetchAmtrakData } from './amtrak'
-import { getConnectionInfo, shouldDisableOverpass } from './connection-detector'
 
 // Extend jQuery to include getJSON method with Promise support
 declare const $: {
@@ -346,13 +344,6 @@ function debounceUpdateTable(): void {
 
 function loadShapesOnce(): void {
   if (!baseLayerLoaded) {
-    // Skip shapes loading on slow connections to improve performance
-    if (shouldDisableOverpass()) {
-      console.log('Skipping shapes loading due to slow connection')
-      baseLayerLoaded = true
-      return
-    }
-
     Object.values(shapesLayerGroups).forEach((group) => {
       group.clearLayers()
     })
@@ -406,25 +397,11 @@ function loadShapesOnce(): void {
 
 annotate_map()
 
-// Set up progressive enhancement for railway tracks
-setupProgressiveEnhancement()
 
-// Adaptive refresh rate based on connection quality
 function getAdaptiveRefreshRate(): number {
-  const connectionInfo = getConnectionInfo()
   const savedRefreshRate = getCookie('refresh-rate')
   const userRefreshRate = savedRefreshRate ? parseInt(savedRefreshRate) : 15
-
-  // Adjust cache duration and refresh rate based on connection
-  if (connectionInfo.isSlowConnection) {
-    CACHE_DURATION = 10000 // 10 seconds cache for slow connections
-    return Math.max(userRefreshRate, 30) // Minimum 30s refresh for slow connections
-  } else if (connectionInfo.effectiveType === '5g') {
-    CACHE_DURATION = 3000 // 3 seconds cache for fast connections
-    return Math.max(userRefreshRate, 5) // Allow faster refresh for 5G
-  }
-
-  CACHE_DURATION = 5000 // Default 5 seconds
+  CACHE_DURATION = 5000
   return userRefreshRate
 }
 
@@ -472,25 +449,6 @@ const refreshRateElement = document.getElementById(
 ) as HTMLInputElement
 if (refreshRateElement) {
   refreshRateElement.value = defaultRefreshRate.toString()
-
-  // Add connection info display and update min value
-  const connectionInfo = getConnectionInfo()
-  const minRefreshRate = getAdaptiveRefreshRate()
-
-  // Set minimum value on the input to guide users
-  refreshRateElement.min = minRefreshRate.toString()
-
-  if (connectionInfo.isSlowConnection) {
-    const label = refreshRateElement.parentElement?.querySelector('label')
-    if (label) {
-      label.textContent += ` (Slow connection - min ${minRefreshRate}s)`
-    }
-    // If current value is below minimum, update it
-    if (parseInt(refreshRateElement.value) < minRefreshRate) {
-      refreshRateElement.value = minRefreshRate.toString()
-      setCookie('refresh-rate', minRefreshRate.toString())
-    }
-  }
 }
 
 L.easyButton({

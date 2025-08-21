@@ -1,40 +1,9 @@
 import * as L from 'leaflet'
 import * as turf from '@turf/turf'
-import {
-  getTracksForRoute,
-  convertTracksToPolylines,
-  getRailwayTracksSync,
-  hasRailwayTracks,
-  onRailwayTracksLoaded
-} from './overpass-railway'
 
 const MAX_SNAP_DISTANCE = 100 // meters - maximum distance to snap vehicles to route
 const COMMUTER_RAIL_TRAIN_LENGTH = 200 // meters - approximate length of 6-8 car CR train
 
-// Track whether we've set up progressive enhancement
-let progressiveEnhancementSetup = false
-
-export function setupProgressiveEnhancement(): void {
-  if (progressiveEnhancementSetup) {
-    return
-  }
-
-  progressiveEnhancementSetup = true
-
-  // Set up callback for when railway tracks load
-  onRailwayTracksLoaded((tracks) => {
-    console.log(
-      `Railway tracks loaded (${tracks.length}), enhancing vehicle positioning...`
-    )
-
-    // Trigger a map refresh to update vehicle positions with new track data
-    if (typeof window !== 'undefined' && (window as any).annotate_map) {
-      setTimeout(() => {
-        ;(window as any).annotate_map()
-      }, 100) // Small delay to ensure tracks are fully processed
-    }
-  })
-}
 
 function filterShapesByDirection(
   shapes: L.Polyline[],
@@ -178,45 +147,6 @@ export function snapVehicleToRoute(
   route?: string,
   direction?: number
 ): L.LatLng {
-  // Try to use detailed railway track data for rail routes if available
-  if (
-    route &&
-    hasRailwayTracks() &&
-    (route.startsWith('CR-') ||
-      route.startsWith('Red') ||
-      route.startsWith('Blue') ||
-      route.startsWith('Orange') ||
-      route.startsWith('Green') ||
-      route.startsWith('Mattapan'))
-  ) {
-    try {
-      const railwayTracks = getRailwayTracksSync()
-      const relevantTracks = getTracksForRoute(railwayTracks, route)
-
-      if (relevantTracks.length > 0) {
-        const railwayPolylines = convertTracksToPolylines(relevantTracks)
-        console.log(
-          `Using ${relevantTracks.length} Overpass railway tracks for ${route}`
-        )
-
-        // Use railway tracks instead of route shapes
-        return snapVehicleToRouteInternal(
-          vehicleLatLng,
-          railwayPolylines,
-          vehicleStatus,
-          route,
-          direction
-        )
-      }
-    } catch (error) {
-      console.warn(
-        'Failed to use railway track data, falling back to route shapes:',
-        error
-      )
-    }
-  }
-
-  // Fallback to existing route shapes
   return snapVehicleToRouteInternal(
     vehicleLatLng,
     routeShapes,

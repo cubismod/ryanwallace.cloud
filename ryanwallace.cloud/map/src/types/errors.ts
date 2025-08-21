@@ -3,8 +3,7 @@ export enum ErrorType {
   VALIDATION = 'VALIDATION',
   CACHE = 'CACHE',
   GEOSPATIAL = 'GEOSPATIAL',
-  CONNECTION = 'CONNECTION',
-  OVERPASS = 'OVERPASS'
+  CONNECTION = 'CONNECTION'
 }
 
 export class BaseError extends Error {
@@ -61,22 +60,6 @@ export class ConnectionError extends BaseError {
   constructor(message: string, connectionType?: string, code?: string) {
     super(ErrorType.CONNECTION, message, code)
     this.connectionType = connectionType
-  }
-}
-
-export class OverpassError extends BaseError {
-  public readonly query?: string
-  public readonly endpoint?: string
-
-  constructor(
-    message: string,
-    query?: string,
-    endpoint?: string,
-    code?: string
-  ) {
-    super(ErrorType.OVERPASS, message, code)
-    this.query = query
-    this.endpoint = endpoint
   }
 }
 
