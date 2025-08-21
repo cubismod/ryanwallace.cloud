@@ -25,7 +25,11 @@
     cursor: pointer;
     box-shadow: none;
     outline: none;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.1s ease;
     /* Nice alignment in case of flex display */
     align-items: center;
     justify-content: center;
@@ -37,6 +41,97 @@
   }
   .controls-section #tracking-stop-btn.tracking-stop-btn:active {
     transform: scale(0.95);
+  }
+  /* Map expand behavior (not full-screen) */
+  #map {
+    transition: height 0.2s ease;
+  }
+  #map.map-expanded {
+    height: 80vh; /* expand but not full screen */
+  }
+
+  /* Tracked vehicle overlays */
+  .leaflet-div-icon.tracked-info-icon {
+    background: transparent;
+    border: none;
+    width: auto !important;
+    height: auto !important;
+  }
+  /* Tooltip styling for tracked vehicle */
+  #map .leaflet-tooltip.tracked-tooltip {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    color: #111827; /* gray-900 */
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    padding: 6px 8px;
+    pointer-events: none;
+  }
+  #map .leaflet-tooltip.tracked-tooltip .t-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+    font-size: 12px;
+  }
+  #map .leaflet-tooltip.tracked-tooltip .t-meta {
+    font-size: 11px;
+    color: #374151; /* gray-700 */
+  }
+
+  /* Legacy divIcon label (kept for safety) */
+  .tracked-label {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+      sans-serif;
+    font-size: 12px;
+    line-height: 1.25;
+    background: rgba(255, 255, 255, 0.96);
+    color: #111827; /* gray-900 */
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    border-radius: 6px;
+    padding: 6px 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transform: translate(-50%, -120%);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .tracked-label .t-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .tracked-label .t-meta {
+    font-size: 11px;
+    color: #374151; /* gray-700 */
+  }
+  .tracked-pulse {
+    width: 60px;
+    height: 60px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    background: transparent;
+    border: none;
+  }
+  .tracked-pulse span {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    border: 2px solid rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.9);
+    box-shadow: 0 0 0 0 rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.7);
+    animation: tracked-pulse 1.8s ease-out infinite;
+  }
+  @keyframes tracked-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.6);
+      opacity: 1;
+    }
+    70% {
+      box-shadow: 0 0 0 16px rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0);
+      opacity: 0.6;
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0);
+      opacity: 0.4;
+    }
   }
 </style>
 <link
@@ -71,7 +166,9 @@
       class="tracking-stop-btn"
       aria-label="Stop tracking"
       title="Stop tracking"
-    >Stop</button>
+    >
+      Stop
+    </button>
   </div>
 
   <div class="control-group">

@@ -176,7 +176,7 @@ function applyElfClasses(marker: L.Marker, feature: VehicleFeature): void {
 }
 
 export function updateMarkers(features: VehicleFeature[]): void {
-  const newMarkerIds = new Set<string | number>()
+  const newMarkerIds = new Set<string>()
 
   const vehicleFeatures = features.filter(
     (f) => f.properties['marker-symbol'] !== 'building'
@@ -186,13 +186,14 @@ export function updateMarkers(features: VehicleFeature[]): void {
     const markerId =
       feature.id ||
       `${feature.geometry.coordinates[0]}-${feature.geometry.coordinates[1]}`
-    newMarkerIds.add(markerId)
+    const markerKey = String(markerId)
+    newMarkerIds.add(markerKey)
 
     const latlng = L.latLng(
       feature.geometry.coordinates[1],
       feature.geometry.coordinates[0]
     )
-    const existingMarker = currentMarkers.get(markerId)
+    const existingMarker = currentMarkers.get(markerKey)
 
     if (existingMarker) {
       existingMarker.setLatLng(latlng)
@@ -275,7 +276,7 @@ export function updateMarkers(features: VehicleFeature[]): void {
       applyElfClasses(existingMarker, feature)
     } else {
       const marker = pointToLayer(feature, latlng)
-      currentMarkers.set(markerId, marker)
+      currentMarkers.set(markerKey, marker)
 
       if (feature.properties.route) {
         const layerGroup = getLayerGroupForRoute(feature.properties.route)
@@ -289,15 +290,15 @@ export function updateMarkers(features: VehicleFeature[]): void {
     }
   }
 
-  for (const [markerId, marker] of currentMarkers.entries()) {
-    if (!newMarkerIds.has(markerId)) {
+  for (const [markerKey, marker] of currentMarkers.entries()) {
+    if (!newMarkerIds.has(String(markerKey))) {
       Object.values(layerGroups).forEach((group) => {
         if (group.hasLayer(marker)) {
           group.removeLayer(marker)
         }
       })
-      currentMarkers.delete(markerId)
-      decrementMapItem(markerId as string)
+      currentMarkers.delete(markerKey)
+      decrementMapItem(String(markerKey))
     }
   }
 }

@@ -51,6 +51,7 @@ declare global {
     trackVehicleById: (id: string | number) => void
     untrackVehicle: () => void
     isTrackingVehicleId: (id: string | number) => boolean
+    toggleMapExpand: () => void
   }
 }
 
@@ -77,6 +78,8 @@ var map = L.map('map', {
 //   }
 // })
 
+// Tracking overlays: keep minimal halo only (no extra panes)
+
 const vehicles_url: string =
   process.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
 const bos_url: string = 'https://bos.ryanwallace.cloud'
@@ -89,6 +92,22 @@ let adaptiveRefreshRate: number = 15
 let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
 let trackedVehicleId: string | number | null = null
 let trackedVehicleLabel: string | null = null
+let isMapExpanded = false
+let trackedHalo: L.CircleMarker | null = null
+let trackedPulse: L.Marker | null = null
+let overlayBoostInterval: number | null = null
+let overlayBoostTimeout: number | null = null
+let trackedPulseSize: number | null = null
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!m) return null
+  return {
+    r: parseInt(m[1], 16),
+    g: parseInt(m[2], 16),
+    b: parseInt(m[3], 16)
+  }
+}
 
 function updateTrackingStatusUI(): void {
   const el = document.getElementById('tracking-status')
@@ -434,13 +453,22 @@ window.moveMapToStop = (lat: number, lng: number): void => {
 
 // Vehicle tracking helpers exposed for popup actions
 window.trackVehicleById = (id: string | number): void => {
-  trackedVehicleId = id
+  trackedVehicleId = String(id)
   trackedVehicleLabel = null
   // Center immediately if we already have a marker
-  const marker = currentMarkers.get(id)
+  const marker = currentMarkers.get(String(id)) || currentMarkers.get(id as any)
   if (marker) {
     const latlng = marker.getLatLng()
     map.panTo(latlng)
+    // Immediately render tracking overlays for snappy feedback
+    let trackedFeature: any = null
+    try {
+      const feats = (vehicleDataCache && vehicleDataCache.features) || []
+      trackedFeature = feats.find((f: any) => String(f.id) === String(trackedVehicleId))
+    } catch {}
+    updateTrackedOverlays(marker as L.Marker, trackedFeature)
+    // Temporarily boost overlay refresh while panning/settling
+    startOverlayBoost()
   }
   updateTrackingStatusUI()
 }
@@ -449,10 +477,29 @@ window.untrackVehicle = (): void => {
   trackedVehicleId = null
   trackedVehicleLabel = null
   updateTrackingStatusUI()
+  clearTrackedOverlays()
+  stopOverlayBoost()
 }
 
 window.isTrackingVehicleId = (id: string | number): boolean => {
-  return trackedVehicleId === id
+  return String(trackedVehicleId) === String(id)
+}
+
+// Non-fullscreen expand toggle
+function setMapExpanded(expand: boolean): void {
+  const el = document.getElementById('map')
+  if (!el) return
+  isMapExpanded = expand
+  el.classList.toggle('map-expanded', expand)
+  map.invalidateSize()
+  // run again after transition for crisp tiles
+  window.setTimeout(() => map.invalidateSize(), 220)
+  // persist preference
+  setCookie('map-expanded', expand.toString())
+}
+
+window.toggleMapExpand = (): void => {
+  setMapExpanded(!isMapExpanded)
 }
 
 function annotate_map(): void {
@@ -513,13 +560,23 @@ function processVehicleData(data: any): void {
 
     // If tracking a vehicle, keep it in view
     if (trackedVehicleId !== null) {
-      const marker = currentMarkers.get(trackedVehicleId)
+      const marker =
+        currentMarkers.get(String(trackedVehicleId)) ||
+        (currentMarkers.get((trackedVehicleId as unknown) as number) as any)
       if (marker) {
         const latlng = marker.getLatLng()
         // Only pan if marker is outside current bounds to reduce jitter
         if (!map.getBounds().pad(-0.2).contains(latlng)) {
           map.panTo(latlng)
         }
+        // Find tracked feature for info display
+        let trackedFeature: any = null
+        try {
+          trackedFeature = (data.features || []).find(
+            (f: any) => String(f.id) === String(trackedVehicleId)
+          )
+        } catch {}
+        updateTrackedOverlays(marker, trackedFeature)
       }
       // Update label from latest data
       try {
@@ -703,6 +760,46 @@ window.addEventListener('offline', () => {
   }
 })
 
+// Recompute halo/pulse sizes and alignment when zoom changes
+function refreshTrackedOverlaysForZoom(): void {
+  if (trackedVehicleId === null) return
+  const marker =
+    currentMarkers.get(String(trackedVehicleId)) ||
+    (currentMarkers.get((trackedVehicleId as unknown) as number) as any)
+  if (!marker) return
+  let trackedFeature: any = null
+  try {
+    const feats = (vehicleDataCache && vehicleDataCache.features) || []
+    trackedFeature = feats.find((f: any) => String(f.id) === String(trackedVehicleId))
+  } catch {}
+  updateTrackedOverlays(marker, trackedFeature)
+}
+
+map.on('zoom', refreshTrackedOverlaysForZoom)
+map.on('zoomend', refreshTrackedOverlaysForZoom)
+
+function startOverlayBoost(): void {
+  stopOverlayBoost()
+  // Refresh overlays ~10x/sec for 1.5s to follow pan/animation
+  overlayBoostInterval = window.setInterval(() => {
+    refreshTrackedOverlaysForZoom()
+  }, 100)
+  overlayBoostTimeout = window.setTimeout(() => {
+    stopOverlayBoost()
+  }, 1500)
+}
+
+function stopOverlayBoost(): void {
+  if (overlayBoostInterval) {
+    window.clearInterval(overlayBoostInterval)
+    overlayBoostInterval = null
+  }
+  if (overlayBoostTimeout) {
+    window.clearTimeout(overlayBoostTimeout)
+    overlayBoostTimeout = null
+  }
+}
+
 function startUpdateInterval(): void {
   if (intervalID) return
   const currentRefreshRate = getAdaptiveRefreshRate()
@@ -768,6 +865,40 @@ L.easyButton({
     }
   ]
 }).addTo(map)
+
+// Add a compact expand toggle (not full-screen)
+const expandBtn: any = L.easyButton({
+  position: 'topright',
+  states: [
+    {
+      stateName: 'expand-off',
+      title: 'Expand map',
+      onClick: (btn) => {
+        setMapExpanded(true)
+        btn.state('expand-on')
+      },
+      icon: "<span class='expand' style='font-weight:600'>&#x21F2;</span>"
+    },
+    {
+      stateName: 'expand-on',
+      title: 'Shrink map',
+      onClick: (btn) => {
+        setMapExpanded(false)
+        btn.state('expand-off')
+      },
+      icon: "<span class='expand' style='font-weight:600'>&#x21F3;</span>"
+    }
+  ]
+}).addTo(map)
+
+// Initialize expanded state from cookie
+const savedMapExpanded = getCookie('map-expanded')
+if (savedMapExpanded && savedMapExpanded.toString().toLowerCase() === 'true') {
+  setMapExpanded(true)
+  if (expandBtn && typeof expandBtn.state === 'function') {
+    expandBtn.state('expand-on')
+  }
+}
 
 // Variables to store the user location circle and watch state
 let userLocationCircle: L.Circle | null = null
@@ -1103,3 +1234,103 @@ document.getElementById('elf-search-close')!.addEventListener('click', () => {
 })
 
 alerts(vehicles_url)
+function clearTrackedOverlays(): void {
+  if (trackedHalo) {
+    map.removeLayer(trackedHalo)
+    trackedHalo = null
+  }
+  if (trackedPulse) {
+    map.removeLayer(trackedPulse)
+    trackedPulse = null
+  }
+  trackedPulseSize = null
+}
+
+// (removed) buildTrackedInfoHtml – we no longer render an info label above the marker
+
+function updateTrackedOverlays(marker: L.Marker, feature: any | null): void {
+  // Compute visual center of the marker icon using icon size and anchor
+  const iconObj: any = marker.getIcon && (marker.getIcon() as any)
+  const iconSize: L.Point = L.point(iconObj?.options?.iconSize || [0, 0])
+  const iconAnchor: L.Point = L.point(
+    iconObj?.options?.iconAnchor || [iconSize.x / 2, iconSize.y]
+  )
+  const base = map.latLngToLayerPoint(marker.getLatLng())
+  // Center slightly below geometric middle to match icon silhouette
+  const centerFactorY = 1.1
+  const offsetX = iconSize.x / 2 - iconAnchor.x
+  const offsetY = iconSize.y * centerFactorY - iconAnchor.y
+  const centerPoint = base.add(L.point(offsetX, offsetY))
+  const centerLatLng = map.layerPointToLatLng(centerPoint)
+
+  // Determine route/marker color for overlays
+  let hexColor = '#ef4444'
+  if (feature?.properties?.['marker-color']) {
+    hexColor = feature.properties['marker-color']
+  } else if (feature?.properties?.route) {
+    try {
+      hexColor = return_colors(feature.properties.route)
+    } catch {}
+  }
+  const rgb = hexToRgb(hexColor) || { r: 239, g: 68, b: 68 }
+
+  // Compute overlay sizes based on zoom (linear scaling with sensible caps)
+  const zoom = map.getZoom()
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
+  const haloRadius = clamp(12 + (zoom - 12) * 2, 10, 30) // px radius
+  const pulseSize = Math.round(clamp(40 + (zoom - 12) * 8, 36, 120)) // px
+
+  // Halo ring around the vehicle
+  if (!trackedHalo) {
+    trackedHalo = L.circleMarker(centerLatLng, {
+      radius: haloRadius,
+      color: hexColor,
+      weight: 2,
+      opacity: 0.9,
+      fill: false,
+      dashArray: '4,4'
+    }).addTo(map)
+  } else {
+    trackedHalo.setLatLng(centerLatLng).setRadius(haloRadius).bringToFront()
+    trackedHalo.setStyle({ color: hexColor })
+  }
+
+  // Pulsing ring as div icon overlay (matches route color)
+  const pulseHtml = `<span style=\"--pulse-r:${rgb.r}; --pulse-g:${rgb.g}; --pulse-b:${rgb.b};\"></span>`
+  if (!trackedPulse) {
+    const pulseIcon = L.divIcon({
+      className: 'tracked-pulse',
+      html: pulseHtml,
+      iconSize: [pulseSize, pulseSize],
+      iconAnchor: [pulseSize / 2, pulseSize / 2]
+    })
+    trackedPulse = L.marker(centerLatLng, {
+      icon: pulseIcon,
+      interactive: false,
+      zIndexOffset: 2000
+    }).addTo(map)
+    trackedPulseSize = pulseSize
+  } else {
+    // Only rebuild icon if size changed (e.g., on zoom). Otherwise, update color and position only
+    trackedPulse.setLatLng(centerLatLng)
+    const el = trackedPulse.getElement() as HTMLElement | null
+    if (el) {
+      const span = el.querySelector('span') as HTMLElement | null
+      if (span) {
+        span.style.setProperty('--pulse-r', String(rgb.r))
+        span.style.setProperty('--pulse-g', String(rgb.g))
+        span.style.setProperty('--pulse-b', String(rgb.b))
+      }
+    }
+    if (trackedPulseSize !== pulseSize) {
+      const pulseIcon = L.divIcon({
+        className: 'tracked-pulse',
+        html: pulseHtml,
+        iconSize: [pulseSize, pulseSize],
+        iconAnchor: [pulseSize / 2, pulseSize / 2]
+      })
+      trackedPulse.setIcon(pulseIcon)
+      trackedPulseSize = pulseSize
+    }
+  }
+}
