@@ -313,12 +313,23 @@ export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
             elfScoreHtml = `<br />Elf Score: ${elfDisplay}`
           }
 
+          // Tracking toggle
+          const idStr = String(feature.id ?? '')
+          const isTracking = (window as any).isTrackingVehicleId
+            ? (window as any).isTrackingVehicleId(feature.id as any)
+            : false
+          const trackLabel = isTracking ? 'Stop tracking' : 'Track vehicle'
+          const trackAction = isTracking
+            ? `window.untrackVehicle()`
+            : `window.trackVehicleById(${JSON.stringify(idStr)})`
+
           return `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
         <br />Stop: ${stopDisplay}
         <br />Status: ${niceStatus(feature.properties.status || '')}
         ${elfScoreHtml}
         ${eta}${speed}${occupancy}${platform_prediction}
-        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`
+        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>
+        <br /><a href="#" class="popup-link" onclick='${trackAction}; return false;'>${trackLabel}</a>`
         },
         autoPan: true,
         closeOnEscapeKey: true

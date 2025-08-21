@@ -4,7 +4,6 @@ import * as turf from '@turf/turf'
 const MAX_SNAP_DISTANCE = 100 // meters - maximum distance to snap vehicles to route
 const COMMUTER_RAIL_TRAIN_LENGTH = 200 // meters - approximate length of 6-8 car CR train
 
-
 function filterShapesByDirection(
   shapes: L.Polyline[],
   route?: string,

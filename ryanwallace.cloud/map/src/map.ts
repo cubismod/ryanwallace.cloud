@@ -23,7 +23,8 @@ import {
   updateMarkers,
   refreshAllElfClasses,
   findTopElfTrains,
-  jumpToElfTrain
+  jumpToElfTrain,
+  currentMarkers
 } from './marker-manager'
 import { updateTable } from './table-manager'
 import { alerts } from './alerts'
@@ -47,6 +48,9 @@ declare global {
   interface Window {
     moveMapToStop: (lat: number, lng: number) => void
     buildingMarkers: L.GeoJSON | null
+    trackVehicleById: (id: string | number) => void
+    untrackVehicle: () => void
+    isTrackingVehicleId: (id: string | number) => boolean
   }
 }
 
@@ -83,6 +87,175 @@ let lastVehicleUpdate: number = 0
 let vehicleDataCache: any = null
 let adaptiveRefreshRate: number = 15
 let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
+let trackedVehicleId: string | number | null = null
+let trackedVehicleLabel: string | null = null
+
+function updateTrackingStatusUI(): void {
+  const el = document.getElementById('tracking-status')
+  const stopBtn = document.getElementById(
+    'tracking-stop-btn'
+  ) as HTMLButtonElement | null
+  if (!el) return
+  el.classList.remove('live-streaming', 'live-polling', 'live-connecting')
+  if (trackedVehicleId !== null) {
+    el.textContent = trackedVehicleLabel
+      ? `Tracking: ${trackedVehicleLabel}`
+      : 'Tracking'
+    el.classList.add('live-streaming')
+    if (stopBtn) stopBtn.style.display = 'inline-flex'
+  } else {
+    el.textContent = 'Off'
+    el.classList.add('live-polling')
+    if (stopBtn) stopBtn.style.display = 'none'
+  }
+}
+
+// SSE vehicle stream state
+let vehicleEventSource: EventSource | null = null
+let sseActive = false
+let sseReconnectTimer: number | null = null
+let sseBackoffMs = 1000 // start with 1s, max ~30s
+let sseImmediateMode = false // when true, apply SSE updates immediately
+let sseHeartbeatTimer: number | null = null
+let lastSSEActivityMs = 0
+
+function startSSEHeartbeatMonitor(): void {
+  if (sseHeartbeatTimer) return
+  // Check every 15s; if we haven't seen activity in 60s, force reconnect
+  sseHeartbeatTimer = window.setInterval(() => {
+    if (!sseActive) return
+    const now = Date.now()
+    if (lastSSEActivityMs && now - lastSSEActivityMs > 60000) {
+      // Consider the stream stale and reconnect
+      stopVehicleSSE()
+      startUpdateInterval()
+      scheduleSSEReconnect()
+    }
+  }, 15000)
+}
+
+function stopSSEHeartbeatMonitor(): void {
+  if (sseHeartbeatTimer) {
+    window.clearInterval(sseHeartbeatTimer)
+    sseHeartbeatTimer = null
+  }
+}
+
+function updateSSEStatusUI(
+  state: 'streaming' | 'polling' | 'connecting'
+): void {
+  const el = document.getElementById('sse-status')
+  if (!el) return
+  el.classList.remove('live-streaming', 'live-polling', 'live-connecting')
+  if (state === 'streaming') {
+    el.textContent = 'Streaming'
+    el.classList.add('live-streaming')
+  } else if (state === 'connecting') {
+    el.textContent = 'Connecting…'
+    el.classList.add('live-connecting')
+  } else {
+    el.textContent = 'Polling'
+    el.classList.add('live-polling')
+  }
+}
+
+function stopVehicleSSE(): void {
+  if (vehicleEventSource) {
+    vehicleEventSource.close()
+    vehicleEventSource = null
+  }
+  if (sseReconnectTimer) {
+    window.clearTimeout(sseReconnectTimer)
+    sseReconnectTimer = null
+  }
+  stopSSEHeartbeatMonitor()
+  sseActive = false
+  updateSSEStatusUI('polling')
+}
+
+function scheduleSSEReconnect(): void {
+  if (sseReconnectTimer) return
+  const delay = Math.min(sseBackoffMs, 30000)
+  sseReconnectTimer = window.setTimeout(() => {
+    sseReconnectTimer = null
+    startVehicleSSE()
+  }, delay)
+  sseBackoffMs *= 2
+}
+
+function startVehicleSSE(): boolean {
+  if (typeof EventSource === 'undefined') return false
+  if (vehicleEventSource) return true
+
+  try {
+    updateSSEStatusUI('connecting')
+    const url = `${vehicles_url}/vehicles/stream`
+    vehicleEventSource = new EventSource(url)
+
+    vehicleEventSource.onopen = () => {
+      sseActive = true
+      sseBackoffMs = 1000
+      // Determine if user wants immediate updates (refresh-rate = 0)
+      sseImmediateMode = isImmediateModeSelected()
+      lastSSEActivityMs = Date.now()
+      startSSEHeartbeatMonitor()
+      // If immediate mode, prefer push-only; otherwise keep interval for throttled UI updates
+      if (sseImmediateMode) {
+        stopUpdateInterval()
+      } else if (!intervalID && isTabVisible) {
+        startUpdateInterval()
+      }
+      updateSSEStatusUI('streaming')
+    }
+
+    // Common handler to process SSE JSON payloads
+    const handleSSEPayload = (raw: string) => {
+      if (!raw) return
+      lastSSEActivityMs = Date.now()
+      try {
+        const data = JSON.parse(raw)
+        // Always update cache timestamp
+        vehicleDataCache = data
+        lastVehicleUpdate = Date.now()
+        // Apply immediately only when in immediate mode; otherwise, let interval drive UI updates
+        if (sseImmediateMode) {
+          processVehicleData(data)
+        }
+      } catch (_e) {
+        // Ignore malformed payloads
+      }
+    }
+
+    // Default message events
+    vehicleEventSource.onmessage = (evt: MessageEvent) => {
+      handleSSEPayload(evt.data)
+    }
+
+    // Support named events commonly used by SSE backends
+    // e.g. "snapshot", "vehicles", etc.
+    vehicleEventSource.addEventListener('snapshot', (evt: MessageEvent) => {
+      handleSSEPayload((evt as MessageEvent).data)
+    })
+    vehicleEventSource.addEventListener('vehicles', (evt: MessageEvent) => {
+      handleSSEPayload((evt as MessageEvent).data)
+    })
+
+    vehicleEventSource.onerror = () => {
+      // Drop SSE and fall back to polling, then try to reconnect
+      stopVehicleSSE()
+      // Kick a one-off poll to avoid stale UI
+      annotate_map()
+      startUpdateInterval()
+      scheduleSSEReconnect()
+    }
+
+    return true
+  } catch (_e) {
+    // If EventSource failed to construct, use polling
+    stopVehicleSSE()
+    return false
+  }
+}
 
 // Elf emoji marker layer and helpers
 let elfEmojiLayer: L.LayerGroup | null = null
@@ -259,12 +432,48 @@ window.moveMapToStop = (lat: number, lng: number): void => {
   map.setView([lat, lng], Math.max(map.getZoom(), 16))
 }
 
+// Vehicle tracking helpers exposed for popup actions
+window.trackVehicleById = (id: string | number): void => {
+  trackedVehicleId = id
+  trackedVehicleLabel = null
+  // Center immediately if we already have a marker
+  const marker = currentMarkers.get(id)
+  if (marker) {
+    const latlng = marker.getLatLng()
+    map.panTo(latlng)
+  }
+  updateTrackingStatusUI()
+}
+
+window.untrackVehicle = (): void => {
+  trackedVehicleId = null
+  trackedVehicleLabel = null
+  updateTrackingStatusUI()
+}
+
+window.isTrackingVehicleId = (id: string | number): boolean => {
+  return trackedVehicleId === id
+}
+
 function annotate_map(): void {
   const now = Date.now()
 
   // Show loading overlay on first load
   if (mapLoading && !mapInitialized) {
     showMapLoading()
+  }
+
+  // If SSE is active, throttle UI updates by user-selected refresh rate
+  if (sseActive) {
+    // Only load shapes once
+    loadShapesOnce()
+    // Fetch Amtrak data from BOS API (with error handling in fetchAmtrakData)
+    fetchAmtrakData(bos_url)
+    // When not in immediate mode, apply latest cached SSE payload on the interval
+    if (!sseImmediateMode && vehicleDataCache) {
+      processVehicleData(vehicleDataCache)
+    }
+    return
   }
 
   // Use cached data if recent enough
@@ -283,7 +492,6 @@ function annotate_map(): void {
       console.warn('Failed to fetch vehicle data:', textStatus, errorThrown)
       // Use cached data if available as fallback
       if (vehicleDataCache) {
-        console.log('Using cached vehicle data as fallback')
         processVehicleData(vehicleDataCache)
       }
     })
@@ -303,6 +511,30 @@ function processVehicleData(data: any): void {
     // Update vehicle markers efficiently
     updateMarkers(data.features || [])
 
+    // If tracking a vehicle, keep it in view
+    if (trackedVehicleId !== null) {
+      const marker = currentMarkers.get(trackedVehicleId)
+      if (marker) {
+        const latlng = marker.getLatLng()
+        // Only pan if marker is outside current bounds to reduce jitter
+        if (!map.getBounds().pad(-0.2).contains(latlng)) {
+          map.panTo(latlng)
+        }
+      }
+      // Update label from latest data
+      try {
+        const tf = (data.features || []).find(
+          (f: any) => String(f.id) === String(trackedVehicleId)
+        )
+        if (tf) {
+          const route = tf.properties?.route || ''
+          const headsign = tf.properties?.headsign || tf.properties?.stop || ''
+          trackedVehicleLabel = `${route}${headsign ? ' → ' + headsign : ''}`
+        }
+      } catch {}
+      updateTrackingStatusUI()
+    }
+
     // Handle building markers (static, so only create once if needed)
     if (!buildingMarkers) {
       buildingMarkers = L.geoJSON(data, {
@@ -315,8 +547,6 @@ function processVehicleData(data: any): void {
       // Make buildingMarkers accessible globally
       window.buildingMarkers = buildingMarkers
     }
-
-    console.log('Map loaded')
 
     // Hide loading overlay when map is ready
     if (mapLoading) {
@@ -397,9 +627,39 @@ function loadShapesOnce(): void {
 
 annotate_map()
 
+// Start SSE after initial call so we have data either way
+if (!startVehicleSSE()) {
+  updateSSEStatusUI('polling')
+}
+
+// Wire up tracking stop button
+const trackingStopBtn = document.getElementById('tracking-stop-btn')
+if (trackingStopBtn) {
+  trackingStopBtn.addEventListener('click', (e) => {
+    e.preventDefault()
+    window.untrackVehicle()
+  })
+}
+// Initialize tracking UI state on load
+updateTrackingStatusUI()
+
+function isImmediateModeSelected(): boolean {
+  const v = getCookie('refresh-rate')
+  if (!v) return false
+  const s = v.toString().toLowerCase()
+  return s === '0' || s === 'immediate' || s === 'live'
+}
 
 function getAdaptiveRefreshRate(): number {
   const savedRefreshRate = getCookie('refresh-rate')
+  // If immediate chosen, fall back to 1s for polling/non-SSE paths
+  if (
+    savedRefreshRate &&
+    (savedRefreshRate === '0' || savedRefreshRate.toLowerCase() === 'immediate')
+  ) {
+    CACHE_DURATION = 1000
+    return 1
+  }
   const userRefreshRate = savedRefreshRate ? parseInt(savedRefreshRate) : 15
   CACHE_DURATION = 5000
   return userRefreshRate
@@ -427,6 +687,22 @@ document.addEventListener('visibilitychange', () => {
   }
 })
 
+// Reconnect SSE promptly when network returns; fall back to polling while offline
+window.addEventListener('online', () => {
+  if (!sseActive) {
+    // Try to reconnect immediately when back online
+    scheduleSSEReconnect()
+  }
+})
+
+window.addEventListener('offline', () => {
+  if (sseActive) {
+    // Stop the stream and rely on polling until back online
+    stopVehicleSSE()
+    startUpdateInterval()
+  }
+})
+
 function startUpdateInterval(): void {
   if (intervalID) return
   const currentRefreshRate = getAdaptiveRefreshRate()
@@ -443,12 +719,26 @@ function stopUpdateInterval(): void {
 // Start initial interval
 startUpdateInterval()
 
-// Set the refresh rate input to the saved value
-const refreshRateElement = document.getElementById(
-  'refresh-rate'
-) as HTMLInputElement
+// Set up the refresh rate control, add "Immediate" if missing
+const refreshRateElement = document.getElementById('refresh-rate') as
+  | HTMLInputElement
+  | HTMLSelectElement
+  | null
 if (refreshRateElement) {
-  refreshRateElement.value = defaultRefreshRate.toString()
+  // If it's a <select>, ensure an Immediate (0) option exists
+  if (refreshRateElement.tagName === 'SELECT') {
+    const sel = refreshRateElement as HTMLSelectElement
+    const hasImmediate = Array.from(sel.options).some((o) => o.value === '0')
+    if (!hasImmediate) {
+      const opt = document.createElement('option')
+      opt.value = '0'
+      opt.text = 'Immediate'
+      // Put as first option for visibility
+      sel.add(opt, 0)
+    }
+  }
+  ;(refreshRateElement as HTMLInputElement).value =
+    defaultRefreshRate.toString()
 }
 
 L.easyButton({
@@ -596,24 +886,36 @@ map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
   }
 })
 
-document
-  .getElementById('refresh-rate')!
-  .addEventListener('change', (event: Event) => {
-    stopUpdateInterval()
-    const target = event.target as HTMLInputElement
-    const newVal = parseInt(target.value)
-    if (newVal) {
-      // Clear cache when refresh rate changes
-      vehicleDataCache = null
-      lastVehicleUpdate = 0
-      adaptiveRefreshRate = Math.max(newVal, getAdaptiveRefreshRate())
+if (refreshRateElement) {
+  refreshRateElement.addEventListener('change', (event: Event) => {
+    const target = event.target as HTMLInputElement | HTMLSelectElement
+    const raw = target.value.trim()
+    const parsed = parseInt(raw)
 
-      if (isTabVisible) {
+    // Save selection (allow 0 for Immediate)
+    setCookie('refresh-rate', raw)
+
+    // Clear cache when refresh rate changes to force an update cycle
+    vehicleDataCache = null
+    lastVehicleUpdate = 0
+
+    // Update immediate mode if SSE is active
+    sseImmediateMode = isImmediateModeSelected()
+
+    // Reset polling interval appropriately
+    stopUpdateInterval()
+    if (sseActive) {
+      if (!sseImmediateMode && isTabVisible) {
         startUpdateInterval()
       }
-      setCookie('refresh-rate', newVal.toString())
+      // In immediate mode, SSE onmessage will push updates directly
+    } else {
+      // Polling path: use at least 1s when Immediate is selected
+      adaptiveRefreshRate = parsed > 0 ? parsed : getAdaptiveRefreshRate()
+      if (isTabVisible) startUpdateInterval()
     }
   })
+}
 
 // Function to start/stop location watching
 function toggleLocationWatch(enabled: boolean): void {

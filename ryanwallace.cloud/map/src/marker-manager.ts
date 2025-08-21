@@ -104,19 +104,8 @@ function applyElfClasses(marker: L.Marker, feature: VehicleFeature): void {
 
   if (!markerElement) {
     // Marker is clustered, store data but can't apply visual effects yet
-    console.log(
-      'Marker is clustered, storing elf data:',
-      feature.id || 'unknown'
-    )
     return
   }
-
-  console.log(
-    'Found unclustered marker element, applying elf effects:',
-    feature.id || 'unknown',
-    'elf enabled:',
-    elfModeEnabled
-  )
 
   // Remove existing elf classes
   markerElement.classList.remove(
@@ -131,10 +120,6 @@ function applyElfClasses(marker: L.Marker, feature: VehicleFeature): void {
     // The marker element IS the icon element (it's the <img> itself)
     const iconElement = markerElement as HTMLElement
 
-    console.log(
-      'Applying elf effects to marker (img) element:',
-      feature.id || 'unknown'
-    )
     if (iconElement) {
       iconElement.classList.remove(
         'elf-low',
@@ -144,12 +129,6 @@ function applyElfClasses(marker: L.Marker, feature: VehicleFeature): void {
         'elf-trans-pride'
       )
       iconElement.classList.add(elfClass)
-      console.log(
-        'Added elf class:',
-        elfClass,
-        'to icon. Classes now:',
-        iconElement.className
-      )
 
       // Class and initial filter applied
 
@@ -176,12 +155,7 @@ function applyElfClasses(marker: L.Marker, feature: VehicleFeature): void {
 
       iconElement.style.boxShadow = boxShadow
       iconElement.style.transition = 'box-shadow 0.3s ease'
-      console.log(
-        'Applied halo to icon:',
-        boxShadow,
-        'actual style.boxShadow:',
-        iconElement.style.boxShadow
-      )
+      // halo applied via boxShadow
     }
   } else {
     // Remove custom styling when disabled
@@ -266,12 +240,23 @@ export function updateMarkers(features: VehicleFeature[]): void {
           elfScoreHtml = `<br />Elf Score: ${elfDisplay}`
         }
 
+        // Tracking toggle
+        const idStr = String(feature.id ?? '')
+        const isTracking = (window as any).isTrackingVehicleId
+          ? (window as any).isTrackingVehicleId(feature.id as any)
+          : false
+        const trackLabel = isTracking ? 'Stop tracking' : 'Track vehicle'
+        const trackAction = isTracking
+          ? `window.untrackVehicle()`
+          : `window.trackVehicleById(${JSON.stringify(idStr)})`
+
         return `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
         <br />Stop: ${feature.properties.stop || ''}
         <br />Status: ${niceStatus(feature.properties.status || '')}
         ${elfScoreHtml}
         ${eta}${speed}${occupancy}${platform_prediction}
-        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`
+        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>
+        <br /><a href="#" class="popup-link" onclick='${trackAction}; return false;'>${trackLabel}</a>`
       }
 
       existingMarker.setPopupContent(createPopupContent())

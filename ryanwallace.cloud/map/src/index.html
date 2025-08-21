@@ -3,6 +3,42 @@
   integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
   crossorigin="anonymous"
 ></script>
+<style>
+  /* Tracking stop icon button */
+  .controls-section #tracking-stop-btn.tracking-stop-btn {
+    /* hidden by JS until tracking starts; JS toggles to inline-block */
+    display: none;
+    -webkit-appearance: none;
+    appearance: none;
+    vertical-align: middle;
+    width: auto;
+    height: auto;
+    line-height: normal;
+    border-radius: 6px;
+    border: 1px solid #ef4444; /* red-500 */
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    font-size: 13px;
+    padding: 4px 10px;
+    text-align: center;
+    margin-left: 8px;
+    cursor: pointer;
+    box-shadow: none;
+    outline: none;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    /* Nice alignment in case of flex display */
+    align-items: center;
+    justify-content: center;
+  }
+  .controls-section #tracking-stop-btn.tracking-stop-btn:hover {
+    background: #ef4444;
+    color: #fff;
+    border-color: #ef4444;
+  }
+  .controls-section #tracking-stop-btn.tracking-stop-btn:active {
+    transform: scale(0.95);
+  }
+</style>
 <link
   rel="stylesheet"
   href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css"
@@ -20,6 +56,22 @@
       <option value="60">60 seconds</option>
       <option value="99999">Off</option>
     </select>
+  </div>
+
+  <div class="control-group">
+    <label>Live updates:</label>
+    <span id="sse-status" class="live-badge live-polling">Polling</span>
+  </div>
+
+  <div class="control-group">
+    <label>Tracking:</label>
+    <span id="tracking-status" class="live-badge">Off</span>
+    <button
+      id="tracking-stop-btn"
+      class="tracking-stop-btn"
+      aria-label="Stop tracking"
+      title="Stop tracking"
+    >Stop</button>
   </div>
 
   <div class="control-group">
