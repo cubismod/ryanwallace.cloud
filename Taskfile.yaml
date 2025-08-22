@@ -15,24 +15,24 @@ tasks:
   build:
     dir: ryanwallace.cloud/map
     cmds:
-      - yarn build
-      - yarn clean
-      - yarn move
+      - pnpm build
+      - pnpm clean
+      - pnpm move
   clean:
     dir: ryanwallace.cloud/map
     cmds:
-      - yarn clean
+      - pnpm clean
   formattheme:
     dir: ryanwallace.cloud/themes/poison
     cmds:
-      - npx prettier --write .
+      - pnpm dlx prettier --write .
   format:
     cmds:
-      - npx prettier --write .
+      - pnpm dlx prettier --write .
   check:
     dir: ryanwallace.cloud/map
     cmds:
-      - yarn tsc --noEmit
+      - pnpm typecheck
   cleanpublic:
     dir: ryanwallace.cloud
     cmds:
@@ -40,6 +40,6 @@ tasks:
   nocache:
     dir: ryanwallace.cloud/map
     cmds:
-      - yarn build:nocache
-      - yarn clean
-      - yarn move
+      - pnpm build:nocache
+      - pnpm clean
+      - pnpm move

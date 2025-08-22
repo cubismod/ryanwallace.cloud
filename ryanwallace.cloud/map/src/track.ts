@@ -293,15 +293,15 @@ function formatTime(date: moment.Moment): string {
 async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
   const stopIds = STOP_IDS.join(',')
   const url = `${MBTA_API_BASE}/predictions?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time`
-
-  return new Promise((resolve, reject) => {
-    $.getJSON(url, (data: MBTAResponse) => {
-      resolve(data.data)
-    }).fail((error: any) => {
-      console.error('Error fetching MBTA predictions:', error)
-      reject(error)
-    })
-  })
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data: MBTAResponse = await res.json()
+    return data.data
+  } catch (e) {
+    console.error('Error fetching MBTA predictions:', e)
+    throw e
+  }
 }
 
 async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
@@ -314,14 +314,15 @@ async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   }
   const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&page[limit]=75&filter[route_type]=2&sort=departure_time${timeFilter}`
 
-  return new Promise((resolve, reject) => {
-    $.getJSON(url, (data: MBTAScheduleResponse) => {
-      resolve(data.data)
-    }).fail((error: any) => {
-      console.error('Error fetching MBTA schedules:', error)
-      reject(error)
-    })
-  })
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data: MBTAScheduleResponse = await res.json()
+    return data.data
+  } catch (e) {
+    console.error('Error fetching MBTA schedules:', e)
+    throw e
+  }
 }
 
 async function fetchChainedTrackPredictions(
@@ -330,21 +331,19 @@ async function fetchChainedTrackPredictions(
   const url = `${TRACK_PREDICTION_API}/chained-predictions`
   const requestBody: ChainedPredictionsRequest = { predictions: requests }
 
-  return new Promise((resolve, reject) => {
-    $.ajax({
-      url: url,
+  try {
+    const res = await fetch(url, {
       method: 'POST',
-      contentType: 'application/json',
-      data: JSON.stringify(requestBody),
-      success: (data: ChainedPredictionsResponse) => {
-        resolve(data.results)
-      },
-      error: (error: any) => {
-        console.error('Error fetching chained track predictions:', error)
-        reject(error)
-      }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
     })
-  })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data: ChainedPredictionsResponse = await res.json()
+    return data.results
+  } catch (e) {
+    console.error('Error fetching chained track predictions:', e)
+    throw e
+  }
 }
 
 function restructureData(

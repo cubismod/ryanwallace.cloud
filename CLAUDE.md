@@ -11,14 +11,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### TypeScript Map Application
 
-- `task build` - Build the interactive map application (runs yarn build, clean, move)
+- `task build` - Build the interactive map application (runs pnpm build, clean, move)
 - `task format` - Format TypeScript code using Prettier
 - `task typecheck` - Run TypeScript type checking
 - Individual commands can be run from `ryanwallace.cloud/map/`:
-  - `yarn build` - Build with Parcel bundler
-  - `yarn tsc --noEmit` - Type check without emitting files
-  - `yarn prettier --write .` - Format code
-- Use `task build` instead of `yarn build` for this repo
+  - `pnpm build` - Build with Parcel bundler
+  - `pnpm typecheck` - Type check without emitting files
+  - `pnpm prettier --write .` - Format code
+- Use `task build` instead of `pnpm build` for this repo
 
 ## Architecture Overview
 
