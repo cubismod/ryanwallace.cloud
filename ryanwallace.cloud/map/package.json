@@ -48,7 +48,7 @@
     "webpack-bundle-analyzer": "^4.10.1",
     "terser-webpack-plugin": "^5.3.10"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.15.0",
   "scripts": {
     "build": "webpack --config webpack.config.js --mode production",
     "build:nocache": "webpack --config webpack.config.js --mode production",
