@@ -28,7 +28,7 @@ import {
   hookZoom,
   trackedId
 } from './tracking'
-// Alerts module is lazy-loaded when its table becomes visible
+// Alerts module is loaded immediately
 // Amtrak helpers are lazy-loaded when the layer is enabled
 
 // Note: jQuery removed. Use fetch() for network requests.
@@ -798,41 +798,20 @@ if ('serviceWorker' in navigator) {
   }
 }
 
-// Lazy-load alerts (DataTables) when the alerts table becomes visible
-let alertsLoaded = false
-function setupAlertsLazyLoad(): void {
+// Load alerts table immediately
+async function loadAlerts(): Promise<void> {
   const table = document.getElementById('alerts')
   if (!table) return
-  const load = async () => {
-    if (alertsLoaded) return
-    alertsLoaded = true
-    try {
-      const mod = await import('./alerts')
-      mod.alerts(vehicles_url)
-    } catch (e) {
-      console.warn('Failed to load alerts module:', e)
-      alertsLoaded = false
-    }
-  }
-  if ('IntersectionObserver' in window) {
-    const io = new IntersectionObserver((entries, obs) => {
-      if (entries.some((e) => e.isIntersecting)) {
-        load()
-        obs.disconnect()
-      }
-    })
-    io.observe(table)
-  } else {
-    // Fallback: load after idle/timeout
-    if ((window as any).requestIdleCallback) {
-      ;(window as any).requestIdleCallback(load, { timeout: 3000 })
-    } else {
-      setTimeout(load, 2000)
-    }
+
+  try {
+    const mod = await import('./alerts')
+    mod.alerts(vehicles_url)
+  } catch (e) {
+    console.warn('Failed to load alerts module:', e)
   }
 }
 
-setupAlertsLazyLoad()
+loadAlerts()
 
 // Wire up tracking stop button
 const trackingStopBtn = document.getElementById('tracking-stop-btn')
