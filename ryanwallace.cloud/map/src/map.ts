@@ -79,6 +79,15 @@ var map = L.map('map', {
   }
 }).setView([42.36565, -71.05236], 13)
 
+// Track popup open state to avoid disrupting user interactions
+let popupOpen = false
+map.on('popupopen', () => {
+  popupOpen = true
+})
+map.on('popupclose', () => {
+  popupOpen = false
+})
+
 // map.on('enterFullscreen', function () {
 //   let elements = document.getElementsByClassName('leaflet-zoom-animated')
 //   for (const element of elements) {
@@ -586,7 +595,9 @@ function processVehicleData(data: any): void {
     updateVehicleFeatures(data.features || [])
 
     // Update vehicle markers efficiently
-    updateMarkers(data.features || [])
+    if (!popupOpen) {
+      updateMarkers(data.features || [])
+    }
 
     // If tracking a vehicle, keep it in view
     if (trackedId()) {
