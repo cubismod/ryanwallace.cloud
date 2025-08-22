@@ -72,7 +72,7 @@ export function refreshTrackedOverlays(
   if (!trackedVehicleId) return
   const marker =
     currentMarkers.get(String(trackedVehicleId)) ||
-    (currentMarkers.get((trackedVehicleId as unknown) as number) as any)
+    (currentMarkers.get(trackedVehicleId as unknown as number) as any)
   if (!marker) return
   const feats = getFeatures() || []
   const f = feats.find((x: any) => String(x.id) === String(trackedVehicleId))
@@ -107,7 +107,8 @@ export function updateTrackedOverlays(
   const rgb = hexToRgb(hexColor) || { r: 239, g: 68, b: 68 }
 
   const zoom = map.getZoom()
-  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
+  const clamp = (v: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, v))
   const haloRadius = clamp(12 + (zoom - 12) * 2, 10, 30)
   const pulseSize = Math.round(clamp(40 + (zoom - 12) * 8, 36, 120))
 
@@ -166,7 +167,8 @@ export function updateTrackedOverlays(
   try {
     if (feature) {
       const route = feature.properties?.route || ''
-      const headsign = feature.properties?.headsign || feature.properties?.stop || ''
+      const headsign =
+        feature.properties?.headsign || feature.properties?.stop || ''
       trackedVehicleLabel = `${route}${headsign ? ' → ' + headsign : ''}`
     }
   } catch {}

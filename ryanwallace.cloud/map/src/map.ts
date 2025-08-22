@@ -106,6 +106,9 @@ function updateTrackingStatusUI(): void {
   const stopBtn = document.getElementById(
     'tracking-stop-btn'
   ) as HTMLButtonElement | null
+  const note = document.getElementById(
+    'mode-conflict'
+  ) as HTMLSpanElement | null
   if (!el) return
   el.classList.remove('live-streaming', 'live-polling', 'live-connecting')
   if (trackedId()) {
@@ -113,10 +116,36 @@ function updateTrackingStatusUI(): void {
     el.textContent = label ? `Tracking: ${label}` : 'Tracking'
     el.classList.add('live-streaming')
     if (stopBtn) stopBtn.style.display = 'inline-flex'
+    // When tracking is on, warn if follow-location is also checked
+    const fl = document.getElementById(
+      'follow-location'
+    ) as HTMLInputElement | null
+    if (note) {
+      if (fl?.checked) {
+        note.textContent = 'Disabled Follow location while tracking a vehicle.'
+        note.style.display = 'inline'
+      } else if (!fl?.checked) {
+        // Clear note unless some other path set it
+        note.textContent = note.textContent?.includes('Disabled Follow')
+          ? ''
+          : note.textContent || ''
+        if (!note.textContent) note.style.display = 'none'
+      }
+    }
   } else {
     el.textContent = 'Off'
     el.classList.add('live-polling')
     if (stopBtn) stopBtn.style.display = 'none'
+    const fl = document.getElementById(
+      'follow-location'
+    ) as HTMLInputElement | null
+    const note = document.getElementById(
+      'mode-conflict'
+    ) as HTMLSpanElement | null
+    if (note && fl && !fl.checked) {
+      note.textContent = ''
+      note.style.display = 'none'
+    }
   }
 }
 
@@ -444,6 +473,22 @@ window.moveMapToStop = (lat: number, lng: number): void => {
 
 // Vehicle tracking helpers exposed for popup actions
 window.trackVehicleById = (id: string | number): void => {
+  // If follow-location is enabled, disable it and inform user
+  const followEl = document.getElementById(
+    'follow-location'
+  ) as HTMLInputElement | null
+  if (followEl?.checked) {
+    toggleLocationWatch(false)
+    followEl.checked = false
+    setCookie('follow-location', 'false')
+    const note = document.getElementById(
+      'mode-conflict'
+    ) as HTMLSpanElement | null
+    if (note) {
+      note.textContent = 'Disabled Follow location while tracking a vehicle.'
+      note.style.display = 'inline'
+    }
+  }
   trackById(
     id,
     map,
@@ -456,7 +501,8 @@ window.untrackVehicle = (): void => {
   untrack(map, () => updateTrackingStatusUI())
 }
 
-window.isTrackingVehicleId = (id: string | number): boolean => isTrackingVehicleId(id)
+window.isTrackingVehicleId = (id: string | number): boolean =>
+  isTrackingVehicleId(id)
 
 // Non-fullscreen expand toggle
 function setMapExpanded(expand: boolean): void {
@@ -536,7 +582,7 @@ function processVehicleData(data: any): void {
       const id = trackedId() as string
       const marker =
         currentMarkers.get(String(id)) ||
-        (currentMarkers.get((id as unknown) as number) as any)
+        (currentMarkers.get(id as unknown as number) as any)
       if (marker) {
         const latlng = marker.getLatLng()
         // Only pan if marker is outside current bounds to reduce jitter
@@ -728,7 +774,6 @@ hookZoom(
   map,
   () => ((vehicleDataCache && vehicleDataCache.features) || []) as any[]
 )
-
 
 function startUpdateInterval(): void {
   if (intervalID) return
@@ -1033,8 +1078,28 @@ document
   .getElementById('follow-location')!
   .addEventListener('change', (event: Event) => {
     const target = event.target as HTMLInputElement
-    toggleLocationWatch(target.checked)
-    setCookie('follow-location', target.checked.toString())
+    const note = document.getElementById(
+      'mode-conflict'
+    ) as HTMLSpanElement | null
+    if (target.checked) {
+      // If user turns on follow location while tracking, stop tracking and inform
+      if (trackedId()) {
+        untrack(map, () => updateTrackingStatusUI())
+        if (note) {
+          note.textContent = 'Stopped tracking to follow your location.'
+          note.style.display = 'inline'
+        }
+      }
+      toggleLocationWatch(true)
+      setCookie('follow-location', 'true')
+    } else {
+      toggleLocationWatch(false)
+      setCookie('follow-location', 'false')
+      if (note) {
+        note.textContent = ''
+        note.style.display = 'none'
+      }
+    }
   })
 
 // Load saved elf mode setting from cookie

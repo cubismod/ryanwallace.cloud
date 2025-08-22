@@ -79,7 +79,13 @@
 
   /* Legacy divIcon label (kept for safety) */
   .tracked-label {
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+    font-family:
+      system-ui,
+      -apple-system,
+      Segoe UI,
+      Roboto,
+      Helvetica,
+      Arial,
       sans-serif;
     font-size: 12px;
     line-height: 1.25;
@@ -115,21 +121,26 @@
     width: 100%;
     height: 100%;
     border-radius: 9999px;
-    border: 2px solid rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.9);
-    box-shadow: 0 0 0 0 rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.7);
+    border: 2px solid
+      rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.9);
+    box-shadow: 0 0 0 0
+      rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.7);
     animation: tracked-pulse 1.8s ease-out infinite;
   }
   @keyframes tracked-pulse {
     0% {
-      box-shadow: 0 0 0 0 rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.6);
+      box-shadow: 0 0 0 0
+        rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.6);
       opacity: 1;
     }
     70% {
-      box-shadow: 0 0 0 16px rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0);
+      box-shadow: 0 0 0 16px
+        rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0);
       opacity: 0.6;
     }
     100% {
-      box-shadow: 0 0 0 0 rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0);
+      box-shadow: 0 0 0 0
+        rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0);
       opacity: 0.4;
     }
   }
@@ -177,6 +188,14 @@
       <input type="checkbox" id="follow-location" name="follow-location" />
       <span class="slider"></span>
     </label>
+  </div>
+
+  <div class="control-group">
+    <span
+      id="mode-conflict"
+      class="mode-note"
+      style="display: none; color: #6b7280; font-size: 12px"
+    ></span>
   </div>
 </div>
 
