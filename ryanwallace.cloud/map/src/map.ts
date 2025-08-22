@@ -1,12 +1,5 @@
 import * as L from 'leaflet'
-import '@petoc/leaflet-double-touch-drag-zoom'
 import 'leaflet/dist/leaflet.css'
-import '@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom.css'
-import 'leaflet.fullscreen'
-import 'leaflet-easybutton'
-import 'leaflet-arrowheads'
-import 'invert-color'
-import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
 
 // Import modules
 import { setCookie, getCookie, return_colors } from './utils'
@@ -54,18 +47,21 @@ declare global {
 
 var map = L.map('map', {
   doubleTouchDragZoom: true,
-  // @ts-expect-error - fullscreenControl is not a valid option
-  fullscreenControl: true,
   preferCanvas: true,
-  maxZoom: 50,
-
-  fullscreenControlOptions: {
-    position: 'topleft',
-    title: 'Fullscreen',
-    forcePseudoFullscreen: true
-    // fullscreenElement: true
-  }
+  maxZoom: 50
 }).setView([42.36565, -71.05236], 13)
+
+// Load double-touch drag/zoom enhancement only on touch devices to save bytes on desktop
+const isTouchDevice =
+  'ontouchstart' in window || (navigator as any).maxTouchPoints > 0
+if (isTouchDevice) {
+  Promise.all([
+    import('@petoc/leaflet-double-touch-drag-zoom'),
+    import(
+      '@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom.css'
+    )
+  ]).catch(() => {})
+}
 
 // Track popup open state to avoid disrupting user interactions
 let popupOpen = false
@@ -439,19 +435,33 @@ document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
 const effectiveType = (navigator as any).connection?.effectiveType || ''
 const slowConnection = ['slow-2g', '2g', '3g'].includes(effectiveType)
 if (process.env.NODE_ENV === 'production' && !slowConnection) {
-  new MaptilerLayer({
-    apiKey: process.env.MT_KEY || '',
-    style: 'streets-v2'
-  }).addTo(map)
+  import('@maptiler/leaflet-maptilersdk')
+    .then(({ MaptilerLayer }) => {
+      new MaptilerLayer({
+        apiKey: process.env.MT_KEY || '',
+        style: 'streets-v2'
+      }).addTo(map)
+      // Fallback hide if tiles don't trigger load quickly
+      setTimeout(() => hideMapLoading(), 800)
+    })
+    .catch(() => {
+      // Fallback to raster if MapTiler fails to load
+      const raster = L.tileLayer(
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }
+      )
+      raster.on('load', hideMapLoading)
+      raster.addTo(map)
+    })
 } else {
   const raster = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   })
-  raster.on('load', () => {
-    // Hide loading overlay as soon as tiles load; keep map interactive
-    hideMapLoading()
-  })
+  raster.on('load', hideMapLoading)
   raster.addTo(map)
 }
 
@@ -931,67 +941,81 @@ if (refreshRateElement) {
     defaultRefreshRate.toString()
 }
 
-L.easyButton({
-  position: 'topright',
-  states: [
-    {
-      stateName: 'refresh',
-      title: 'Refresh',
-      onClick: (_btn, _map) => {
-        annotate_map()
-      },
-      icon: "<span class='refresh'>&olarr;</span>"
-    }
-  ]
-}).addTo(map)
+;(async () => {
+  try {
+    await import('leaflet-easybutton')
+  } catch {}
 
-L.easyButton({
-  position: 'topright',
-  states: [
-    {
-      stateName: 'locate',
-      title: 'Locate',
-      onClick: (_btn, map) => {
-        map.locate({ setView: true })
-      },
-      icon: "<span class='odot'>&odot;</span>"
-    }
-  ]
-}).addTo(map)
+  // Refresh button
+  ;(L as any)
+    .easyButton({
+      position: 'topright',
+      states: [
+        {
+          stateName: 'refresh',
+          title: 'Refresh',
+          onClick: (_btn: any, _map: any) => {
+            annotate_map()
+          },
+          icon: "<span class='refresh'>&olarr;</span>"
+        }
+      ]
+    })
+    .addTo(map)
 
-// Add a compact expand toggle (not full-screen)
-const expandBtn: any = L.easyButton({
-  position: 'topright',
-  states: [
-    {
-      stateName: 'expand-off',
-      title: 'Expand map',
-      onClick: (btn) => {
-        setMapExpanded(true)
-        btn.state('expand-on')
-      },
-      icon: "<span class='expand' style='font-weight:600'>&#x21F2;</span>"
-    },
-    {
-      stateName: 'expand-on',
-      title: 'Shrink map',
-      onClick: (btn) => {
-        setMapExpanded(false)
-        btn.state('expand-off')
-      },
-      icon: "<span class='expand' style='font-weight:600'>&#x21F3;</span>"
-    }
-  ]
-}).addTo(map)
+  // Locate button
+  ;(L as any)
+    .easyButton({
+      position: 'topright',
+      states: [
+        {
+          stateName: 'locate',
+          title: 'Locate',
+          onClick: (_btn: any, mapRef: L.Map) => {
+            mapRef.locate({ setView: true })
+          },
+          icon: "<span class='odot'>&odot;</span>"
+        }
+      ]
+    })
+    .addTo(map)
 
-// Initialize expanded state from cookie
-const savedMapExpanded = getCookie('map-expanded')
-if (savedMapExpanded && savedMapExpanded.toString().toLowerCase() === 'true') {
-  setMapExpanded(true)
-  if (expandBtn && typeof expandBtn.state === 'function') {
-    expandBtn.state('expand-on')
+  // Add a compact expand toggle (not full-screen)
+  ;(L as any)
+    .easyButton({
+      position: 'topright',
+      states: [
+        {
+          stateName: 'expand-off',
+          title: 'Expand map',
+          onClick: (btn: any) => {
+            setMapExpanded(true)
+            btn.state('expand-on')
+          },
+          icon: "<span class='expand' style='font-weight:600'>&#x21F2;</span>"
+        },
+        {
+          stateName: 'expand-on',
+          title: 'Shrink map',
+          onClick: (btn: any) => {
+            setMapExpanded(false)
+            btn.state('expand-off')
+          },
+          icon: "<span class='expand' style='font-weight:600'>&#x21F3;</span>"
+        }
+      ]
+    })
+    .addTo(map)
+
+  // Initialize expanded state from cookie
+  const savedMapExpanded = getCookie('map-expanded')
+  if (
+    savedMapExpanded &&
+    savedMapExpanded.toString().toLowerCase() === 'true'
+  ) {
+    setMapExpanded(true)
   }
-}
+})()
 
 // Variables to store the user location circle and watch state
 let userLocationCircle: L.Circle | null = null

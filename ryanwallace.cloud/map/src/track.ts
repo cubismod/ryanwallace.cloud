@@ -1,6 +1,7 @@
-import DataTable from 'datatables.net-dt'
+// Defer DataTables to reduce initial chunk size on /map/track
 import DOMPurify from 'dompurify'
-import moment from 'moment-timezone'
+import { addHours } from 'date-fns'
+import { toZonedTime, formatInTimeZone } from 'date-fns-tz'
 import levenshtein from 'string-comparison'
 
 // Type definitions
@@ -179,7 +180,7 @@ interface ChainedPredictionsResponse {
 
 interface PredictionRow {
   station: string
-  time: moment.Moment
+  time: Date
   destination: string
   track: string
   confidence: number
@@ -195,6 +196,7 @@ interface PredictionStats {
 
 // DataTable instance for progressive updates
 let predictionsTable: any | null = null
+let DataTableCtor: any | null = null
 
 // jQuery typings removed; using fetch and vanilla APIs.
 
@@ -286,8 +288,9 @@ function formatRoute(routeId: string): string {
   return `${routeId.replace('CR-', '').trim()} Line`
 }
 
-function formatTime(date: moment.Moment): string {
-  return `<span class="departure-time">${date.format('HH:mm')}</span>`
+function formatTime(date: Date): string {
+  const tz = 'America/New_York'
+  return `<span class="departure-time">${formatInTimeZone(date, tz, 'HH:mm')}</span>`
 }
 
 async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
@@ -306,11 +309,12 @@ async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
 
 async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   const stopIds = STOP_IDS.join(',')
-  const minTime = moment().tz('America/New_York')
+  const tz = 'America/New_York'
+  const minTime = toZonedTime(new Date(), tz)
   let timeFilter = ''
-  if (minTime.hour() > 2) {
-    const maxTime = moment().tz('America/New_York').add(2, 'hour')
-    timeFilter = `&filter[min_time]=${minTime.format('HH:mm')}&filter[max_time]=${maxTime.format('HH:mm')}`
+  if (minTime.getHours() > 2) {
+    const maxTime = addHours(minTime, 2)
+    timeFilter = `&filter[min_time]=${formatInTimeZone(minTime, tz, 'HH:mm')}&filter[max_time]=${formatInTimeZone(maxTime, tz, 'HH:mm')}`
   }
   const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&page[limit]=75&filter[route_type]=2&sort=departure_time${timeFilter}`
 
@@ -369,8 +373,8 @@ function restructureData(
       prediction.attributes.departure_time || prediction.attributes.arrival_time
     if (!departureTime) continue
 
-    const depDate = moment(departureTime).tz('America/New_York')
-    if (depDate.isBefore(moment().tz('America/New_York'))) continue
+    const depDate = new Date(departureTime)
+    if (depDate.getTime() < Date.now()) continue
 
     const stopId = fullStationName(prediction.relationships.stop.data.id)
     const routeId = prediction.relationships.route.data.id
@@ -411,8 +415,8 @@ function restructureData(
       schedule.attributes.departure_time || schedule.attributes.arrival_time
     if (!departureTime) continue
 
-    const depDate = moment(departureTime)
-    if (depDate.isBefore(moment().tz('America/New_York'))) continue
+    const depDate = new Date(departureTime)
+    if (depDate.getTime() < Date.now()) continue
 
     const stopId = fullStationName(schedule.relationships.stop.data.id)
     const routeId = schedule.relationships.route.data.id
@@ -447,7 +451,7 @@ function restructureData(
     }
   }
 
-  return rows.sort((a, b) => a.time.diff(b.time))
+  return rows.sort((a, b) => a.time.getTime() - b.time.getTime())
 }
 
 function showLoading(): void {
@@ -479,7 +483,7 @@ function hideLoading(): void {
   }
 }
 
-function updateTable(rows: PredictionRow[]): void {
+async function updateTable(rows: PredictionRow[]): Promise<void> {
   // Hide spinner on first render
   hideLoading()
 
@@ -493,7 +497,11 @@ function updateTable(rows: PredictionRow[]): void {
   ])
 
   if (!predictionsTable) {
-    predictionsTable = new DataTable('#predictions-table', {
+    if (!DataTableCtor) {
+      const mod = await import('datatables.net')
+      DataTableCtor = (mod as any).default || (mod as any)
+    }
+    predictionsTable = new DataTableCtor('#predictions-table', {
       data: tableData,
       columns: [
         { title: 'Time', type: 'date', width: '5%' },
@@ -531,7 +539,11 @@ function updateTable(rows: PredictionRow[]): void {
     }
   } else {
     // Fallback: reinitialize
-    predictionsTable = new DataTable('#predictions-table', {
+    if (!DataTableCtor) {
+      const mod = await import('datatables.net')
+      DataTableCtor = (mod as any).default || (mod as any)
+    }
+    predictionsTable = new DataTableCtor('#predictions-table', {
       data: tableData,
       columns: [
         { title: 'Time', type: 'date', width: '5%' },

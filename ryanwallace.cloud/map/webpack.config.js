@@ -1,5 +1,11 @@
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const webpack = require('webpack')
+const TerserPlugin = require('terser-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
+
+const isProd = process.env.NODE_ENV === 'production'
 
 function tryRequire(name) {
   try {
@@ -27,9 +33,15 @@ const appConfig = {
     publicPath: '/map/'
   },
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
-  devtool: 'source-map',
+  devtool: process.env.NODE_ENV === 'production' ? false : 'source-map',
   resolve: {
-    extensions: ['.ts', '.tsx', '.js']
+    extensions: ['.ts', '.tsx', '.js'],
+    alias: {
+      // Map only the bare 'leaflet' import to JS file; leave CSS path intact
+      leaflet$: 'leaflet/dist/leaflet.js',
+      // Ensure no stray jquery import gets bundled
+      jquery: false
+    }
   },
   module: {
     rules: [
@@ -45,7 +57,10 @@ const appConfig = {
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader']
+        use: [
+          isProd ? MiniCssExtractPlugin.loader : 'style-loader',
+          'css-loader'
+        ]
       }
     ]
   },
@@ -56,6 +71,14 @@ const appConfig = {
       chunks: ['map'],
       inject: 'body'
     }),
+    new webpack.EnvironmentPlugin({
+      NODE_ENV: 'production',
+      MT_KEY: '',
+      VEHICLES_URL: '',
+      MBTA_API_BASE: '',
+      TRACK_PREDICTION_API: ''
+    }),
+    new MiniCssExtractPlugin({ filename: '[name].css' }),
     ...(MomentLocalesPlugin
       ? [new MomentLocalesPlugin({ localesToKeep: [] })]
       : []),
@@ -73,15 +96,45 @@ const appConfig = {
   optimization: {
     splitChunks: {
       chunks: 'all',
+      name: false,
+      maxSize: 150000,
       cacheGroups: {
+        leaflet: {
+          test: /[\\/]node_modules[\\/](leaflet)[\\/]/,
+          name: 'leaflet',
+          chunks: 'all',
+          priority: 20
+        },
         vendors: {
           test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          chunks: 'all'
+          chunks: 'all',
+          priority: 10
         }
       }
     },
-    runtimeChunk: 'single'
+    runtimeChunk: false,
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        extractComments: false,
+        parallel: true,
+        terserOptions: {
+          ecma: 2020,
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+            pure_getters: true,
+            passes: 2,
+            dead_code: true,
+            comparisons: true,
+            inline: 2
+          },
+          mangle: true,
+          format: { comments: false }
+        }
+      }),
+      new CssMinimizerPlugin()
+    ]
   }
 }
 
@@ -118,8 +171,38 @@ const swConfig = {
   target: 'web',
   optimization: {
     splitChunks: false,
-    runtimeChunk: false
-  }
+    runtimeChunk: false,
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        extractComments: false,
+        parallel: true,
+        terserOptions: {
+          ecma: 2020,
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+            pure_getters: true,
+            passes: 2,
+            dead_code: true,
+            comparisons: true,
+            inline: 2
+          },
+          mangle: true,
+          format: { comments: false }
+        }
+      })
+    ]
+  },
+  plugins: [
+    new webpack.EnvironmentPlugin({
+      NODE_ENV: 'production',
+      MT_KEY: '',
+      VEHICLES_URL: '',
+      MBTA_API_BASE: '',
+      TRACK_PREDICTION_API: ''
+    })
+  ]
 }
 
 module.exports = [appConfig, swConfig]

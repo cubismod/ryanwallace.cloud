@@ -1,6 +1,4 @@
 import * as L from 'leaflet'
-import 'leaflet.markercluster/dist/MarkerCluster.css'
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 
 function createClusterIcon(cluster: any, lineType: string): L.DivIcon {
   const childCount = cluster.getChildCount()
@@ -98,6 +96,11 @@ export function isClusteringEnabled(): boolean {
 
 export async function enableClustering(map: L.Map): Promise<void> {
   if (clusteringEnabled) return
+  // Load styles and plugin on demand to keep initial bundle light
+  await Promise.all([
+    import('leaflet.markercluster/dist/MarkerCluster.css'),
+    import('leaflet.markercluster/dist/MarkerCluster.Default.css')
+  ]).catch(() => {})
   await import('leaflet.markercluster')
 
   const makeClusterGroup = (lineType: string, radius: number) =>

@@ -1,4 +1,4 @@
-import DataTable from 'datatables.net-dt'
+import DataTable from 'datatables.net'
 import { formatDistance } from 'date-fns'
 import { AlertData, RouteMapping } from './types'
 
