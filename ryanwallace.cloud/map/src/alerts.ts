@@ -1,4 +1,5 @@
 import DataTable from 'datatables.net'
+import 'datatables.net-dt/css/dataTables.dataTables.css'
 import { formatDistance } from 'date-fns'
 import { AlertData, RouteMapping } from './types'
 
@@ -51,12 +52,14 @@ function calculateAffectedLines(data: Array<{ route: string }>): string {
 let alertsTable: any | null = null
 
 export function alerts(vehicles_url: string): void {
+  console.log('Fetching alerts from:', `${vehicles_url}/alerts`)
   fetch(`${vehicles_url}/alerts`)
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return res.json()
     })
     .then((data: AlertData) => {
+      console.log('Alerts data received:', data)
       const msgs = new Set()
       const dataSet = []
 
@@ -102,6 +105,7 @@ export function alerts(vehicles_url: string): void {
         } catch {}
       }
 
+      console.log('Initializing DataTable with', dataSet.length, 'alerts')
       alertsTable = new DataTable('#alerts', {
         columns: [
           { title: 'Lines' },
@@ -124,7 +128,7 @@ export function alerts(vehicles_url: string): void {
         paging: false
       })
     })
-    .catch((_e) => {
-      // Silently ignore for now; alerts are non-critical
+    .catch((e) => {
+      console.error('Failed to load alerts:', e)
     })
 }

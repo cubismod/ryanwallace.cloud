@@ -798,20 +798,32 @@ if ('serviceWorker' in navigator) {
   }
 }
 
-// Load alerts table immediately
+// Load alerts table when DOM is ready
 async function loadAlerts(): Promise<void> {
+  console.log('loadAlerts() called')
   const table = document.getElementById('alerts')
-  if (!table) return
+  if (!table) {
+    console.warn('Alerts table element not found')
+    return
+  }
+  console.log('Alerts table element found, loading module...')
 
   try {
     const mod = await import('./alerts')
+    console.log('Alerts module loaded, calling alerts function...')
     mod.alerts(vehicles_url)
   } catch (e) {
     console.warn('Failed to load alerts module:', e)
   }
 }
 
-loadAlerts()
+// Wait for DOM to be ready before loading alerts
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadAlerts)
+} else {
+  // DOM is already ready
+  loadAlerts()
+}
 
 // Wire up tracking stop button
 const trackingStopBtn = document.getElementById('tracking-stop-btn')
