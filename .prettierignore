@@ -6,3 +6,4 @@ dist
 themes
 resources
 static/map
+pnpm-lock.yaml

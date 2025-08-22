@@ -1,5 +1,6 @@
 import { VehicleFeature } from './types'
-import { distance, point } from '@turf/turf'
+import distance from '@turf/distance'
+import { point } from '@turf/helpers'
 
 export interface ElfScore {
   score: number

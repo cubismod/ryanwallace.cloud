@@ -8,7 +8,11 @@
   "dependencies": {
     "@maptiler/leaflet-maptilersdk": "^4.0.2",
     "@petoc/leaflet-double-touch-drag-zoom": "^1.0.3",
-    "@turf/turf": "^7.2.0",
+    "@turf/along": "^7.2.0",
+    "@turf/nearest-point-on-line": "^7.2.0",
+    "@turf/length": "^7.2.0",
+    "@turf/distance": "^7.2.0",
+    "@turf/helpers": "^7.2.0",
     "@types/leaflet.markercluster": "^1.5.5",
     "datatables.net-dt": "^2.2.2",
     "datatables.net-responsive": "^3.0.4",
