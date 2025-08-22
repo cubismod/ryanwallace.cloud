@@ -196,11 +196,7 @@ interface PredictionStats {
 // DataTable instance for progressive updates
 let predictionsTable: any | null = null
 
-declare global {
-  interface Window {
-    $: typeof import('jquery')
-  }
-}
+// jQuery typings removed; using fetch and vanilla APIs.
 
 document
   .getElementById('predictions-container')

@@ -49,12 +49,4 @@ export interface RouteMapping {
   alt: string
 }
 
-declare global {
-  interface Window {
-    $: typeof import('jquery')
-  }
-}
-
-export declare const $: {
-  getJSON: (url: string, callback: (data: any) => void) => void
-}
+// jQuery typings removed; project uses fetch() now.

@@ -38,18 +38,7 @@ import {
 // Alerts module is lazy-loaded when its table becomes visible
 // Amtrak helpers are lazy-loaded when the layer is enabled
 
-// Extend jQuery to include getJSON method with Promise support
-declare const $: {
-  getJSON: (
-    url: string,
-    callback?: (data: any) => void
-  ) => {
-    done: (callback: (data: any) => void) => any
-    fail: (
-      callback: (jqXHR: any, textStatus: string, errorThrown?: string) => void
-    ) => any
-  }
-}
+// Note: jQuery removed. Use fetch() for network requests.
 
 // Extend window to include moveMapToStop function and buildingMarkers
 declare global {
@@ -573,8 +562,12 @@ function annotate_map(): void {
     return
   }
 
-  $.getJSON(`${vehicles_url}/vehicles`)
-    .done(function (data: any) {
+  fetch(`${vehicles_url}/vehicles`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
+    })
+    .then((data: any) => {
       vehicleDataCache = data
       lastVehicleUpdate = now
       processVehicleData(data)
@@ -589,8 +582,8 @@ function annotate_map(): void {
         }, delay)
       }
     })
-    .fail(function (_jqXHR: any, textStatus: string, errorThrown: string) {
-      console.warn('Failed to fetch vehicle data:', textStatus, errorThrown)
+    .catch((e: any) => {
+      console.warn('Failed to fetch vehicle data:', e?.message || e)
       // Use cached data if available as fallback
       if (vehicleDataCache) {
         processVehicleData(vehicleDataCache)
@@ -695,8 +688,12 @@ function loadShapesOnce(): void {
       group.clearLayers()
     })
 
-    $.getJSON(`${vehicles_url}/shapes`)
-      .done(function (data: any) {
+    fetch(`${vehicles_url}/shapes`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then((data: any) => {
         // Batch DOM operations
         map.eachLayer(() => {}) // Force layer update batching
 
@@ -734,8 +731,8 @@ function loadShapesOnce(): void {
           }
         })
       })
-      .fail(function (_jqXHR: any, textStatus: string) {
-        console.warn('Failed to load shapes data:', textStatus)
+      .catch((e: any) => {
+        console.warn('Failed to load shapes data:', e?.message || e)
         // Continue without shapes - vehicles will still work
       })
     baseLayerLoaded = true

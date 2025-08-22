@@ -2,10 +2,6 @@ import DataTable from 'datatables.net-dt'
 import { formatDistance } from 'date-fns'
 import { AlertData, RouteMapping } from './types'
 
-declare const $: {
-  getJSON: (url: string, callback: (data: any) => void) => void
-}
-
 function embedSVG(line: string, alt: string): string {
   return `<img src="/images/icons/lines/${line}.svg" alt="${alt}" class="line">`
 }
@@ -55,75 +51,83 @@ function calculateAffectedLines(data: Array<{ route: string }>): string {
 let alertsTable: any | null = null
 
 export function alerts(vehicles_url: string): void {
-  $.getJSON(`${vehicles_url}/alerts`, function (data: AlertData) {
-    const msgs = new Set()
-    const dataSet = []
-
-    for (const alert of data.data) {
-      if (alert.attributes && !msgs.has(alert.attributes.header)) {
-        if (
-          alert.attributes.active_period.length > 0 &&
-          alert.attributes.active_period[0].end
-        ) {
-          const end_time = alert.attributes.active_period[0].end
-          if (Date.parse(end_time) < Date.now()) {
-            continue
-          }
-        }
-        const rowData = [
-          calculateAffectedLines(alert.attributes.informed_entity),
-          alert.attributes.severity,
-          {
-            display: formatDistance(
-              new Date(
-                alert.attributes.updated_at || alert.attributes.created_at
-              ),
-              new Date(),
-              { addSuffix: true }
-            ),
-            timestamp: new Date(
-              alert.attributes.updated_at || alert.attributes.created_at
-            ).getTime()
-          },
-          alert.attributes.header
-        ]
-        dataSet.push(rowData)
-      }
-    }
-
-    // If already initialized, update instead of reinit
-    const alertsEl = document.getElementById('alerts')
-    const alreadyHasDt = !!alertsEl?.querySelector('.dt-container')
-    if (alertsTable || alreadyHasDt) {
-      try {
-        alertsTable = alertsTable || (DataTable as any).api('#alerts')
-        alertsTable.clear()
-        alertsTable.rows.add(dataSet)
-        alertsTable.draw()
-        return
-      } catch {}
-    }
-
-    alertsTable = new DataTable('#alerts', {
-      columns: [
-        { title: 'Lines' },
-        { title: 'Sev', className: 'dt-body-center' },
-        {
-          title: 'Upd',
-          render: {
-            _: 'display',
-            sort: 'timestamp'
-          }
-        },
-        { title: 'Alert', className: 'alert-body' }
-      ],
-      order: [
-        [0, 'desc'],
-        [1, 'desc']
-      ],
-      data: dataSet,
-      ordering: true,
-      paging: false
+  fetch(`${vehicles_url}/alerts`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
     })
-  })
+    .then((data: AlertData) => {
+      const msgs = new Set()
+      const dataSet = []
+
+      for (const alert of data.data) {
+        if (alert.attributes && !msgs.has(alert.attributes.header)) {
+          if (
+            alert.attributes.active_period.length > 0 &&
+            alert.attributes.active_period[0].end
+          ) {
+            const end_time = alert.attributes.active_period[0].end
+            if (Date.parse(end_time) < Date.now()) {
+              continue
+            }
+          }
+          const rowData = [
+            calculateAffectedLines(alert.attributes.informed_entity),
+            alert.attributes.severity,
+            {
+              display: formatDistance(
+                new Date(
+                  alert.attributes.updated_at || alert.attributes.created_at
+                ),
+                new Date(),
+                { addSuffix: true }
+              ),
+              timestamp: new Date(
+                alert.attributes.updated_at || alert.attributes.created_at
+              ).getTime()
+            },
+            alert.attributes.header
+          ]
+          dataSet.push(rowData)
+        }
+      }
+
+      // If already initialized, update instead of reinit
+      const alertsEl = document.getElementById('alerts')
+      const alreadyHasDt = !!alertsEl?.querySelector('.dt-container')
+      if (alertsTable || alreadyHasDt) {
+        try {
+          alertsTable = alertsTable || (DataTable as any).api('#alerts')
+          alertsTable.clear()
+          alertsTable.rows.add(dataSet)
+          alertsTable.draw()
+          return
+        } catch {}
+      }
+
+      alertsTable = new DataTable('#alerts', {
+        columns: [
+          { title: 'Lines' },
+          { title: 'Sev', className: 'dt-body-center' },
+          {
+            title: 'Upd',
+            render: {
+              _: 'display',
+              sort: 'timestamp'
+            }
+          },
+          { title: 'Alert', className: 'alert-body' }
+        ],
+        order: [
+          [0, 'desc'],
+          [1, 'desc']
+        ],
+        data: dataSet,
+        ordering: true,
+        paging: false
+      })
+    })
+    .catch((_e) => {
+      // Silently ignore for now; alerts are non-critical
+    })
 }

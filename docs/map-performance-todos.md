@@ -13,7 +13,7 @@ Legend: [ ] todo · [x] done · P0 critical · P1 high · P2 nice-to-have
   - Alerts/DataTables (`src/alerts.ts`) when the alerts section becomes visible. (done)
   - Amtrak helpers (`src/amtrak.ts`) only when Amtrak layer is enabled. (done)
   - Elf score utilities (`src/elf-score.ts`) on first toggle/use and on-demand for popups/search. (done)
-- [ ] P2 Convert jQuery to module import (or keep CDN and add `defer`) to avoid render-blocking.
+- [x] P2 Replace jQuery AJAX with `fetch()` and remove jQuery script tag to avoid render-blocking.
 
 ## Data & API Requests
 
