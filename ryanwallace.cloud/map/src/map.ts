@@ -5,9 +5,6 @@ import '@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom
 import 'leaflet.fullscreen'
 import 'leaflet-easybutton'
 import 'leaflet-arrowheads'
-import 'leaflet.markercluster'
-import 'leaflet.markercluster/dist/MarkerCluster.css'
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import 'invert-color'
 import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
 
@@ -17,7 +14,9 @@ import { pointToLayer, onEachFeature, updateVehicleFeatures } from './markers'
 import {
   layerGroups,
   shapesLayerGroups,
-  getShapesLayerGroupForRoute
+  getShapesLayerGroupForRoute,
+  enableClustering,
+  isClusteringEnabled
 } from './layer-groups'
 import {
   updateMarkers,
@@ -36,8 +35,8 @@ import {
   hookZoom,
   trackedId
 } from './tracking'
-import { alerts } from './alerts'
-import { fetchAmtrakData } from './amtrak'
+// Alerts module is lazy-loaded when its table becomes visible
+// Amtrak helpers are lazy-loaded when the layer is enabled
 
 // Extend jQuery to include getJSON method with Promise support
 declare const $: {
@@ -109,6 +108,7 @@ let vehicleDataCache: any = null
 let adaptiveRefreshRate: number = 15
 let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
 let isMapExpanded = false
+let initialSSEStartTimer: number | null = null
 
 function updateTrackingStatusUI(): void {
   const el = document.getElementById('tracking-status')
@@ -446,16 +446,24 @@ let mapInitialized = false
 
 document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
 
-if (process.env.NODE_ENV === 'production') {
+// Prefer raster tiles on slow connections for faster first paint
+const effectiveType = (navigator as any).connection?.effectiveType || ''
+const slowConnection = ['slow-2g', '2g', '3g'].includes(effectiveType)
+if (process.env.NODE_ENV === 'production' && !slowConnection) {
   new MaptilerLayer({
     apiKey: process.env.MT_KEY || '',
     style: 'streets-v2'
   }).addTo(map)
 } else {
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  const raster = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map)
+  })
+  raster.on('load', () => {
+    // Hide loading overlay as soon as tiles load; keep map interactive
+    hideMapLoading()
+  })
+  raster.addTo(map)
 }
 
 // Loading overlay functions
@@ -551,10 +559,7 @@ function annotate_map(): void {
 
   // If SSE is active, throttle UI updates by user-selected refresh rate
   if (sseActive) {
-    // Only load shapes once
-    loadShapesOnce()
-    // Fetch Amtrak data from BOS API (with error handling in fetchAmtrakData)
-    fetchAmtrakData(bos_url)
+    // Defer shapes; Amtrak loads when layer enabled
     // When not in immediate mode, apply latest cached SSE payload on the interval
     if (!sseImmediateMode && vehicleDataCache) {
       processVehicleData(vehicleDataCache)
@@ -573,6 +578,16 @@ function annotate_map(): void {
       vehicleDataCache = data
       lastVehicleUpdate = now
       processVehicleData(data)
+
+      // Kick off SSE shortly after a successful initial poll
+      if (!sseActive && !vehicleEventSource && initialSSEStartTimer === null) {
+        const delay = Math.min(sseBackoffMs, 3000)
+        initialSSEStartTimer = window.setTimeout(() => {
+          initialSSEStartTimer = null
+          const ok = startVehicleSSE()
+          if (!ok) updateSSEStatusUI('polling')
+        }, delay)
+      }
     })
     .fail(function (_jqXHR: any, textStatus: string, errorThrown: string) {
       console.warn('Failed to fetch vehicle data:', textStatus, errorThrown)
@@ -582,11 +597,7 @@ function annotate_map(): void {
       }
     })
 
-  // Only load shapes once
-  loadShapesOnce()
-
-  // Fetch Amtrak data from BOS API (with error handling in fetchAmtrakData)
-  fetchAmtrakData(bos_url)
+  // Defer shapes; Amtrak loads when layer enabled
 }
 
 function processVehicleData(data: any): void {
@@ -598,6 +609,21 @@ function processVehicleData(data: any): void {
     if (!popupOpen) {
       updateMarkers(data.features || [])
     }
+
+    // If many markers, enable clustering dynamically
+    try {
+      const markerCount = currentMarkers.size
+      const CLUSTER_THRESHOLD = 120
+      if (markerCount > CLUSTER_THRESHOLD && !isClusteringEnabled()) {
+        suppressOverlayEvents = true
+        enableClustering(map)
+          .then(() => rebuildOverlayControl())
+          .catch(() => {})
+          .finally(() => {
+            suppressOverlayEvents = false
+          })
+      }
+    } catch {}
 
     // If tracking a vehicle, keep it in view
     if (trackedId()) {
@@ -642,6 +668,9 @@ function processVehicleData(data: any): void {
       mapInitialized = true
       hideMapLoading()
     }
+
+    // After first vehicle render, schedule shapes load during idle time
+    scheduleShapesLoad()
 
     // Use debounced table update
     debounceUpdateTable()
@@ -713,12 +742,88 @@ function loadShapesOnce(): void {
   }
 }
 
+// Schedule shapes load after first paint or when browser is idle
+let shapesLoadScheduled = false
+function scheduleShapesLoad(): void {
+  if (baseLayerLoaded || shapesLoadScheduled) return
+  shapesLoadScheduled = true
+  const cb = () => {
+    try {
+      loadShapesOnce()
+    } catch (e) {
+      // If it fails, allow a retry on next call
+      shapesLoadScheduled = false
+    }
+  }
+  // Prefer idle callback; fallback to small timeout
+  if ((window as any).requestIdleCallback) {
+    ;(window as any).requestIdleCallback(cb, { timeout: 3000 })
+  } else {
+    window.setTimeout(cb, 1200)
+  }
+}
+
 annotate_map()
 
-// Start SSE after initial call so we have data either way
-if (!startVehicleSSE()) {
-  updateSSEStatusUI('polling')
+// Defer SSE start; we'll kick it off after the first successful vehicles poll
+
+// Register service worker only in production (dev often runs http://localhost)
+if ('serviceWorker' in navigator) {
+  const isProd = process.env.NODE_ENV === 'production'
+  if (isProd) {
+    window.addEventListener('load', () => {
+      try {
+        const swUrl = new URL('./sw.ts', import.meta.url)
+        navigator.serviceWorker
+          .register(swUrl, { scope: '/map/' })
+          .catch((e) => console.warn('SW register failed:', e))
+      } catch (e) {
+        console.warn('SW register error:', e)
+      }
+    })
+  } else {
+    // In dev, ensure any prior registrations don’t interfere
+    navigator.serviceWorker.getRegistrations?.().then((regs) => {
+      regs.forEach((r) => r.unregister().catch(() => {}))
+    })
+  }
 }
+
+// Lazy-load alerts (DataTables) when the alerts table becomes visible
+let alertsLoaded = false
+function setupAlertsLazyLoad(): void {
+  const table = document.getElementById('alerts')
+  if (!table) return
+  const load = async () => {
+    if (alertsLoaded) return
+    alertsLoaded = true
+    try {
+      const mod = await import('./alerts')
+      mod.alerts(vehicles_url)
+    } catch (e) {
+      console.warn('Failed to load alerts module:', e)
+      alertsLoaded = false
+    }
+  }
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries, obs) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        load()
+        obs.disconnect()
+      }
+    })
+    io.observe(table)
+  } else {
+    // Fallback: load after idle/timeout
+    if ((window as any).requestIdleCallback) {
+      ;(window as any).requestIdleCallback(load, { timeout: 3000 })
+    } else {
+      setTimeout(load, 2000)
+    }
+  }
+}
+
+setupAlertsLazyLoad()
 
 // Wire up tracking stop button
 const trackingStopBtn = document.getElementById('tracking-stop-btn')
@@ -927,21 +1032,7 @@ map.on('locationerror', (e: L.ErrorEvent) => {
   console.warn('Location access denied or unavailable:', e.message)
 })
 
-const overlayMaps = {
-  '🟥 Red Line': layerGroups.red,
-  '🟦 Blue Line': layerGroups.blue,
-  '🟩 Green Line': layerGroups.green,
-  '🟧 Orange Line': layerGroups.orange,
-  '🚍 Silver Line': layerGroups.silver,
-  '🟪 Commuter Rail': layerGroups.commuter,
-  '🚄 Amtrak': layerGroups.amtrak,
-  '🔴 Red Line Routes': shapesLayerGroups.red,
-  '🔵 Blue Line Routes': shapesLayerGroups.blue,
-  '🟢 Green Line Routes': shapesLayerGroups.green,
-  '🟠 Orange Line Routes': shapesLayerGroups.orange,
-  '🚏 Silver Line Routes': shapesLayerGroups.silver,
-  '🟣 Commuter Rail Routes': shapesLayerGroups.commuter
-}
+// overlayMaps is built in rebuildOverlayControl()
 
 // Load saved layer visibility settings from cookies
 const savedLayerStates = getCookie('layer-visibility')
@@ -962,6 +1053,10 @@ Object.entries(layerGroups).forEach(([key, group]) => {
     // Amtrak layer is off by default
     if (layerStates[vehicleLayerKey] === true) {
       group.addTo(map)
+      // If Amtrak is visible on load, fetch once
+      import('./amtrak')
+        .then((mod) => mod.fetchAmtrakData(bos_url))
+        .catch(() => {})
     }
   } else {
     // All other layers are on by default
@@ -971,22 +1066,54 @@ Object.entries(layerGroups).forEach(([key, group]) => {
   }
 })
 
+let anyShapesOn = false
 Object.entries(shapesLayerGroups).forEach(([key, group]) => {
   const routeLayerKey = `routes-${key}`
+  // Default ON unless explicitly disabled by saved state (original behavior)
   if (layerStates[routeLayerKey] !== false) {
     group.addTo(map)
+    anyShapesOn = true
   }
 })
+// If any shapes layers are on at load, schedule shapes data load
+if (anyShapesOn) {
+  scheduleShapesLoad()
+}
 
-L.control
-  .layers({}, overlayMaps, {
+let overlayControl: L.Control.Layers | null = null
+let suppressOverlayEvents = false
+function rebuildOverlayControl() {
+  if (overlayControl) {
+    map.removeControl(overlayControl)
+    overlayControl = null
+  }
+  const overlayMaps = {
+    '🟥 Red Line': layerGroups.red,
+    '🟦 Blue Line': layerGroups.blue,
+    '🟩 Green Line': layerGroups.green,
+    '🟧 Orange Line': layerGroups.orange,
+    '🚍 Silver Line': layerGroups.silver,
+    '🟪 Commuter Rail': layerGroups.commuter,
+    '🚄 Amtrak': layerGroups.amtrak,
+    '🔴 Red Line Routes': shapesLayerGroups.red,
+    '🔵 Blue Line Routes': shapesLayerGroups.blue,
+    '🟢 Green Line Routes': shapesLayerGroups.green,
+    '🟠 Orange Line Routes': shapesLayerGroups.orange,
+    '🚏 Silver Line Routes': shapesLayerGroups.silver,
+    '🟣 Commuter Rail Routes': shapesLayerGroups.commuter
+  }
+  overlayControl = L.control.layers({}, overlayMaps, {
     position: 'topright',
     collapsed: true
   })
-  .addTo(map)
+  overlayControl.addTo(map)
+}
+
+rebuildOverlayControl()
 
 // Save layer visibility when layers are toggled
 map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
+  if (suppressOverlayEvents) return
   const layerName = (e as any).name
   const isVisible = e.type === 'overlayadd'
 
@@ -1011,6 +1138,17 @@ map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
   if (layerKey) {
     layerStates[layerKey] = isVisible
     setCookie('layer-visibility', JSON.stringify(layerStates))
+  }
+
+  // Lazy-load Amtrak data when layer is enabled
+  if (layerName === '🚄 Amtrak' && isVisible) {
+    import('./amtrak')
+      .then((mod) => mod.fetchAmtrakData(bos_url))
+      .catch((e) => console.warn('Failed to load Amtrak module:', e))
+  }
+  // Ensure shapes data is loaded when any routes overlay is enabled
+  if (isVisible && /Routes$/.test(layerName)) {
+    scheduleShapesLoad()
   }
 })
 
@@ -1185,45 +1323,47 @@ function ensureElfEmojiStyles(): void {
 }
 
 // Handle elf search functionality
-document.getElementById('elf-search-btn')!.addEventListener('click', () => {
-  if (!vehicleDataCache || !vehicleDataCache.features) {
-    console.warn('No vehicle data available for elf search')
-    return
-  }
+document
+  .getElementById('elf-search-btn')!
+  .addEventListener('click', async () => {
+    if (!vehicleDataCache || !vehicleDataCache.features) {
+      console.warn('No vehicle data available for elf search')
+      return
+    }
 
-  const resultsDiv = document.getElementById('elf-search-results')!
-  const resultsList = document.getElementById('elf-results-list')!
+    const resultsDiv = document.getElementById('elf-search-results')!
+    const resultsList = document.getElementById('elf-results-list')!
 
-  // Show results panel
-  resultsDiv.style.display = 'block'
+    // Show results panel
+    resultsDiv.style.display = 'block'
 
-  // Find top elf trains
-  const topElves = findTopElfTrains(vehicleDataCache.features)
+    // Find top elf trains (lazy-load elf scoring)
+    const topElves = await findTopElfTrains(vehicleDataCache.features)
 
-  // Clear previous results
-  resultsList.innerHTML = ''
+    // Clear previous results
+    resultsList.innerHTML = ''
 
-  if (topElves.length === 0) {
-    resultsList.innerHTML =
-      '<div style="padding: 15px; text-align: center; color: #666;">No trains found with elf energy! 🥺</div>'
-    return
-  }
+    if (topElves.length === 0) {
+      resultsList.innerHTML =
+        '<div style="padding: 15px; text-align: center; color: #666;">No trains found with elf energy! 🥺</div>'
+      return
+    }
 
-  // Populate results
-  topElves.forEach((result, index) => {
-    const item = document.createElement('div')
-    item.className = 'elf-result-item'
+    // Populate results
+    topElves.forEach((result, index) => {
+      const item = document.createElement('div')
+      item.className = 'elf-result-item'
 
-    const route = result.feature.properties.route || 'Unknown'
-    const headsign =
-      result.feature.properties.headsign ||
-      result.feature.properties.stop ||
-      'Unknown destination'
-    const stop = result.feature.properties.stop || 'Unknown stop'
-    const scoreLevel = result.elfScore.level.toLowerCase()
-    const scorePercentage = Math.round(result.elfScore.score)
+      const route = result.feature.properties.route || 'Unknown'
+      const headsign =
+        result.feature.properties.headsign ||
+        result.feature.properties.stop ||
+        'Unknown destination'
+      const stop = result.feature.properties.stop || 'Unknown stop'
+      const scoreLevel = result.elfScore.level.toLowerCase()
+      const scorePercentage = Math.round(result.elfScore.score)
 
-    item.innerHTML = `
+      item.innerHTML = `
         <div class="elf-result-info">
           <div class="elf-result-route">${index + 1}. ${route} to ${headsign}</div>
           <div class="elf-result-details">Stop: ${stop}</div>
@@ -1235,23 +1375,21 @@ document.getElementById('elf-search-btn')!.addEventListener('click', () => {
         </div>
       `
 
-    // Add click handler to jump to train
-    item.addEventListener('click', () => {
-      jumpToElfTrain(result, map)
-      // Hide search results after selection
-      resultsDiv.style.display = 'none'
-      // Scroll back to map element
-      document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
-    })
+      // Add click handler to jump to train
+      item.addEventListener('click', () => {
+        jumpToElfTrain(result, map)
+        // Hide search results after selection
+        resultsDiv.style.display = 'none'
+        // Scroll back to map element
+        document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
+      })
 
-    resultsList.appendChild(item)
+      resultsList.appendChild(item)
+    })
   })
-})
 
 // Handle elf search close button
 document.getElementById('elf-search-close')!.addEventListener('click', () => {
   const resultsDiv = document.getElementById('elf-search-results')!
   resultsDiv.style.display = 'none'
 })
-
-alerts(vehicles_url)

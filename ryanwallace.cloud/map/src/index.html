@@ -1,3 +1,8 @@
+<link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin />
+<link rel="preconnect" href="https://api.maptiler.com" crossorigin />
+<link rel="preconnect" href="https://imt.ryanwallace.cloud" crossorigin />
+<link rel="preconnect" href="https://bos.ryanwallace.cloud" crossorigin />
+
 <script
   src="https://code.jquery.com/jquery-3.7.1.min.js"
   integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
@@ -48,6 +53,11 @@
   }
   #map.map-expanded {
     height: 80vh; /* expand but not full screen */
+  }
+
+  /* Loading overlay shouldn't block interactions */
+  .map-loading-overlay {
+    pointer-events: none;
   }
 
   /* Follow location: make active state highly visible */
@@ -168,8 +178,10 @@
   }
 </style>
 <link
-  rel="stylesheet"
+  rel="preload"
+  as="style"
   href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css"
+  onload="this.onload=null;this.rel='stylesheet'"
 />
 
 <div id="map" class="noselect"></div>

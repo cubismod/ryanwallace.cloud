@@ -52,6 +52,8 @@ function calculateAffectedLines(data: Array<{ route: string }>): string {
   return [...afLines].join('</br>')
 }
 
+let alertsTable: any | null = null
+
 export function alerts(vehicles_url: string): void {
   $.getJSON(`${vehicles_url}/alerts`, function (data: AlertData) {
     const msgs = new Set()
@@ -88,7 +90,21 @@ export function alerts(vehicles_url: string): void {
         dataSet.push(rowData)
       }
     }
-    new DataTable('#alerts', {
+
+    // If already initialized, update instead of reinit
+    const alertsEl = document.getElementById('alerts')
+    const alreadyHasDt = !!alertsEl?.querySelector('.dt-container')
+    if (alertsTable || alreadyHasDt) {
+      try {
+        alertsTable = alertsTable || (DataTable as any).api('#alerts')
+        alertsTable.clear()
+        alertsTable.rows.add(dataSet)
+        alertsTable.draw()
+        return
+      } catch {}
+    }
+
+    alertsTable = new DataTable('#alerts', {
       columns: [
         { title: 'Lines' },
         { title: 'Sev', className: 'dt-body-center' },

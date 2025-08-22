@@ -5,7 +5,11 @@ import { niceStatus } from './utils'
 import { pointToLayer, onEachFeature, createIconForFeature } from './markers'
 import { getLayerGroupForRoute, layerGroups } from './layer-groups'
 import { decrementMapItem } from './vehicle-counter'
-import { calculateElfScore } from './elf-score'
+// Elf score utilities are loaded on demand
+
+async function loadElfModule() {
+  return await import('./elf-score')
+}
 
 export let currentMarkers: Map<string | number, L.Marker> = new Map()
 
@@ -89,61 +93,53 @@ function applyElfClasses(marker: L.Marker, feature: VehicleFeature): void {
     return
   }
 
-  // Always calculate and store elf data on the marker for later use
-  const elfScore = calculateElfScore(feature)
-  const elfClass = `elf-${elfScore.level.toLowerCase().replace(' ', '-')}`
-
-  // Store elf data on the marker for when it becomes unclustered
-  ;(marker as any)._elfData = {
-    elfScore,
-    elfClass,
-    feature
-  }
-
-  const markerElement = marker.getElement()
-
-  if (!markerElement) {
-    // Marker is clustered, store data but can't apply visual effects yet
-    return
-  }
-
-  // Remove existing elf classes
-  markerElement.classList.remove(
-    'elf-low',
-    'elf-medium',
-    'elf-high',
-    'elf-legendary',
-    'elf-trans-pride'
-  )
-
-  if (elfModeEnabled) {
-    // The marker element IS the icon element (it's the <img> itself)
-    const iconElement = markerElement as HTMLElement
-
-    if (iconElement) {
-      iconElement.classList.remove(
+  if (!elfModeEnabled) {
+    // Clear any existing elf effects when disabled
+    const markerElement = marker.getElement()
+    if (markerElement) {
+      markerElement.classList.remove(
         'elf-low',
         'elf-medium',
         'elf-high',
         'elf-legendary',
         'elf-trans-pride'
       )
-      iconElement.classList.add(elfClass)
+      ;(markerElement as HTMLElement).style.boxShadow = ''
+      ;(markerElement as HTMLElement).style.transition = ''
+    }
+    return
+  }
 
-      // Class and initial filter applied
+  // Calculate and store elf data only when mode is enabled
+  loadElfModule()
+    .then(({ calculateElfScore }) => {
+      const elfScore = calculateElfScore(feature)
+      const elfClass = `elf-${elfScore.level.toLowerCase().replace(' ', '-')}`
+      ;(marker as any)._elfData = { elfScore, elfClass, feature }
+
+      const markerElement = marker.getElement()
+      if (!markerElement) return
+
+      // Remove existing elf classes
+      markerElement.classList.remove(
+        'elf-low',
+        'elf-medium',
+        'elf-high',
+        'elf-legendary',
+        'elf-trans-pride'
+      )
+
+      // The marker element IS the icon element
+      const iconElement = markerElement as HTMLElement
+      iconElement.classList.add(elfClass)
 
       // Apply halos colored to match vehicle route (more visible)
       let boxShadow = ''
-
-      // Get route color from vehicle properties
       const routeColor = feature.properties['marker-color'] || '#7B388C'
       const routeColorRgb = hexToRgb(routeColor)
-
       if (elfScore.level === 'Trans Pride') {
-        // Trans pride gets special colors regardless of route
         boxShadow = `0 0 12px rgba(91, 206, 250, 0.8), 0 0 24px rgba(245, 169, 184, 0.6)`
       } else if (elfScore.level === 'Legendary') {
-        // Route color with rainbow accent
         boxShadow = `0 0 10px rgba(${routeColorRgb.r}, ${routeColorRgb.g}, ${routeColorRgb.b}, 0.8), 0 0 20px rgba(255, 0, 128, 0.4)`
       } else if (elfScore.level === 'High') {
         boxShadow = `0 0 8px rgba(${routeColorRgb.r}, ${routeColorRgb.g}, ${routeColorRgb.b}, 0.7)`
@@ -152,27 +148,12 @@ function applyElfClasses(marker: L.Marker, feature: VehicleFeature): void {
       } else {
         boxShadow = `0 0 4px rgba(${routeColorRgb.r}, ${routeColorRgb.g}, ${routeColorRgb.b}, 0.5)`
       }
-
       iconElement.style.boxShadow = boxShadow
       iconElement.style.transition = 'box-shadow 0.3s ease'
-      // halo applied via boxShadow
-    }
-  } else {
-    // Remove custom styling when disabled
-    // The marker element IS the icon element (it's the <img> itself)
-    const iconElement = markerElement as HTMLElement
-    if (iconElement) {
-      iconElement.classList.remove(
-        'elf-low',
-        'elf-medium',
-        'elf-high',
-        'elf-legendary',
-        'elf-trans-pride'
-      )
-      iconElement.style.boxShadow = ''
-      iconElement.style.transition = ''
-    }
-  }
+    })
+    .catch(() => {})
+
+  // Note: Remaining styling is applied in the promise resolution above
 }
 
 export function updateMarkers(features: VehicleFeature[]): void {
@@ -228,19 +209,7 @@ export function updateMarkers(features: VehicleFeature[]): void {
       }
 
       // Create dynamic popup content that updates based on current elf mode state
-      const createPopupContent = () => {
-        const elfModeEnabled =
-          (document.getElementById('show-elf-mode') as HTMLInputElement)
-            ?.checked || false
-
-        let elfScoreHtml = ''
-        if (elfModeEnabled) {
-          const elfScore = calculateElfScore(feature)
-          const { getElfScoreDisplay } = require('./elf-score')
-          const elfDisplay = getElfScoreDisplay(elfScore)
-          elfScoreHtml = `<br />Elf Score: ${elfDisplay}`
-        }
-
+      const createPopupContent = (elfScoreHtml: string = '') => {
         // Tracking toggle
         const idStr = String(feature.id ?? '')
         const isTracking = (window as any).isTrackingVehicleId
@@ -263,8 +232,25 @@ export function updateMarkers(features: VehicleFeature[]): void {
       existingMarker.setPopupContent(createPopupContent())
 
       // Update popup content when it opens to ensure elf mode state is current
-      existingMarker.on('popupopen', () => {
-        existingMarker.getPopup()?.setContent(createPopupContent())
+      existingMarker.on('popupopen', async () => {
+        const elfModeEnabled =
+          (document.getElementById('show-elf-mode') as HTMLInputElement)
+            ?.checked || false
+        if (!elfModeEnabled) {
+          existingMarker.getPopup()?.setContent(createPopupContent())
+          return
+        }
+        try {
+          const { calculateElfScore, getElfScoreDisplay } =
+            await loadElfModule()
+          const elfScore = calculateElfScore(feature)
+          const elfDisplay = getElfScoreDisplay(elfScore)
+          existingMarker
+            .getPopup()
+            ?.setContent(createPopupContent(`<br />Elf Score: ${elfDisplay}`))
+        } catch {
+          existingMarker.getPopup()?.setContent(createPopupContent())
+        }
       })
 
       const newIcon = createIconForFeature(feature)
@@ -348,14 +334,16 @@ export interface ElfSearchResult {
   marker: L.Marker
 }
 
-export function findTopElfTrains(
+export async function findTopElfTrains(
   features: VehicleFeature[]
-): ElfSearchResult[] {
+): Promise<ElfSearchResult[]> {
   const vehicleFeatures = features.filter(
     (f) => f.properties['marker-symbol'] !== 'building'
   )
 
   const elfResults: ElfSearchResult[] = []
+
+  const { calculateElfScore } = await loadElfModule()
 
   for (const feature of vehicleFeatures) {
     const markerId =
