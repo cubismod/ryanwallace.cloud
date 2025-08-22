@@ -109,6 +109,10 @@ function updateTrackingStatusUI(): void {
   const note = document.getElementById(
     'mode-conflict'
   ) as HTMLSpanElement | null
+  const followGroup =
+    (document
+      .getElementById('follow-location')
+      ?.closest('.control-group') as HTMLElement) || null
   if (!el) return
   el.classList.remove('live-streaming', 'live-polling', 'live-connecting')
   if (trackedId()) {
@@ -132,6 +136,7 @@ function updateTrackingStatusUI(): void {
         if (!note.textContent) note.style.display = 'none'
       }
     }
+    if (followGroup) followGroup.classList.remove('follow-active')
   } else {
     el.textContent = 'Off'
     el.classList.add('live-polling')
@@ -145,6 +150,10 @@ function updateTrackingStatusUI(): void {
     if (note && fl && !fl.checked) {
       note.textContent = ''
       note.style.display = 'none'
+    }
+    if (followGroup) {
+      if (fl?.checked) followGroup.classList.add('follow-active')
+      else followGroup.classList.remove('follow-active')
     }
   }
 }
@@ -488,6 +497,8 @@ window.trackVehicleById = (id: string | number): void => {
       note.textContent = 'Disabled Follow location while tracking a vehicle.'
       note.style.display = 'inline'
     }
+    const group = (followEl.closest('.control-group') as HTMLElement) || null
+    if (group) group.classList.remove('follow-active')
   }
   trackById(
     id,
@@ -1092,6 +1103,8 @@ document
       }
       toggleLocationWatch(true)
       setCookie('follow-location', 'true')
+      const group = (target.closest('.control-group') as HTMLElement) || null
+      if (group) group.classList.add('follow-active')
     } else {
       toggleLocationWatch(false)
       setCookie('follow-location', 'false')
@@ -1099,6 +1112,8 @@ document
         note.textContent = ''
         note.style.display = 'none'
       }
+      const group = (target.closest('.control-group') as HTMLElement) || null
+      if (group) group.classList.remove('follow-active')
     }
   })
 

@@ -50,6 +50,28 @@
     height: 80vh; /* expand but not full screen */
   }
 
+  /* Follow location: make active state highly visible */
+  .controls-section .control-group.follow-active {
+    background: rgba(34, 197, 94, 0.08); /* green-500 tint */
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    border-radius: 8px;
+    padding: 6px 8px;
+  }
+  .controls-section .control-group.follow-active label[for='follow-location'] {
+    color: #16a34a; /* green-600 */
+    font-weight: 600;
+  }
+  /* Boost the toggle visibility when active */
+  #follow-location:checked + .slider {
+    background: #22c55e !important; /* green-500 */
+    box-shadow:
+      0 0 0 3px rgba(34, 197, 94, 0.2),
+      0 0 12px rgba(34, 197, 94, 0.5);
+  }
+  #follow-location:checked + .slider:before {
+    background: #ffffff;
+  }
+
   /* Tracked vehicle overlays */
   .leaflet-div-icon.tracked-info-icon {
     background: transparent;
@@ -110,7 +132,7 @@
   .tracked-pulse {
     width: 60px;
     height: 60px;
-    transform: translate(-50%, -50%);
+    /* rely on Leaflet iconAnchor for centering to avoid double-shift jitter */
     pointer-events: none;
     background: transparent;
     border: none;
