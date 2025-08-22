@@ -769,17 +769,11 @@ if ('serviceWorker' in navigator) {
   const isProd = process.env.NODE_ENV === 'production'
   if (isProd) {
     window.addEventListener('load', () => {
-      try {
-        const swUrl = new URL('./sw.ts', import.meta.url)
-        navigator.serviceWorker
-          .register(swUrl, { scope: '/map/' })
-          .catch((e) => console.warn('SW register failed:', e))
-      } catch (e) {
-        console.warn('SW register error:', e)
-      }
+      navigator.serviceWorker
+        .register('/map/sw.js', { scope: '/map/' })
+        .catch((e) => console.warn('SW register failed:', e))
     })
   } else {
-    // In dev, ensure any prior registrations don’t interfere
     navigator.serviceWorker.getRegistrations?.().then((regs) => {
       regs.forEach((r) => r.unregister().catch(() => {}))
     })

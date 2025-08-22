@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `task format` - Format TypeScript code using Prettier
 - `task typecheck` - Run TypeScript type checking
 - Individual commands can be run from `ryanwallace.cloud/map/`:
-  - `pnpm build` - Build with Parcel bundler
+  - `pnpm build` - Build with Webpack bundler
   - `pnpm typecheck` - Type check without emitting files
   - `pnpm prettier --write .` - Format code
 - Use `task build` instead of `pnpm build` for this repo
@@ -48,7 +48,7 @@ The map application is a real-time MBTA (Massachusetts Bay Transportation Author
 - **Leaflet**: Interactive mapping library
 - **MapTiler**: Map tiles provider
 - **DataTables**: For tabular data display
-- **Parcel**: Build tool and bundler
+- **Webpack**: Build tool and bundler
 - **TypeScript**: Type safety for complex geospatial data structures
 
 The app handles real-time vehicle tracking, route visualization, and service alerts. The build process integrates into Hugo's static site generation.
