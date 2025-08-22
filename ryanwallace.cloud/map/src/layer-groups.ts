@@ -1,12 +1,6 @@
 import * as L from 'leaflet'
-import 'leaflet.markercluster'
-import 'leaflet.markercluster/dist/MarkerCluster.css'
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 
-function createClusterIcon(
-  cluster: L.MarkerCluster,
-  lineType: string
-): L.DivIcon {
+function createClusterIcon(cluster: any, lineType: string): L.DivIcon {
   const childCount = cluster.getChildCount()
   return new L.DivIcon({
     html: `<div><span>${childCount}</span></div>`,
@@ -15,65 +9,16 @@ function createClusterIcon(
   })
 }
 
-function setupClusterEvents(
-  clusterGroup: L.MarkerClusterGroup
-): L.MarkerClusterGroup {
-  // Handle elf effects when markers become unclustered
-  clusterGroup.on('spiderfied', (event: any) => {
-    // When cluster opens (spiderfies), apply elf effects to individual markers
-    const { applyStoredElfEffects } = require('./marker-manager')
-    event.markers.forEach((marker: L.Marker) => {
-      // Use setTimeout to ensure DOM is ready
-      setTimeout(() => applyStoredElfEffects(marker), 10)
-    })
-  })
+let clusteringEnabled = false
 
-  return clusterGroup
-}
-
-export const layerGroups = {
-  red: setupClusterEvents(
-    L.markerClusterGroup({
-      maxClusterRadius: 40,
-      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'red')
-    })
-  ),
-  blue: setupClusterEvents(
-    L.markerClusterGroup({
-      maxClusterRadius: 40,
-      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'blue')
-    })
-  ),
-  green: setupClusterEvents(
-    L.markerClusterGroup({
-      maxClusterRadius: 50,
-      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'green')
-    })
-  ),
-  orange: setupClusterEvents(
-    L.markerClusterGroup({
-      maxClusterRadius: 40,
-      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'orange')
-    })
-  ),
-  silver: setupClusterEvents(
-    L.markerClusterGroup({
-      maxClusterRadius: 50,
-      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'silver')
-    })
-  ),
-  commuter: setupClusterEvents(
-    L.markerClusterGroup({
-      maxClusterRadius: 80,
-      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'commuter')
-    })
-  ),
-  amtrak: setupClusterEvents(
-    L.markerClusterGroup({
-      maxClusterRadius: 80,
-      iconCreateFunction: (cluster) => createClusterIcon(cluster, 'amtrak')
-    })
-  )
+export const layerGroups: Record<string, L.LayerGroup> = {
+  red: L.layerGroup(),
+  blue: L.layerGroup(),
+  green: L.layerGroup(),
+  orange: L.layerGroup(),
+  silver: L.layerGroup(),
+  commuter: L.layerGroup(),
+  amtrak: L.layerGroup()
 }
 
 export const shapesLayerGroups = {
@@ -85,7 +30,7 @@ export const shapesLayerGroups = {
   commuter: L.layerGroup()
 }
 
-export function getLayerGroupForRoute(route: string): L.MarkerClusterGroup {
+export function getLayerGroupForRoute(route: string): L.LayerGroup {
   if (route.startsWith('Red') || route.startsWith('Mattapan')) {
     return layerGroups.red
   }
@@ -143,4 +88,69 @@ export function getShapesLayerGroupForRoute(route: string): L.LayerGroup {
     return shapesLayerGroups.commuter
   }
   return shapesLayerGroups.commuter
+}
+
+export function isClusteringEnabled(): boolean {
+  return clusteringEnabled
+}
+
+export async function enableClustering(map: L.Map): Promise<void> {
+  if (clusteringEnabled) return
+  // Load styles and plugin on demand to keep initial bundle light
+  await Promise.all([
+    import('leaflet.markercluster/dist/MarkerCluster.css'),
+    import('leaflet.markercluster/dist/MarkerCluster.Default.css')
+  ]).catch(() => {})
+  await import('leaflet.markercluster')
+
+  const makeClusterGroup = (lineType: string, radius: number) =>
+    (L as any).markerClusterGroup({
+      maxClusterRadius: radius,
+      iconCreateFunction: (cluster: any) => createClusterIcon(cluster, lineType)
+    }) as L.LayerGroup
+
+  const newGroups: Record<string, L.LayerGroup> = {
+    red: makeClusterGroup('red', 40),
+    blue: makeClusterGroup('blue', 40),
+    green: makeClusterGroup('green', 50),
+    orange: makeClusterGroup('orange', 40),
+    silver: makeClusterGroup('silver', 50),
+    commuter: makeClusterGroup('commuter', 30),
+    amtrak: makeClusterGroup('amtrak', 80)
+  }
+
+  // Move layers from plain groups to cluster groups and swap
+  for (const key of Object.keys(layerGroups)) {
+    const oldGroup = layerGroups[key]
+    const newGroup = newGroups[key]
+    const wasOnMap = map.hasLayer(oldGroup)
+
+    const layers: L.Layer[] = []
+    oldGroup.eachLayer((l) => layers.push(l))
+    oldGroup.clearLayers()
+
+    layers.forEach((l) => newGroup.addLayer(l))
+
+    if (wasOnMap) {
+      map.removeLayer(oldGroup)
+      newGroup.addTo(map)
+    }
+
+    layerGroups[key] = newGroup
+  }
+
+  // Attach spiderfied handler to apply stored effects
+  for (const key of Object.keys(layerGroups)) {
+    const group: any = layerGroups[key] as any
+    if (group && typeof group.on === 'function') {
+      group.on('spiderfied', (event: any) => {
+        const { applyStoredElfEffects } = require('./marker-manager')
+        event.markers?.forEach((marker: L.Marker) => {
+          setTimeout(() => applyStoredElfEffects(marker), 10)
+        })
+      })
+    }
+  }
+
+  clusteringEnabled = true
 }

@@ -1,11 +1,181 @@
-<script
-  src="https://code.jquery.com/jquery-3.7.1.min.js"
-  integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
-  crossorigin="anonymous"
-></script>
+<link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin />
+<link rel="preconnect" href="https://imt.ryanwallace.cloud" crossorigin />
+<link rel="preconnect" href="https://bos.ryanwallace.cloud" crossorigin />
+
+<style>
+  /* Tracking stop icon button */
+  .controls-section #tracking-stop-btn.tracking-stop-btn {
+    /* hidden by JS until tracking starts; JS toggles to inline-block */
+    display: none;
+    -webkit-appearance: none;
+    appearance: none;
+    vertical-align: middle;
+    width: auto;
+    height: auto;
+    line-height: normal;
+    border-radius: 6px;
+    border: 1px solid #ef4444; /* red-500 */
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    font-size: 13px;
+    padding: 4px 10px;
+    text-align: center;
+    margin-left: 8px;
+    cursor: pointer;
+    box-shadow: none;
+    outline: none;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.1s ease;
+    /* Nice alignment in case of flex display */
+    align-items: center;
+    justify-content: center;
+  }
+  .controls-section #tracking-stop-btn.tracking-stop-btn:hover {
+    background: #ef4444;
+    color: #fff;
+    border-color: #ef4444;
+  }
+  .controls-section #tracking-stop-btn.tracking-stop-btn:active {
+    transform: scale(0.95);
+  }
+  /* Map expand behavior (not full-screen) */
+  #map {
+    transition: height 0.2s ease;
+  }
+  #map.map-expanded {
+    height: 80vh; /* expand but not full screen */
+  }
+
+  /* Loading overlay shouldn't block interactions */
+  .map-loading-overlay {
+    pointer-events: none;
+  }
+
+  /* Follow location: make active state highly visible */
+  .controls-section .control-group.follow-active {
+    background: rgba(34, 197, 94, 0.08); /* green-500 tint */
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    border-radius: 8px;
+    padding: 6px 8px;
+  }
+  .controls-section .control-group.follow-active label[for='follow-location'] {
+    color: #16a34a; /* green-600 */
+    font-weight: 600;
+  }
+  /* Boost the toggle visibility when active */
+  #follow-location:checked + .slider {
+    background: #22c55e !important; /* green-500 */
+    box-shadow:
+      0 0 0 3px rgba(34, 197, 94, 0.2),
+      0 0 12px rgba(34, 197, 94, 0.5);
+  }
+  #follow-location:checked + .slider:before {
+    background: #ffffff;
+  }
+
+  /* Tracked vehicle overlays */
+  .leaflet-div-icon.tracked-info-icon {
+    background: transparent;
+    border: none;
+    width: auto !important;
+    height: auto !important;
+  }
+  /* Tooltip styling for tracked vehicle */
+  #map .leaflet-tooltip.tracked-tooltip {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    color: #111827; /* gray-900 */
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    padding: 6px 8px;
+    pointer-events: none;
+  }
+  #map .leaflet-tooltip.tracked-tooltip .t-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+    font-size: 12px;
+  }
+  #map .leaflet-tooltip.tracked-tooltip .t-meta {
+    font-size: 11px;
+    color: #374151; /* gray-700 */
+  }
+
+  /* Legacy divIcon label (kept for safety) */
+  .tracked-label {
+    font-family:
+      system-ui,
+      -apple-system,
+      Segoe UI,
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif;
+    font-size: 12px;
+    line-height: 1.25;
+    background: rgba(255, 255, 255, 0.96);
+    color: #111827; /* gray-900 */
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    border-radius: 6px;
+    padding: 6px 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transform: translate(-50%, -120%);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .tracked-label .t-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .tracked-label .t-meta {
+    font-size: 11px;
+    color: #374151; /* gray-700 */
+  }
+  .tracked-pulse {
+    width: 60px;
+    height: 60px;
+    /* rely on Leaflet iconAnchor for centering to avoid double-shift jitter */
+    pointer-events: none;
+    background: transparent;
+    border: none;
+  }
+  .tracked-pulse span {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    border: 2px solid
+      rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.9);
+    box-shadow: 0 0 0 0
+      rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.7);
+    animation: tracked-pulse 1.8s ease-out infinite;
+  }
+  @keyframes tracked-pulse {
+    0% {
+      box-shadow: 0 0 0 0
+        rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0.6);
+      opacity: 1;
+    }
+    70% {
+      box-shadow: 0 0 0 16px
+        rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0);
+      opacity: 0.6;
+    }
+    100% {
+      box-shadow: 0 0 0 0
+        rgba(var(--pulse-r, 239), var(--pulse-g, 68), var(--pulse-b, 68), 0);
+      opacity: 0.4;
+    }
+  }
+</style>
 <link
-  rel="stylesheet"
-  href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css"
+  rel="preload"
+  as="style"
+  href="https://cdn.datatables.net/2.3.3/css/dataTables.dataTables.css"
+  onload="this.onload=null;this.rel='stylesheet'"
 />
 
 <div id="map" class="noselect"></div>
@@ -23,15 +193,41 @@
   </div>
 
   <div class="control-group">
+    <label>Live updates:</label>
+    <span id="sse-status" class="live-badge live-polling">Polling</span>
+  </div>
+
+  <div class="control-group">
+    <label>Tracking:</label>
+    <span id="tracking-status" class="live-badge">Off</span>
+    <button
+      id="tracking-stop-btn"
+      class="tracking-stop-btn"
+      aria-label="Stop tracking"
+      title="Stop tracking"
+    >
+      Stop
+    </button>
+  </div>
+
+  <div class="control-group">
     <label for="follow-location">Follow location:</label>
     <label class="toggle-switch">
       <input type="checkbox" id="follow-location" name="follow-location" />
       <span class="slider"></span>
     </label>
   </div>
+
+  <div class="control-group">
+    <span
+      id="mode-conflict"
+      class="mode-note"
+      style="display: none; color: #6b7280; font-size: 12px"
+    ></span>
+  </div>
 </div>
 
-<script type="module" src="map.ts"></script>
+<!-- Script will be injected by Webpack HtmlWebpackPlugin -->
 
 <h4>Currently Operating Vehicles</h4>
 <table id="vehicle-table">

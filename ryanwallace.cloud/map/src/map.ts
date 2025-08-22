@@ -1,15 +1,5 @@
 import * as L from 'leaflet'
-import '@petoc/leaflet-double-touch-drag-zoom'
 import 'leaflet/dist/leaflet.css'
-import '@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom.css'
-import 'leaflet.fullscreen'
-import 'leaflet-easybutton'
-import 'leaflet-arrowheads'
-import 'leaflet.markercluster'
-import 'leaflet.markercluster/dist/MarkerCluster.css'
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
-import 'invert-color'
-import { MaptilerLayer } from '@maptiler/leaflet-maptilersdk'
 
 // Import modules
 import { setCookie, getCookie, return_colors } from './utils'
@@ -17,53 +7,70 @@ import { pointToLayer, onEachFeature, updateVehicleFeatures } from './markers'
 import {
   layerGroups,
   shapesLayerGroups,
-  getShapesLayerGroupForRoute
+  getShapesLayerGroupForRoute,
+  enableClustering,
+  isClusteringEnabled
 } from './layer-groups'
 import {
   updateMarkers,
   refreshAllElfClasses,
   findTopElfTrains,
-  jumpToElfTrain
+  jumpToElfTrain,
+  currentMarkers
 } from './marker-manager'
 import { updateTable } from './table-manager'
-import { alerts } from './alerts'
-import { fetchAmtrakData } from './amtrak'
+import {
+  trackById,
+  untrack,
+  isTracking as isTrackingVehicleId,
+  getTrackedLabel,
+  updateTrackedOverlays,
+  hookZoom,
+  trackedId
+} from './tracking'
+// Alerts module is lazy-loaded when its table becomes visible
+// Amtrak helpers are lazy-loaded when the layer is enabled
 
-// Extend jQuery to include getJSON method with Promise support
-declare const $: {
-  getJSON: (
-    url: string,
-    callback?: (data: any) => void
-  ) => {
-    done: (callback: (data: any) => void) => any
-    fail: (
-      callback: (jqXHR: any, textStatus: string, errorThrown?: string) => void
-    ) => any
-  }
-}
+// Note: jQuery removed. Use fetch() for network requests.
 
 // Extend window to include moveMapToStop function and buildingMarkers
 declare global {
   interface Window {
     moveMapToStop: (lat: number, lng: number) => void
     buildingMarkers: L.GeoJSON | null
+    trackVehicleById: (id: string | number) => void
+    untrackVehicle: () => void
+    isTrackingVehicleId: (id: string | number) => boolean
+    toggleMapExpand: () => void
   }
 }
 
 var map = L.map('map', {
   doubleTouchDragZoom: true,
-  // @ts-expect-error - fullscreenControl is not a valid option
-  fullscreenControl: true,
   preferCanvas: true,
-  maxZoom: 50,
-
-  fullscreenControlOptions: {
-    position: 'topleft',
-    title: 'Fullscreen',
-    forcePseudoFullscreen: true
-    // fullscreenElement: true
-  }
+  maxZoom: 50
 }).setView([42.36565, -71.05236], 13)
+
+// Load double-touch drag/zoom enhancement only on touch devices to save bytes on desktop
+const isTouchDevice =
+  'ontouchstart' in window || (navigator as any).maxTouchPoints > 0
+if (isTouchDevice) {
+  Promise.all([
+    import('@petoc/leaflet-double-touch-drag-zoom'),
+    import(
+      '@petoc/leaflet-double-touch-drag-zoom/src/leaflet-double-touch-drag-zoom.css'
+    )
+  ]).catch(() => {})
+}
+
+// Track popup open state to avoid disrupting user interactions
+let popupOpen = false
+map.on('popupopen', () => {
+  popupOpen = true
+})
+map.on('popupclose', () => {
+  popupOpen = false
+})
 
 // map.on('enterFullscreen', function () {
 //   let elements = document.getElementsByClassName('leaflet-zoom-animated')
@@ -72,6 +79,8 @@ var map = L.map('map', {
 //     if (element.tagName === 'CANVAS') element.setAttribute('height', '100%')
 //   }
 // })
+
+// Tracking overlays: keep minimal halo only (no extra panes)
 
 const vehicles_url: string =
   process.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
@@ -83,6 +92,212 @@ let lastVehicleUpdate: number = 0
 let vehicleDataCache: any = null
 let adaptiveRefreshRate: number = 15
 let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
+let isMapExpanded = false
+let initialSSEStartTimer: number | null = null
+
+function updateTrackingStatusUI(): void {
+  const el = document.getElementById('tracking-status')
+  const stopBtn = document.getElementById(
+    'tracking-stop-btn'
+  ) as HTMLButtonElement | null
+  const note = document.getElementById(
+    'mode-conflict'
+  ) as HTMLSpanElement | null
+  const followGroup =
+    (document
+      .getElementById('follow-location')
+      ?.closest('.control-group') as HTMLElement) || null
+  if (!el) return
+  el.classList.remove('live-streaming', 'live-polling', 'live-connecting')
+  if (trackedId()) {
+    const label = getTrackedLabel()
+    el.textContent = label ? `Tracking: ${label}` : 'Tracking'
+    el.classList.add('live-streaming')
+    if (stopBtn) stopBtn.style.display = 'inline-flex'
+    // When tracking is on, warn if follow-location is also checked
+    const fl = document.getElementById(
+      'follow-location'
+    ) as HTMLInputElement | null
+    if (note) {
+      if (fl?.checked) {
+        note.textContent = 'Disabled Follow location while tracking a vehicle.'
+        note.style.display = 'inline'
+      } else if (!fl?.checked) {
+        // Clear note unless some other path set it
+        note.textContent = note.textContent?.includes('Disabled Follow')
+          ? ''
+          : note.textContent || ''
+        if (!note.textContent) note.style.display = 'none'
+      }
+    }
+    if (followGroup) followGroup.classList.remove('follow-active')
+  } else {
+    el.textContent = 'Off'
+    el.classList.add('live-polling')
+    if (stopBtn) stopBtn.style.display = 'none'
+    const fl = document.getElementById(
+      'follow-location'
+    ) as HTMLInputElement | null
+    const note = document.getElementById(
+      'mode-conflict'
+    ) as HTMLSpanElement | null
+    if (note && fl && !fl.checked) {
+      note.textContent = ''
+      note.style.display = 'none'
+    }
+    if (followGroup) {
+      if (fl?.checked) followGroup.classList.add('follow-active')
+      else followGroup.classList.remove('follow-active')
+    }
+  }
+}
+
+// SSE vehicle stream state
+let vehicleEventSource: EventSource | null = null
+let sseActive = false
+let sseReconnectTimer: number | null = null
+let sseBackoffMs = 1000 // start with 1s, max ~30s
+let sseImmediateMode = false // when true, apply SSE updates immediately
+let sseHeartbeatTimer: number | null = null
+let lastSSEActivityMs = 0
+
+function startSSEHeartbeatMonitor(): void {
+  if (sseHeartbeatTimer) return
+  // Check every 15s; if we haven't seen activity in 60s, force reconnect
+  sseHeartbeatTimer = window.setInterval(() => {
+    if (!sseActive) return
+    const now = Date.now()
+    if (lastSSEActivityMs && now - lastSSEActivityMs > 60000) {
+      // Consider the stream stale and reconnect
+      stopVehicleSSE()
+      startUpdateInterval()
+      scheduleSSEReconnect()
+    }
+  }, 15000)
+}
+
+function stopSSEHeartbeatMonitor(): void {
+  if (sseHeartbeatTimer) {
+    window.clearInterval(sseHeartbeatTimer)
+    sseHeartbeatTimer = null
+  }
+}
+
+function updateSSEStatusUI(
+  state: 'streaming' | 'polling' | 'connecting'
+): void {
+  const el = document.getElementById('sse-status')
+  if (!el) return
+  el.classList.remove('live-streaming', 'live-polling', 'live-connecting')
+  if (state === 'streaming') {
+    el.textContent = 'Streaming'
+    el.classList.add('live-streaming')
+  } else if (state === 'connecting') {
+    el.textContent = 'Connecting…'
+    el.classList.add('live-connecting')
+  } else {
+    el.textContent = 'Polling'
+    el.classList.add('live-polling')
+  }
+}
+
+function stopVehicleSSE(): void {
+  if (vehicleEventSource) {
+    vehicleEventSource.close()
+    vehicleEventSource = null
+  }
+  if (sseReconnectTimer) {
+    window.clearTimeout(sseReconnectTimer)
+    sseReconnectTimer = null
+  }
+  stopSSEHeartbeatMonitor()
+  sseActive = false
+  updateSSEStatusUI('polling')
+}
+
+function scheduleSSEReconnect(): void {
+  if (sseReconnectTimer) return
+  const delay = Math.min(sseBackoffMs, 30000)
+  sseReconnectTimer = window.setTimeout(() => {
+    sseReconnectTimer = null
+    startVehicleSSE()
+  }, delay)
+  sseBackoffMs *= 2
+}
+
+function startVehicleSSE(): boolean {
+  if (typeof EventSource === 'undefined') return false
+  if (vehicleEventSource) return true
+
+  try {
+    updateSSEStatusUI('connecting')
+    const url = `${vehicles_url}/vehicles/stream`
+    vehicleEventSource = new EventSource(url)
+
+    vehicleEventSource.onopen = () => {
+      sseActive = true
+      sseBackoffMs = 1000
+      // Determine if user wants immediate updates (refresh-rate = 0)
+      sseImmediateMode = isImmediateModeSelected()
+      lastSSEActivityMs = Date.now()
+      startSSEHeartbeatMonitor()
+      // If immediate mode, prefer push-only; otherwise keep interval for throttled UI updates
+      if (sseImmediateMode) {
+        stopUpdateInterval()
+      } else if (!intervalID && isTabVisible) {
+        startUpdateInterval()
+      }
+      updateSSEStatusUI('streaming')
+    }
+
+    // Common handler to process SSE JSON payloads
+    const handleSSEPayload = (raw: string) => {
+      if (!raw) return
+      lastSSEActivityMs = Date.now()
+      try {
+        const data = JSON.parse(raw)
+        // Always update cache timestamp
+        vehicleDataCache = data
+        lastVehicleUpdate = Date.now()
+        // Apply immediately only when in immediate mode; otherwise, let interval drive UI updates
+        if (sseImmediateMode) {
+          processVehicleData(data)
+        }
+      } catch (_e) {
+        // Ignore malformed payloads
+      }
+    }
+
+    // Default message events
+    vehicleEventSource.onmessage = (evt: MessageEvent) => {
+      handleSSEPayload(evt.data)
+    }
+
+    // Support named events commonly used by SSE backends
+    // e.g. "snapshot", "vehicles", etc.
+    vehicleEventSource.addEventListener('snapshot', (evt: MessageEvent) => {
+      handleSSEPayload((evt as MessageEvent).data)
+    })
+    vehicleEventSource.addEventListener('vehicles', (evt: MessageEvent) => {
+      handleSSEPayload((evt as MessageEvent).data)
+    })
+
+    vehicleEventSource.onerror = () => {
+      // Drop SSE and fall back to polling, then try to reconnect
+      stopVehicleSSE()
+      // Kick a one-off poll to avoid stale UI
+      annotate_map()
+      startUpdateInterval()
+      scheduleSSEReconnect()
+    }
+
+    return true
+  } catch (_e) {
+    // If EventSource failed to construct, use polling
+    stopVehicleSSE()
+    return false
+  }
+}
 
 // Elf emoji marker layer and helpers
 let elfEmojiLayer: L.LayerGroup | null = null
@@ -216,16 +431,46 @@ let mapInitialized = false
 
 document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
 
-if (process.env.NODE_ENV === 'production') {
-  new MaptilerLayer({
-    apiKey: process.env.MT_KEY || '',
-    style: 'streets-v2'
-  }).addTo(map)
+// Check if MapTiler key is available and use MapTiler if possible, otherwise fall back to OpenStreetMap
+const effectiveType = (navigator as any).connection?.effectiveType || ''
+const slowConnection = ['slow-2g', '2g', '3g'].includes(effectiveType)
+const hasMapTilerKey = process.env.MT_KEY && process.env.MT_KEY.trim() !== ''
+
+if (
+  hasMapTilerKey &&
+  process.env.NODE_ENV === 'production' &&
+  !slowConnection
+) {
+  // Use MapTiler when key is available
+  import('@maptiler/leaflet-maptilersdk')
+    .then(({ MaptilerLayer }) => {
+      new MaptilerLayer({
+        apiKey: process.env.MT_KEY || '',
+        style: 'streets-v2'
+      }).addTo(map)
+      // Fallback hide if tiles don't trigger load quickly
+      setTimeout(() => hideMapLoading(), 800)
+    })
+    .catch(() => {
+      // Fallback to OpenStreetMap if MapTiler fails to load
+      const raster = L.tileLayer(
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }
+      )
+      raster.on('load', hideMapLoading)
+      raster.addTo(map)
+    })
 } else {
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  // Use OpenStreetMap when no MapTiler key or on slow connections
+  const raster = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map)
+  })
+  raster.on('load', hideMapLoading)
+  raster.addTo(map)
 }
 
 // Loading overlay functions
@@ -259,6 +504,58 @@ window.moveMapToStop = (lat: number, lng: number): void => {
   map.setView([lat, lng], Math.max(map.getZoom(), 16))
 }
 
+// Vehicle tracking helpers exposed for popup actions
+window.trackVehicleById = (id: string | number): void => {
+  // If follow-location is enabled, disable it and inform user
+  const followEl = document.getElementById(
+    'follow-location'
+  ) as HTMLInputElement | null
+  if (followEl?.checked) {
+    toggleLocationWatch(false)
+    followEl.checked = false
+    setCookie('follow-location', 'false')
+    const note = document.getElementById(
+      'mode-conflict'
+    ) as HTMLSpanElement | null
+    if (note) {
+      note.textContent = 'Disabled Follow location while tracking a vehicle.'
+      note.style.display = 'inline'
+    }
+    const group = (followEl.closest('.control-group') as HTMLElement) || null
+    if (group) group.classList.remove('follow-active')
+  }
+  trackById(
+    id,
+    map,
+    () => ((vehicleDataCache && vehicleDataCache.features) || []) as any[],
+    () => updateTrackingStatusUI()
+  )
+}
+
+window.untrackVehicle = (): void => {
+  untrack(map, () => updateTrackingStatusUI())
+}
+
+window.isTrackingVehicleId = (id: string | number): boolean =>
+  isTrackingVehicleId(id)
+
+// Non-fullscreen expand toggle
+function setMapExpanded(expand: boolean): void {
+  const el = document.getElementById('map')
+  if (!el) return
+  isMapExpanded = expand
+  el.classList.toggle('map-expanded', expand)
+  map.invalidateSize()
+  // run again after transition for crisp tiles
+  window.setTimeout(() => map.invalidateSize(), 220)
+  // persist preference
+  setCookie('map-expanded', expand.toString())
+}
+
+window.toggleMapExpand = (): void => {
+  setMapExpanded(!isMapExpanded)
+}
+
 function annotate_map(): void {
   const now = Date.now()
 
@@ -267,32 +564,51 @@ function annotate_map(): void {
     showMapLoading()
   }
 
+  // If SSE is active, throttle UI updates by user-selected refresh rate
+  if (sseActive) {
+    // Defer shapes; Amtrak loads when layer enabled
+    // When not in immediate mode, apply latest cached SSE payload on the interval
+    if (!sseImmediateMode && vehicleDataCache) {
+      processVehicleData(vehicleDataCache)
+    }
+    return
+  }
+
   // Use cached data if recent enough
   if (vehicleDataCache && now - lastVehicleUpdate < CACHE_DURATION) {
     processVehicleData(vehicleDataCache)
     return
   }
 
-  $.getJSON(`${vehicles_url}/vehicles`)
-    .done(function (data: any) {
+  fetch(`${vehicles_url}/vehicles`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json()
+    })
+    .then((data: any) => {
       vehicleDataCache = data
       lastVehicleUpdate = now
       processVehicleData(data)
+
+      // Kick off SSE shortly after a successful initial poll
+      if (!sseActive && !vehicleEventSource && initialSSEStartTimer === null) {
+        const delay = Math.min(sseBackoffMs, 3000)
+        initialSSEStartTimer = window.setTimeout(() => {
+          initialSSEStartTimer = null
+          const ok = startVehicleSSE()
+          if (!ok) updateSSEStatusUI('polling')
+        }, delay)
+      }
     })
-    .fail(function (_jqXHR: any, textStatus: string, errorThrown: string) {
-      console.warn('Failed to fetch vehicle data:', textStatus, errorThrown)
+    .catch((e: any) => {
+      console.warn('Failed to fetch vehicle data:', e?.message || e)
       // Use cached data if available as fallback
       if (vehicleDataCache) {
-        console.log('Using cached vehicle data as fallback')
         processVehicleData(vehicleDataCache)
       }
     })
 
-  // Only load shapes once
-  loadShapesOnce()
-
-  // Fetch Amtrak data from BOS API (with error handling in fetchAmtrakData)
-  fetchAmtrakData(bos_url)
+  // Defer shapes; Amtrak loads when layer enabled
 }
 
 function processVehicleData(data: any): void {
@@ -301,7 +617,48 @@ function processVehicleData(data: any): void {
     updateVehicleFeatures(data.features || [])
 
     // Update vehicle markers efficiently
-    updateMarkers(data.features || [])
+    if (!popupOpen) {
+      updateMarkers(data.features || [])
+    }
+
+    // If many markers, enable clustering dynamically
+    try {
+      const markerCount = currentMarkers.size
+      const CLUSTER_THRESHOLD = 120
+      if (markerCount > CLUSTER_THRESHOLD && !isClusteringEnabled()) {
+        suppressOverlayEvents = true
+        enableClustering(map)
+          .then(() => rebuildOverlayControl())
+          .catch(() => {})
+          .finally(() => {
+            suppressOverlayEvents = false
+          })
+      }
+    } catch {}
+
+    // If tracking a vehicle, keep it in view
+    if (trackedId()) {
+      const id = trackedId() as string
+      const marker =
+        currentMarkers.get(String(id)) ||
+        (currentMarkers.get(id as unknown as number) as any)
+      if (marker) {
+        const latlng = marker.getLatLng()
+        // Only pan if marker is outside current bounds to reduce jitter
+        if (!map.getBounds().pad(-0.2).contains(latlng)) {
+          map.panTo(latlng)
+        }
+        // Find tracked feature for info display
+        let trackedFeature: any = null
+        try {
+          trackedFeature = (data.features || []).find(
+            (f: any) => String(f.id) === String(id)
+          )
+        } catch {}
+        updateTrackedOverlays(map, marker, trackedFeature)
+      }
+      updateTrackingStatusUI()
+    }
 
     // Handle building markers (static, so only create once if needed)
     if (!buildingMarkers) {
@@ -316,14 +673,15 @@ function processVehicleData(data: any): void {
       window.buildingMarkers = buildingMarkers
     }
 
-    console.log('Map loaded')
-
     // Hide loading overlay when map is ready
     if (mapLoading) {
       mapLoading = false
       mapInitialized = true
       hideMapLoading()
     }
+
+    // After first vehicle render, schedule shapes load during idle time
+    scheduleShapesLoad()
 
     // Use debounced table update
     debounceUpdateTable()
@@ -348,8 +706,12 @@ function loadShapesOnce(): void {
       group.clearLayers()
     })
 
-    $.getJSON(`${vehicles_url}/shapes`)
-      .done(function (data: any) {
+    fetch(`${vehicles_url}/shapes`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then((data: any) => {
         // Batch DOM operations
         map.eachLayer(() => {}) // Force layer update batching
 
@@ -387,19 +749,119 @@ function loadShapesOnce(): void {
           }
         })
       })
-      .fail(function (_jqXHR: any, textStatus: string) {
-        console.warn('Failed to load shapes data:', textStatus)
+      .catch((e: any) => {
+        console.warn('Failed to load shapes data:', e?.message || e)
         // Continue without shapes - vehicles will still work
       })
     baseLayerLoaded = true
   }
 }
 
+// Schedule shapes load after first paint or when browser is idle
+let shapesLoadScheduled = false
+function scheduleShapesLoad(): void {
+  if (baseLayerLoaded || shapesLoadScheduled) return
+  shapesLoadScheduled = true
+  const cb = () => {
+    try {
+      loadShapesOnce()
+    } catch (e) {
+      // If it fails, allow a retry on next call
+      shapesLoadScheduled = false
+    }
+  }
+  // Prefer idle callback; fallback to small timeout
+  if ((window as any).requestIdleCallback) {
+    ;(window as any).requestIdleCallback(cb, { timeout: 3000 })
+  } else {
+    window.setTimeout(cb, 1200)
+  }
+}
+
 annotate_map()
 
+// Defer SSE start; we'll kick it off after the first successful vehicles poll
+
+// Register service worker only in production (dev often runs http://localhost)
+if ('serviceWorker' in navigator) {
+  const isProd = process.env.NODE_ENV === 'production'
+  if (isProd) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/map/sw.js', { scope: '/map/' })
+        .catch((e) => console.warn('SW register failed:', e))
+    })
+  } else {
+    navigator.serviceWorker.getRegistrations?.().then((regs) => {
+      regs.forEach((r) => r.unregister().catch(() => {}))
+    })
+  }
+}
+
+// Lazy-load alerts (DataTables) when the alerts table becomes visible
+let alertsLoaded = false
+function setupAlertsLazyLoad(): void {
+  const table = document.getElementById('alerts')
+  if (!table) return
+  const load = async () => {
+    if (alertsLoaded) return
+    alertsLoaded = true
+    try {
+      const mod = await import('./alerts')
+      mod.alerts(vehicles_url)
+    } catch (e) {
+      console.warn('Failed to load alerts module:', e)
+      alertsLoaded = false
+    }
+  }
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries, obs) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        load()
+        obs.disconnect()
+      }
+    })
+    io.observe(table)
+  } else {
+    // Fallback: load after idle/timeout
+    if ((window as any).requestIdleCallback) {
+      ;(window as any).requestIdleCallback(load, { timeout: 3000 })
+    } else {
+      setTimeout(load, 2000)
+    }
+  }
+}
+
+setupAlertsLazyLoad()
+
+// Wire up tracking stop button
+const trackingStopBtn = document.getElementById('tracking-stop-btn')
+if (trackingStopBtn) {
+  trackingStopBtn.addEventListener('click', (e) => {
+    e.preventDefault()
+    window.untrackVehicle()
+  })
+}
+// Initialize tracking UI state on load
+updateTrackingStatusUI()
+
+function isImmediateModeSelected(): boolean {
+  const v = getCookie('refresh-rate')
+  if (!v) return false
+  const s = v.toString().toLowerCase()
+  return s === '0' || s === 'immediate' || s === 'live'
+}
 
 function getAdaptiveRefreshRate(): number {
   const savedRefreshRate = getCookie('refresh-rate')
+  // If immediate chosen, fall back to 1s for polling/non-SSE paths
+  if (
+    savedRefreshRate &&
+    (savedRefreshRate === '0' || savedRefreshRate.toLowerCase() === 'immediate')
+  ) {
+    CACHE_DURATION = 1000
+    return 1
+  }
   const userRefreshRate = savedRefreshRate ? parseInt(savedRefreshRate) : 15
   CACHE_DURATION = 5000
   return userRefreshRate
@@ -427,6 +889,28 @@ document.addEventListener('visibilitychange', () => {
   }
 })
 
+// Reconnect SSE promptly when network returns; fall back to polling while offline
+window.addEventListener('online', () => {
+  if (!sseActive) {
+    // Try to reconnect immediately when back online
+    scheduleSSEReconnect()
+  }
+})
+
+window.addEventListener('offline', () => {
+  if (sseActive) {
+    // Stop the stream and rely on polling until back online
+    stopVehicleSSE()
+    startUpdateInterval()
+  }
+})
+
+// Recompute halo/pulse sizes and alignment when zoom changes
+hookZoom(
+  map,
+  () => ((vehicleDataCache && vehicleDataCache.features) || []) as any[]
+)
+
 function startUpdateInterval(): void {
   if (intervalID) return
   const currentRefreshRate = getAdaptiveRefreshRate()
@@ -443,41 +927,103 @@ function stopUpdateInterval(): void {
 // Start initial interval
 startUpdateInterval()
 
-// Set the refresh rate input to the saved value
-const refreshRateElement = document.getElementById(
-  'refresh-rate'
-) as HTMLInputElement
+// Set up the refresh rate control, add "Immediate" if missing
+const refreshRateElement = document.getElementById('refresh-rate') as
+  | HTMLInputElement
+  | HTMLSelectElement
+  | null
 if (refreshRateElement) {
-  refreshRateElement.value = defaultRefreshRate.toString()
+  // If it's a <select>, ensure an Immediate (0) option exists
+  if (refreshRateElement.tagName === 'SELECT') {
+    const sel = refreshRateElement as HTMLSelectElement
+    const hasImmediate = Array.from(sel.options).some((o) => o.value === '0')
+    if (!hasImmediate) {
+      const opt = document.createElement('option')
+      opt.value = '0'
+      opt.text = 'Immediate'
+      // Put as first option for visibility
+      sel.add(opt, 0)
+    }
+  }
+  ;(refreshRateElement as HTMLInputElement).value =
+    defaultRefreshRate.toString()
 }
 
-L.easyButton({
-  position: 'topright',
-  states: [
-    {
-      stateName: 'refresh',
-      title: 'Refresh',
-      onClick: (_btn, _map) => {
-        annotate_map()
-      },
-      icon: "<span class='refresh'>&olarr;</span>"
-    }
-  ]
-}).addTo(map)
+;(async () => {
+  try {
+    await import('leaflet-easybutton')
+  } catch {}
 
-L.easyButton({
-  position: 'topright',
-  states: [
-    {
-      stateName: 'locate',
-      title: 'Locate',
-      onClick: (_btn, map) => {
-        map.locate({ setView: true })
-      },
-      icon: "<span class='odot'>&odot;</span>"
-    }
-  ]
-}).addTo(map)
+  // Refresh button
+  ;(L as any)
+    .easyButton({
+      position: 'topright',
+      states: [
+        {
+          stateName: 'refresh',
+          title: 'Refresh',
+          onClick: (_btn: any, _map: any) => {
+            annotate_map()
+          },
+          icon: "<span class='refresh'>&olarr;</span>"
+        }
+      ]
+    })
+    .addTo(map)
+
+  // Locate button
+  ;(L as any)
+    .easyButton({
+      position: 'topright',
+      states: [
+        {
+          stateName: 'locate',
+          title: 'Locate',
+          onClick: (_btn: any, mapRef: L.Map) => {
+            mapRef.locate({ setView: true })
+          },
+          icon: "<span class='odot'>&odot;</span>"
+        }
+      ]
+    })
+    .addTo(map)
+
+  // Add a compact expand toggle (not full-screen)
+  ;(L as any)
+    .easyButton({
+      position: 'topright',
+      states: [
+        {
+          stateName: 'expand-off',
+          title: 'Expand map',
+          onClick: (btn: any) => {
+            setMapExpanded(true)
+            btn.state('expand-on')
+          },
+          icon: "<span class='expand' style='font-weight:600'>&#x21F2;</span>"
+        },
+        {
+          stateName: 'expand-on',
+          title: 'Shrink map',
+          onClick: (btn: any) => {
+            setMapExpanded(false)
+            btn.state('expand-off')
+          },
+          icon: "<span class='expand' style='font-weight:600'>&#x21F3;</span>"
+        }
+      ]
+    })
+    .addTo(map)
+
+  // Initialize expanded state from cookie
+  const savedMapExpanded = getCookie('map-expanded')
+  if (
+    savedMapExpanded &&
+    savedMapExpanded.toString().toLowerCase() === 'true'
+  ) {
+    setMapExpanded(true)
+  }
+})()
 
 // Variables to store the user location circle and watch state
 let userLocationCircle: L.Circle | null = null
@@ -509,21 +1055,7 @@ map.on('locationerror', (e: L.ErrorEvent) => {
   console.warn('Location access denied or unavailable:', e.message)
 })
 
-const overlayMaps = {
-  '🟥 Red Line': layerGroups.red,
-  '🟦 Blue Line': layerGroups.blue,
-  '🟩 Green Line': layerGroups.green,
-  '🟧 Orange Line': layerGroups.orange,
-  '🚍 Silver Line': layerGroups.silver,
-  '🟪 Commuter Rail': layerGroups.commuter,
-  '🚄 Amtrak': layerGroups.amtrak,
-  '🔴 Red Line Routes': shapesLayerGroups.red,
-  '🔵 Blue Line Routes': shapesLayerGroups.blue,
-  '🟢 Green Line Routes': shapesLayerGroups.green,
-  '🟠 Orange Line Routes': shapesLayerGroups.orange,
-  '🚏 Silver Line Routes': shapesLayerGroups.silver,
-  '🟣 Commuter Rail Routes': shapesLayerGroups.commuter
-}
+// overlayMaps is built in rebuildOverlayControl()
 
 // Load saved layer visibility settings from cookies
 const savedLayerStates = getCookie('layer-visibility')
@@ -544,6 +1076,10 @@ Object.entries(layerGroups).forEach(([key, group]) => {
     // Amtrak layer is off by default
     if (layerStates[vehicleLayerKey] === true) {
       group.addTo(map)
+      // If Amtrak is visible on load, fetch once
+      import('./amtrak')
+        .then((mod) => mod.fetchAmtrakData(bos_url))
+        .catch(() => {})
     }
   } else {
     // All other layers are on by default
@@ -553,22 +1089,54 @@ Object.entries(layerGroups).forEach(([key, group]) => {
   }
 })
 
+let anyShapesOn = false
 Object.entries(shapesLayerGroups).forEach(([key, group]) => {
   const routeLayerKey = `routes-${key}`
+  // Default ON unless explicitly disabled by saved state (original behavior)
   if (layerStates[routeLayerKey] !== false) {
     group.addTo(map)
+    anyShapesOn = true
   }
 })
+// If any shapes layers are on at load, schedule shapes data load
+if (anyShapesOn) {
+  scheduleShapesLoad()
+}
 
-L.control
-  .layers({}, overlayMaps, {
+let overlayControl: L.Control.Layers | null = null
+let suppressOverlayEvents = false
+function rebuildOverlayControl() {
+  if (overlayControl) {
+    map.removeControl(overlayControl)
+    overlayControl = null
+  }
+  const overlayMaps = {
+    '🟥 Red Line': layerGroups.red,
+    '🟦 Blue Line': layerGroups.blue,
+    '🟩 Green Line': layerGroups.green,
+    '🟧 Orange Line': layerGroups.orange,
+    '🚍 Silver Line': layerGroups.silver,
+    '🟪 Commuter Rail': layerGroups.commuter,
+    '🚄 Amtrak': layerGroups.amtrak,
+    '🔴 Red Line Routes': shapesLayerGroups.red,
+    '🔵 Blue Line Routes': shapesLayerGroups.blue,
+    '🟢 Green Line Routes': shapesLayerGroups.green,
+    '🟠 Orange Line Routes': shapesLayerGroups.orange,
+    '🚏 Silver Line Routes': shapesLayerGroups.silver,
+    '🟣 Commuter Rail Routes': shapesLayerGroups.commuter
+  }
+  overlayControl = L.control.layers({}, overlayMaps, {
     position: 'topright',
     collapsed: true
   })
-  .addTo(map)
+  overlayControl.addTo(map)
+}
+
+rebuildOverlayControl()
 
 // Save layer visibility when layers are toggled
 map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
+  if (suppressOverlayEvents) return
   const layerName = (e as any).name
   const isVisible = e.type === 'overlayadd'
 
@@ -594,26 +1162,49 @@ map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
     layerStates[layerKey] = isVisible
     setCookie('layer-visibility', JSON.stringify(layerStates))
   }
+
+  // Lazy-load Amtrak data when layer is enabled
+  if (layerName === '🚄 Amtrak' && isVisible) {
+    import('./amtrak')
+      .then((mod) => mod.fetchAmtrakData(bos_url))
+      .catch((e) => console.warn('Failed to load Amtrak module:', e))
+  }
+  // Ensure shapes data is loaded when any routes overlay is enabled
+  if (isVisible && /Routes$/.test(layerName)) {
+    scheduleShapesLoad()
+  }
 })
 
-document
-  .getElementById('refresh-rate')!
-  .addEventListener('change', (event: Event) => {
-    stopUpdateInterval()
-    const target = event.target as HTMLInputElement
-    const newVal = parseInt(target.value)
-    if (newVal) {
-      // Clear cache when refresh rate changes
-      vehicleDataCache = null
-      lastVehicleUpdate = 0
-      adaptiveRefreshRate = Math.max(newVal, getAdaptiveRefreshRate())
+if (refreshRateElement) {
+  refreshRateElement.addEventListener('change', (event: Event) => {
+    const target = event.target as HTMLInputElement | HTMLSelectElement
+    const raw = target.value.trim()
+    const parsed = parseInt(raw)
 
-      if (isTabVisible) {
+    // Save selection (allow 0 for Immediate)
+    setCookie('refresh-rate', raw)
+
+    // Clear cache when refresh rate changes to force an update cycle
+    vehicleDataCache = null
+    lastVehicleUpdate = 0
+
+    // Update immediate mode if SSE is active
+    sseImmediateMode = isImmediateModeSelected()
+
+    // Reset polling interval appropriately
+    stopUpdateInterval()
+    if (sseActive) {
+      if (!sseImmediateMode && isTabVisible) {
         startUpdateInterval()
       }
-      setCookie('refresh-rate', newVal.toString())
+      // In immediate mode, SSE onmessage will push updates directly
+    } else {
+      // Polling path: use at least 1s when Immediate is selected
+      adaptiveRefreshRate = parsed > 0 ? parsed : getAdaptiveRefreshRate()
+      if (isTabVisible) startUpdateInterval()
     }
   })
+}
 
 // Function to start/stop location watching
 function toggleLocationWatch(enabled: boolean): void {
@@ -670,8 +1261,32 @@ document
   .getElementById('follow-location')!
   .addEventListener('change', (event: Event) => {
     const target = event.target as HTMLInputElement
-    toggleLocationWatch(target.checked)
-    setCookie('follow-location', target.checked.toString())
+    const note = document.getElementById(
+      'mode-conflict'
+    ) as HTMLSpanElement | null
+    if (target.checked) {
+      // If user turns on follow location while tracking, stop tracking and inform
+      if (trackedId()) {
+        untrack(map, () => updateTrackingStatusUI())
+        if (note) {
+          note.textContent = 'Stopped tracking to follow your location.'
+          note.style.display = 'inline'
+        }
+      }
+      toggleLocationWatch(true)
+      setCookie('follow-location', 'true')
+      const group = (target.closest('.control-group') as HTMLElement) || null
+      if (group) group.classList.add('follow-active')
+    } else {
+      toggleLocationWatch(false)
+      setCookie('follow-location', 'false')
+      if (note) {
+        note.textContent = ''
+        note.style.display = 'none'
+      }
+      const group = (target.closest('.control-group') as HTMLElement) || null
+      if (group) group.classList.remove('follow-active')
+    }
   })
 
 // Load saved elf mode setting from cookie
@@ -731,45 +1346,47 @@ function ensureElfEmojiStyles(): void {
 }
 
 // Handle elf search functionality
-document.getElementById('elf-search-btn')!.addEventListener('click', () => {
-  if (!vehicleDataCache || !vehicleDataCache.features) {
-    console.warn('No vehicle data available for elf search')
-    return
-  }
+document
+  .getElementById('elf-search-btn')!
+  .addEventListener('click', async () => {
+    if (!vehicleDataCache || !vehicleDataCache.features) {
+      console.warn('No vehicle data available for elf search')
+      return
+    }
 
-  const resultsDiv = document.getElementById('elf-search-results')!
-  const resultsList = document.getElementById('elf-results-list')!
+    const resultsDiv = document.getElementById('elf-search-results')!
+    const resultsList = document.getElementById('elf-results-list')!
 
-  // Show results panel
-  resultsDiv.style.display = 'block'
+    // Show results panel
+    resultsDiv.style.display = 'block'
 
-  // Find top elf trains
-  const topElves = findTopElfTrains(vehicleDataCache.features)
+    // Find top elf trains (lazy-load elf scoring)
+    const topElves = await findTopElfTrains(vehicleDataCache.features)
 
-  // Clear previous results
-  resultsList.innerHTML = ''
+    // Clear previous results
+    resultsList.innerHTML = ''
 
-  if (topElves.length === 0) {
-    resultsList.innerHTML =
-      '<div style="padding: 15px; text-align: center; color: #666;">No trains found with elf energy! 🥺</div>'
-    return
-  }
+    if (topElves.length === 0) {
+      resultsList.innerHTML =
+        '<div style="padding: 15px; text-align: center; color: #666;">No trains found with elf energy! 🥺</div>'
+      return
+    }
 
-  // Populate results
-  topElves.forEach((result, index) => {
-    const item = document.createElement('div')
-    item.className = 'elf-result-item'
+    // Populate results
+    topElves.forEach((result, index) => {
+      const item = document.createElement('div')
+      item.className = 'elf-result-item'
 
-    const route = result.feature.properties.route || 'Unknown'
-    const headsign =
-      result.feature.properties.headsign ||
-      result.feature.properties.stop ||
-      'Unknown destination'
-    const stop = result.feature.properties.stop || 'Unknown stop'
-    const scoreLevel = result.elfScore.level.toLowerCase()
-    const scorePercentage = Math.round(result.elfScore.score)
+      const route = result.feature.properties.route || 'Unknown'
+      const headsign =
+        result.feature.properties.headsign ||
+        result.feature.properties.stop ||
+        'Unknown destination'
+      const stop = result.feature.properties.stop || 'Unknown stop'
+      const scoreLevel = result.elfScore.level.toLowerCase()
+      const scorePercentage = Math.round(result.elfScore.score)
 
-    item.innerHTML = `
+      item.innerHTML = `
         <div class="elf-result-info">
           <div class="elf-result-route">${index + 1}. ${route} to ${headsign}</div>
           <div class="elf-result-details">Stop: ${stop}</div>
@@ -781,23 +1398,21 @@ document.getElementById('elf-search-btn')!.addEventListener('click', () => {
         </div>
       `
 
-    // Add click handler to jump to train
-    item.addEventListener('click', () => {
-      jumpToElfTrain(result, map)
-      // Hide search results after selection
-      resultsDiv.style.display = 'none'
-      // Scroll back to map element
-      document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
-    })
+      // Add click handler to jump to train
+      item.addEventListener('click', () => {
+        jumpToElfTrain(result, map)
+        // Hide search results after selection
+        resultsDiv.style.display = 'none'
+        // Scroll back to map element
+        document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
+      })
 
-    resultsList.appendChild(item)
+      resultsList.appendChild(item)
+    })
   })
-})
 
 // Handle elf search close button
 document.getElementById('elf-search-close')!.addEventListener('click', () => {
   const resultsDiv = document.getElementById('elf-search-results')!
   resultsDiv.style.display = 'none'
 })
-
-alerts(vehicles_url)

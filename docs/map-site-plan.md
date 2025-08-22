@@ -632,7 +632,7 @@ WORKDIR /app
 
 # Install deps
 COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable && pnpm install --frozen-lockfile
+RUN corepack prepare pnpm@10.15.0 --activate && pnpm install --frozen-lockfile
 
 # Build (requires next.config.ts with output: 'standalone')
 COPY . .

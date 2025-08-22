@@ -35,13 +35,16 @@ jobs:
       #   with:
       #     path: ryanwallace.cloud/
       #     key: ryanwallace-cloud-preview-${{ github.event.number }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24"
-          cache: "yarn"
-          cache-dependency-path: "ryanwallace.cloud/map/yarn.lock"
+          cache: "pnpm"
+          cache-dependency-path: "ryanwallace.cloud/map/pnpm-lock.yaml"
 
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f # v3
@@ -51,11 +54,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: ryanwallace.cloud/map
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile=false
 
       - name: Build map assets
         working-directory: ryanwallace.cloud/map
-        run: yarn clean && yarn build && yarn move && yarn title
+        run: pnpm clean && pnpm build && pnpm move && pnpm title
         env:
           MT_KEY: ${{ secrets.MT_KEY }}
           NODE_ENV: development

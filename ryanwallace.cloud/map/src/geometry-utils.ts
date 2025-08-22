@@ -1,9 +1,12 @@
 import * as L from 'leaflet'
-import * as turf from '@turf/turf'
+import along from '@turf/along'
+import nearestPointOnLine from '@turf/nearest-point-on-line'
+import length from '@turf/length'
+import distance from '@turf/distance'
+import { point, lineString } from '@turf/helpers'
 
 const MAX_SNAP_DISTANCE = 100 // meters - maximum distance to snap vehicles to route
 const COMMUTER_RAIL_TRAIN_LENGTH = 200 // meters - approximate length of 6-8 car CR train
-
 
 function filterShapesByDirection(
   shapes: L.Polyline[],
@@ -52,21 +55,41 @@ function offsetPositionAlongRoute(
     let minDistanceToShape = Infinity
 
     for (const shape of routeShapes) {
-      const coordinates = shape.getLatLngs() as L.LatLng[]
-      if (coordinates.length < 2) continue
+      let coordinates = shape.getLatLngs()
+      // Handle nested arrays (MultiPolyline case)
+      if (coordinates.length > 0 && Array.isArray(coordinates[0])) {
+        coordinates = (coordinates as L.LatLng[][]).flat()
+      }
 
-      // Check distance to this shape
-      const shapePoint = turf.point([snappedPoint.lng, snappedPoint.lat])
-      const lineCoordinates = coordinates.map((coord) => [coord.lng, coord.lat])
-      const line = turf.lineString(lineCoordinates)
-      const nearestPoint = turf.nearestPointOnLine(line, shapePoint)
-      const distance = turf.distance(shapePoint, nearestPoint, {
-        units: 'meters'
-      })
+      const coordArray = coordinates as L.LatLng[]
+      if (coordArray.length < 2) continue
 
-      if (distance < minDistanceToShape) {
-        minDistanceToShape = distance
-        bestShape = shape
+      // Validate coordinates
+      const validCoordinates = coordArray.filter(isValidCoordinate)
+      if (validCoordinates.length < 2) continue
+
+      const lineCoordinates = validCoordinates
+        .map((coord) => [coord.lng, coord.lat])
+        .filter(([lng, lat]) => isValidLatLng(lat, lng))
+
+      if (lineCoordinates.length < 2) continue
+
+      try {
+        // Build a simple line for distance comparison
+        const line = lineString(lineCoordinates)
+        const shapePoint = point([snappedPoint.lng, snappedPoint.lat])
+        const nearestPoint = nearestPointOnLine(line, shapePoint)
+        const distanceToShape = distance(shapePoint, nearestPoint, {
+          units: 'meters'
+        })
+
+        if (distanceToShape < minDistanceToShape) {
+          minDistanceToShape = distanceToShape
+          bestShape = shape
+        }
+      } catch (e) {
+        // Skip shapes with invalid geometry
+        continue
       }
     }
 
@@ -74,17 +97,31 @@ function offsetPositionAlongRoute(
       return snappedPoint
     }
 
-    const coordinates = bestShape.getLatLngs() as L.LatLng[]
-    const lineCoordinates = coordinates.map((coord) => [coord.lng, coord.lat])
-    const line = turf.lineString(lineCoordinates)
+    let coordinates = bestShape.getLatLngs()
+    if (coordinates.length > 0 && Array.isArray(coordinates[0])) {
+      coordinates = (coordinates as L.LatLng[][]).flat()
+    }
+    const coordArray = coordinates as L.LatLng[]
+    const validCoordinates = coordArray.filter(isValidCoordinate)
+    const lineCoordinates = validCoordinates
+      .map((coord) => [coord.lng, coord.lat])
+      .filter(([lng, lat]) => isValidLatLng(lat, lng))
+
+    if (!Array.isArray(lineCoordinates) || lineCoordinates.length < 2) {
+      return snappedPoint
+    }
+
+    const line = lineString(lineCoordinates)
 
     // Get the line length and current position along the line
-    const lineLength = turf.length(line, { units: 'meters' })
-    const shapePoint = turf.point([snappedPoint.lng, snappedPoint.lat])
-    const nearestPoint = turf.nearestPointOnLine(line, shapePoint)
+    const lineLength = length(line, { units: 'meters' })
+    const shapePoint = point([snappedPoint.lng, snappedPoint.lat])
+    const nearestPoint = nearestPointOnLine(line, shapePoint)
 
     // Calculate the distance along the line to the current position
-    const distanceAlongLine = nearestPoint.properties.location * lineLength
+    const location = Number(nearestPoint.properties.location)
+    const distanceAlongLine =
+      isFinite(location) && !isNaN(location) ? location * lineLength : 0
 
     // Calculate new position based on direction
     let newDistanceAlongLine: number
@@ -100,7 +137,7 @@ function offsetPositionAlongRoute(
     }
 
     // Get the new point along the line
-    const newPoint = turf.along(line, newDistanceAlongLine / 1000, {
+    const newPoint = along(line, newDistanceAlongLine / 1000, {
       units: 'kilometers'
     })
     return L.latLng(
@@ -187,7 +224,7 @@ function snapVehicleToRouteInternal(
     return vehicleLatLng
   }
 
-  const vehiclePoint = turf.point([vehicleLatLng.lng, vehicleLatLng.lat])
+  const vehiclePoint = point([vehicleLatLng.lng, vehicleLatLng.lat])
   let closestPoint = vehicleLatLng
   let minDistance = Infinity
 
@@ -258,12 +295,12 @@ function snapVehicleToRouteInternal(
         continue
       }
 
-      const line = turf.lineString(finalCoords)
-      const snapped = turf.nearestPointOnLine(line, vehiclePoint)
-      const distance = turf.distance(vehiclePoint, snapped, { units: 'meters' })
+      const line = lineString(finalCoords)
+      const snapped = nearestPointOnLine(line, vehiclePoint)
+      const dist = distance(vehiclePoint, snapped, { units: 'meters' })
 
-      if (distance < minDistance) {
-        minDistance = distance
+      if (dist < minDistance) {
+        minDistance = dist
         const [lng, lat] = snapped.geometry.coordinates
         if (isValidLatLng(lat, lng)) {
           closestPoint = L.latLng(lat, lng)

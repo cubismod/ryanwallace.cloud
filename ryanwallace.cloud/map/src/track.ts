@@ -1,6 +1,7 @@
-import DataTable from 'datatables.net-dt'
+// Defer DataTables to reduce initial chunk size on /map/track
 import DOMPurify from 'dompurify'
-import moment from 'moment-timezone'
+import { addHours } from 'date-fns'
+import { toZonedTime, formatInTimeZone } from 'date-fns-tz'
 import levenshtein from 'string-comparison'
 
 // Type definitions
@@ -179,7 +180,7 @@ interface ChainedPredictionsResponse {
 
 interface PredictionRow {
   station: string
-  time: moment.Moment
+  time: Date
   destination: string
   track: string
   confidence: number
@@ -193,11 +194,11 @@ interface PredictionStats {
   fetchDuration: number
 }
 
-declare global {
-  interface Window {
-    $: typeof import('jquery')
-  }
-}
+// DataTable instance for progressive updates
+let predictionsTable: any | null = null
+let DataTableCtor: any | null = null
+
+// jQuery typings removed; using fetch and vanilla APIs.
 
 document
   .getElementById('predictions-container')
@@ -260,7 +261,6 @@ function getStopName(stopId: string): string {
 
 function formatDestination(headsign: string, routeId: string): string {
   const similarity = levenshtein.levenshtein.similarity(headsign, routeId)
-  console.log(similarity)
   if (similarity < 0.5) {
     return `<span class="route-badge">${headsign} via ${routeId}</span>`
   }
@@ -288,42 +288,45 @@ function formatRoute(routeId: string): string {
   return `${routeId.replace('CR-', '').trim()} Line`
 }
 
-function formatTime(date: moment.Moment): string {
-  return `<span class="departure-time">${date.format('HH:mm')}</span>`
+function formatTime(date: Date): string {
+  const tz = 'America/New_York'
+  return `<span class="departure-time">${formatInTimeZone(date, tz, 'HH:mm')}</span>`
 }
 
 async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
   const stopIds = STOP_IDS.join(',')
   const url = `${MBTA_API_BASE}/predictions?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time`
-
-  return new Promise((resolve, reject) => {
-    $.getJSON(url, (data: MBTAResponse) => {
-      resolve(data.data)
-    }).fail((error: any) => {
-      console.error('Error fetching MBTA predictions:', error)
-      reject(error)
-    })
-  })
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data: MBTAResponse = await res.json()
+    return data.data
+  } catch (e) {
+    console.error('Error fetching MBTA predictions:', e)
+    throw e
+  }
 }
 
 async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   const stopIds = STOP_IDS.join(',')
-  const minTime = moment().tz('America/New_York')
+  const tz = 'America/New_York'
+  const minTime = toZonedTime(new Date(), tz)
   let timeFilter = ''
-  if (minTime.hour() > 2) {
-    const maxTime = moment().tz('America/New_York').add(2, 'hour')
-    timeFilter = `&filter[min_time]=${minTime.format('HH:mm')}&filter[max_time]=${maxTime.format('HH:mm')}`
+  if (minTime.getHours() > 2) {
+    const maxTime = addHours(minTime, 2)
+    timeFilter = `&filter[min_time]=${formatInTimeZone(minTime, tz, 'HH:mm')}&filter[max_time]=${formatInTimeZone(maxTime, tz, 'HH:mm')}`
   }
   const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&page[limit]=75&filter[route_type]=2&sort=departure_time${timeFilter}`
 
-  return new Promise((resolve, reject) => {
-    $.getJSON(url, (data: MBTAScheduleResponse) => {
-      resolve(data.data)
-    }).fail((error: any) => {
-      console.error('Error fetching MBTA schedules:', error)
-      reject(error)
-    })
-  })
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data: MBTAScheduleResponse = await res.json()
+    return data.data
+  } catch (e) {
+    console.error('Error fetching MBTA schedules:', e)
+    throw e
+  }
 }
 
 async function fetchChainedTrackPredictions(
@@ -332,21 +335,19 @@ async function fetchChainedTrackPredictions(
   const url = `${TRACK_PREDICTION_API}/chained-predictions`
   const requestBody: ChainedPredictionsRequest = { predictions: requests }
 
-  return new Promise((resolve, reject) => {
-    $.ajax({
-      url: url,
+  try {
+    const res = await fetch(url, {
       method: 'POST',
-      contentType: 'application/json',
-      data: JSON.stringify(requestBody),
-      success: (data: ChainedPredictionsResponse) => {
-        resolve(data.results)
-      },
-      error: (error: any) => {
-        console.error('Error fetching chained track predictions:', error)
-        reject(error)
-      }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
     })
-  })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data: ChainedPredictionsResponse = await res.json()
+    return data.results
+  } catch (e) {
+    console.error('Error fetching chained track predictions:', e)
+    throw e
+  }
 }
 
 function restructureData(
@@ -372,8 +373,8 @@ function restructureData(
       prediction.attributes.departure_time || prediction.attributes.arrival_time
     if (!departureTime) continue
 
-    const depDate = moment(departureTime).tz('America/New_York')
-    if (depDate.isBefore(moment().tz('America/New_York'))) continue
+    const depDate = new Date(departureTime)
+    if (depDate.getTime() < Date.now()) continue
 
     const stopId = fullStationName(prediction.relationships.stop.data.id)
     const routeId = prediction.relationships.route.data.id
@@ -414,8 +415,8 @@ function restructureData(
       schedule.attributes.departure_time || schedule.attributes.arrival_time
     if (!departureTime) continue
 
-    const depDate = moment(departureTime)
-    if (depDate.isBefore(moment().tz('America/New_York'))) continue
+    const depDate = new Date(departureTime)
+    if (depDate.getTime() < Date.now()) continue
 
     const stopId = fullStationName(schedule.relationships.stop.data.id)
     const routeId = schedule.relationships.route.data.id
@@ -450,7 +451,7 @@ function restructureData(
     }
   }
 
-  return rows.sort((a, b) => a.time.diff(b.time))
+  return rows.sort((a, b) => a.time.getTime() - b.time.getTime())
 }
 
 function showLoading(): void {
@@ -482,7 +483,8 @@ function hideLoading(): void {
   }
 }
 
-function updateTable(rows: PredictionRow[]): void {
+async function updateTable(rows: PredictionRow[]): Promise<void> {
+  // Hide spinner on first render
   hideLoading()
 
   const tableData = rows.map((row) => [
@@ -494,24 +496,72 @@ function updateTable(rows: PredictionRow[]): void {
     row.realtime ? 'Yes' : 'No'
   ])
 
-  new DataTable('#predictions-table', {
-    data: tableData,
-    columns: [
-      { title: 'Time', type: 'date', width: '5%' },
-      { title: 'Track', width: '5%' },
-      { title: 'Station', width: '10%' },
-      { title: 'Score', width: '5%' },
-      { title: 'Destination', width: '10%' },
-      { title: 'Live', width: '5%' }
-    ],
-    order: [[3, 'asc']], // Sort by departure time
-    pageLength: 25,
-    searching: false,
-    autoWidth: true,
-    ordering: false,
-    info: true,
-    lengthChange: false
-  })
+  if (!predictionsTable) {
+    if (!DataTableCtor) {
+      const mod = await import('datatables.net')
+      DataTableCtor = (mod as any).default || (mod as any)
+    }
+    predictionsTable = new DataTableCtor('#predictions-table', {
+      data: tableData,
+      columns: [
+        { title: 'Time', type: 'date', width: '5%' },
+        { title: 'Track', width: '5%' },
+        { title: 'Station', width: '10%' },
+        { title: 'Score', width: '5%' },
+        { title: 'Destination', width: '10%' },
+        { title: 'Live', width: '5%' }
+      ],
+      order: [[3, 'asc']], // Sort by departure time
+      pageLength: 25,
+      searching: false,
+      autoWidth: true,
+      ordering: false,
+      info: true,
+      lengthChange: false
+    })
+    return
+  }
+
+  if (predictionsTable && typeof predictionsTable.clear === 'function') {
+    // Progressive update without reinitializing the table
+    predictionsTable.clear()
+    if (
+      predictionsTable.rows &&
+      typeof predictionsTable.rows.add === 'function'
+    ) {
+      predictionsTable.rows.add(tableData)
+    } else if (typeof predictionsTable.rows === 'function') {
+      // Some builds expose rows() as a function
+      predictionsTable.rows().add(tableData)
+    }
+    if (typeof predictionsTable.draw === 'function') {
+      predictionsTable.draw(false)
+    }
+  } else {
+    // Fallback: reinitialize
+    if (!DataTableCtor) {
+      const mod = await import('datatables.net')
+      DataTableCtor = (mod as any).default || (mod as any)
+    }
+    predictionsTable = new DataTableCtor('#predictions-table', {
+      data: tableData,
+      columns: [
+        { title: 'Time', type: 'date', width: '5%' },
+        { title: 'Track', width: '5%' },
+        { title: 'Station', width: '10%' },
+        { title: 'Score', width: '5%' },
+        { title: 'Destination', width: '10%' },
+        { title: 'Live', width: '5%' }
+      ],
+      order: [[3, 'asc']],
+      pageLength: 25,
+      searching: false,
+      autoWidth: true,
+      ordering: false,
+      info: true,
+      lengthChange: false
+    })
+  }
 }
 
 function updateStats(stats: PredictionStats): void {
@@ -552,7 +602,7 @@ async function refreshPredictions(): Promise<void> {
   try {
     const startTime = performance.now()
     showLoading()
-    console.log('Fetching predictions...')
+
     const mbtaPredictions = await fetchMBTAPredictions()
     const mbtaSchedules = await fetchMBTASchedules()
 
@@ -598,37 +648,60 @@ async function refreshPredictions(): Promise<void> {
 
     const predictionRequests = Array.from(predictionRequestsMap.values())
 
-    // Fetch all track predictions in a single batch request
-    const trackPredictionResponses =
-      await fetchChainedTrackPredictions(predictionRequests)
-    const trackPredictions: TrackPrediction[] = trackPredictionResponses
-      .filter((response) => response.success)
-      .map((response) => response.prediction)
-
-    const endTime = performance.now()
-    const fetchDuration = endTime - startTime
-
-    const rows = restructureData(
-      mbtaPredictions,
-      mbtaSchedules,
-      trackPredictions
-    )
-
-    // Calculate stats based on actual displayed predictions
-    const displayedPredictions = rows.length
-    const totalRequests = predictionRequests.length
-    const stats: PredictionStats = {
-      generated: displayedPredictions,
-      notGenerated: totalRequests - displayedPredictions,
-      total: totalRequests,
-      fetchDuration: fetchDuration
+    // Progressive loading: split into batches and fetch with limited concurrency
+    const BATCH_SIZE = 10
+    const CONCURRENCY = 3
+    const batches: PredictionRequest[][] = []
+    for (let i = 0; i < predictionRequests.length; i += BATCH_SIZE) {
+      batches.push(predictionRequests.slice(i, i + BATCH_SIZE))
     }
-    updateTable(rows)
-    updateStats(stats)
-    console.log(`Updated table with ${rows.length} predictions and schedules`)
-    console.log(
-      `Stats: ${stats.generated} generated, ${stats.notGenerated} not generated, ${stats.total} total`
-    )
+
+    // Show totals immediately
+    updateStats({
+      generated: 0,
+      notGenerated: predictionRequests.length,
+      total: predictionRequests.length,
+      fetchDuration: 0
+    })
+
+    if (predictionRequests.length === 0) {
+      updateTable([])
+      return
+    }
+
+    const collectedPredictions: TrackPrediction[] = []
+
+    for (let i = 0; i < batches.length; i += CONCURRENCY) {
+      const wave = batches.slice(i, i + CONCURRENCY)
+      const waveResults = await Promise.all(
+        wave.map((b) =>
+          fetchChainedTrackPredictions(b).catch(
+            () => [] as TrackPredictionResponse[]
+          )
+        )
+      )
+
+      // Append successes from this wave
+      for (const res of waveResults) {
+        for (const item of res) {
+          if (item.success) collectedPredictions.push(item.prediction)
+        }
+      }
+
+      // Recompute and update table + stats with what we have so far
+      const rows = restructureData(
+        mbtaPredictions,
+        mbtaSchedules,
+        collectedPredictions
+      )
+      updateTable(rows)
+      updateStats({
+        generated: rows.length,
+        notGenerated: predictionRequests.length - rows.length,
+        total: predictionRequests.length,
+        fetchDuration: performance.now() - startTime
+      })
+    }
   } catch (error) {
     hideLoading()
     console.error('Error refreshing predictions:', error)

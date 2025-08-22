@@ -4,7 +4,7 @@ import { niceStatus } from './utils'
 import { incrementMapItem } from './vehicle-counter'
 import { getShapesFromLayerGroup, snapVehicleToRoute } from './geometry-utils'
 import { getShapesLayerGroupForRoute } from './layer-groups'
-import { calculateElfScore, getElfScoreDisplay } from './elf-score'
+// Elf score utilities are lazy-loaded in marker-manager popups
 
 export function pointToLayer(
   feature: VehicleFeature,
@@ -299,31 +299,41 @@ export function onEachFeature(feature: VehicleFeature, layer: L.Layer): void {
         stopDisplay = feature.properties.stop
       }
 
-      // Create dynamic popup content that updates based on current elf mode state
-      const popup = L.popup({
-        content: () => {
-          const elfModeEnabled =
-            (document.getElementById('show-elf-mode') as HTMLInputElement)
-              ?.checked || false
-
-          let elfScoreHtml = ''
-          if (elfModeEnabled) {
-            const elfScore = calculateElfScore(feature)
-            const elfDisplay = getElfScoreDisplay(elfScore)
-            elfScoreHtml = `<br />Elf Score: ${elfDisplay}`
-          }
-
-          return `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
+      // Base popup without elf score (lazy-load on open)
+      const buildContent = (elfScoreHtml: string = '') => {
+        const idStr = String(feature.id ?? '')
+        const isTracking = (window as any).isTrackingVehicleId
+          ? (window as any).isTrackingVehicleId(feature.id as any)
+          : false
+        const trackLabel = isTracking ? 'Stop tracking' : 'Track vehicle'
+        const trackAction = isTracking
+          ? `window.untrackVehicle()`
+          : `window.trackVehicleById(${JSON.stringify(idStr)})`
+        return `<b>${feature.properties.route}/<i>${feature.properties.headsign || feature.properties.stop}</i></b>
         <br />Stop: ${stopDisplay}
         <br />Status: ${niceStatus(feature.properties.status || '')}
         ${elfScoreHtml}
         ${eta}${speed}${occupancy}${platform_prediction}
-        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>`
-        },
-        autoPan: true,
-        closeOnEscapeKey: true
-      })
+        <br /><small>Update Time: ${update_time.toLocaleTimeString()}</small>
+        <br /><a href="#" class="popup-link" onclick='${trackAction}; return false;'>${trackLabel}</a>`
+      }
+      const popup = L.popup({ autoPan: true, closeOnEscapeKey: true })
+      popup.setContent(buildContent())
       layer.bindPopup(popup)
+      layer.on('popupopen', async () => {
+        const elfModeEnabled =
+          (document.getElementById('show-elf-mode') as HTMLInputElement)
+            ?.checked || false
+        if (!elfModeEnabled) return
+        try {
+          const mod = await import('./elf-score')
+          const elfScore = mod.calculateElfScore(feature)
+          const elfDisplay = mod.getElfScoreDisplay(elfScore)
+          layer
+            .getPopup()
+            ?.setContent(buildContent(`<br />Elf Score: ${elfDisplay}`))
+        } catch {}
+      })
     }
   }
 }

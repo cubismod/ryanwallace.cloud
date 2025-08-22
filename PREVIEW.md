@@ -65,7 +65,7 @@ The preview environment includes:
 
 Common issues:
 
-- **Node.js dependencies**: Ensure `yarn.lock` is up to date
+- **Node.js dependencies**: Ensure `pnpm-lock.yaml` is up to date
 - **Hugo build errors**: Check for syntax errors in content
 - **Asset compilation**: Verify map assets build correctly
 
@@ -76,8 +76,8 @@ If you need to test locally before creating a PR:
 ```bash
 # Build the map assets
 cd ryanwallace.cloud/map
-yarn install
-yarn build
+pnpm install
+pnpm build
 
 # Build the Hugo site
 cd ..
