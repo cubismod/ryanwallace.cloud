@@ -1,5 +1,4 @@
 import * as L from 'leaflet'
-import 'leaflet.markercluster'
 import { VehicleFeature } from './types'
 import { niceStatus } from './utils'
 import { pointToLayer, onEachFeature, createIconForFeature } from './markers'
@@ -304,7 +303,7 @@ export function refreshAllElfClasses(features: VehicleFeature[]): void {
       feature.id ||
       `${feature.geometry.coordinates[0]}-${feature.geometry.coordinates[1]}`
 
-    const marker = currentMarkers.get(markerId)
+    const marker = currentMarkers.get(String(markerId))
     if (marker) {
       if (elfModeEnabled) {
         applyElfClasses(marker, feature)
@@ -350,7 +349,7 @@ export async function findTopElfTrains(
       feature.id ||
       `${feature.geometry.coordinates[0]}-${feature.geometry.coordinates[1]}`
 
-    const marker = currentMarkers.get(markerId)
+    const marker = currentMarkers.get(String(markerId))
     if (marker) {
       const elfScore = calculateElfScore(feature)
       elfResults.push({

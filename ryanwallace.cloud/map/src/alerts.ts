@@ -93,11 +93,8 @@ export function alerts(vehicles_url: string): void {
       }
 
       // If already initialized, update instead of reinit
-      const alertsEl = document.getElementById('alerts')
-      const alreadyHasDt = !!alertsEl?.querySelector('.dt-container')
-      if (alertsTable || alreadyHasDt) {
+      if (alertsTable) {
         try {
-          alertsTable = alertsTable || (DataTable as any).api('#alerts')
           alertsTable.clear()
           alertsTable.rows.add(dataSet)
           alertsTable.draw()

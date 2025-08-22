@@ -5,7 +5,7 @@ const TerserPlugin = require('terser-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
 
-const isProd = process.env.NODE_ENV === 'production'
+const isProd = true
 
 function tryRequire(name) {
   try {
@@ -32,8 +32,8 @@ const appConfig = {
     clean: true,
     publicPath: '/map/'
   },
-  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
-  devtool: process.env.NODE_ENV === 'production' ? false : 'source-map',
+  mode: 'production',
+  devtool: false,
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
     alias: {
@@ -73,7 +73,7 @@ const appConfig = {
     }),
     new webpack.EnvironmentPlugin({
       NODE_ENV: 'production',
-      MT_KEY: '',
+      MT_KEY: process.env.MT_KEY || '',
       VEHICLES_URL: '',
       MBTA_API_BASE: '',
       TRACK_PREDICTION_API: ''
@@ -149,7 +149,7 @@ const swConfig = {
     clean: false,
     publicPath: '/map/'
   },
-  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+  mode: 'production',
   devtool: false,
   resolve: {
     extensions: ['.ts', '.js']
@@ -197,7 +197,7 @@ const swConfig = {
   plugins: [
     new webpack.EnvironmentPlugin({
       NODE_ENV: 'production',
-      MT_KEY: '',
+      MT_KEY: process.env.MT_KEY || '',
       VEHICLES_URL: '',
       MBTA_API_BASE: '',
       TRACK_PREDICTION_API: ''

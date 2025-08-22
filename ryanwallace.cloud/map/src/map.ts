@@ -431,10 +431,17 @@ let mapInitialized = false
 
 document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
 
-// Prefer raster tiles on slow connections for faster first paint
+// Check if MapTiler key is available and use MapTiler if possible, otherwise fall back to OpenStreetMap
 const effectiveType = (navigator as any).connection?.effectiveType || ''
 const slowConnection = ['slow-2g', '2g', '3g'].includes(effectiveType)
-if (process.env.NODE_ENV === 'production' && !slowConnection) {
+const hasMapTilerKey = process.env.MT_KEY && process.env.MT_KEY.trim() !== ''
+
+if (
+  hasMapTilerKey &&
+  process.env.NODE_ENV === 'production' &&
+  !slowConnection
+) {
+  // Use MapTiler when key is available
   import('@maptiler/leaflet-maptilersdk')
     .then(({ MaptilerLayer }) => {
       new MaptilerLayer({
@@ -445,7 +452,7 @@ if (process.env.NODE_ENV === 'production' && !slowConnection) {
       setTimeout(() => hideMapLoading(), 800)
     })
     .catch(() => {
-      // Fallback to raster if MapTiler fails to load
+      // Fallback to OpenStreetMap if MapTiler fails to load
       const raster = L.tileLayer(
         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         {
@@ -457,6 +464,7 @@ if (process.env.NODE_ENV === 'production' && !slowConnection) {
       raster.addTo(map)
     })
 } else {
+  // Use OpenStreetMap when no MapTiler key or on slow connections
   const raster = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
