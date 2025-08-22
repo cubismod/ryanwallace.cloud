@@ -112,7 +112,7 @@ export async function enableClustering(map: L.Map): Promise<void> {
     green: makeClusterGroup('green', 50),
     orange: makeClusterGroup('orange', 40),
     silver: makeClusterGroup('silver', 50),
-    commuter: makeClusterGroup('commuter', 80),
+    commuter: makeClusterGroup('commuter', 30),
     amtrak: makeClusterGroup('amtrak', 80)
   }
 
