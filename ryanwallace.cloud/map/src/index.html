@@ -171,10 +171,7 @@
     }
   }
 </style>
-<link
-  rel="stylesheet"
-  href="https://cdn.datatables.net/2.3.3/css/dataTables.dataTables.css"
-/>
+<!-- DataTables CSS removed; using card-style alerts -->
 
 <div id="map" class="noselect"></div>
 <div class="controls-section">
@@ -344,4 +341,7 @@
   </div>
 </div>
 
-<table id="alerts" class="display compact"></table>
+<div class="alerts-container">
+  <div id="alerts" class="alerts-list"></div>
+  <!-- Cards will be injected here by alerts.ts -->
+</div>
