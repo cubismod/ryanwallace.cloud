@@ -8,7 +8,10 @@ FROM node:24.6.0@sha256:d2b6b5aedb5b729f68ee1129e0f5a5d4713d93f82448249e82241876
 WORKDIR /build
 ADD ryanwallace.cloud .
 WORKDIR /build/map
+
 ENV DISABLE_OVERPASS=true
+ENV NODE_ENV=production
+
 # Enable pnpm via corepack and install deps
 RUN corepack enable && corepack prepare pnpm@10.15.0 --activate && pnpm install --frozen-lockfile=false
 # https://fly.io/docs/apps/build-secrets/
