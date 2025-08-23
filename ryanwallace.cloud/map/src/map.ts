@@ -56,7 +56,7 @@ var map = L.map('map', {
     title: 'Fullscreen',
     forcePseudoFullscreen: false
   },
-  preferCanvas: true,
+  preferCanvas: false,
   maxZoom: 50
 }).setView([42.36565, -71.05236], 13)
 
