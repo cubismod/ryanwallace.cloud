@@ -18,6 +18,12 @@ tasks:
       - pnpm build
       - pnpm clean
       - pnpm move
+  builddev:
+    dir: ryanwallace.cloud/map
+    cmds:
+      - pnpm build:dev
+      - pnpm clean
+      - pnpm move
   clean:
     dir: ryanwallace.cloud/map
     cmds:

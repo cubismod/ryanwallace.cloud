@@ -5,7 +5,7 @@ const TerserPlugin = require('terser-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
 
-const isProd = true
+const isProd = process.env.NODE_ENV === 'production'
 
 function tryRequire(name) {
   try {
@@ -32,15 +32,13 @@ const appConfig = {
     clean: true,
     publicPath: '/map/'
   },
-  mode: 'production',
-  devtool: false,
+  mode: isProd ? 'production' : 'development',
+  devtool: isProd ? false : 'eval-source-map',
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
     alias: {
       // Map only the bare 'leaflet' import to JS file; leave CSS path intact
-      leaflet$: 'leaflet/dist/leaflet.js',
-      // Ensure no stray jquery import gets bundled
-      jquery: false
+      leaflet$: 'leaflet/dist/leaflet.js'
     }
   },
   module: {
@@ -50,7 +48,10 @@ const appConfig = {
         use: {
           loader: 'ts-loader',
           options: {
-            transpileOnly: true
+            transpileOnly: true,
+            compilerOptions: {
+              sourceMap: !isProd
+            }
           }
         },
         exclude: /node_modules/
@@ -71,8 +72,13 @@ const appConfig = {
       chunks: ['map'],
       inject: 'body'
     }),
+    new webpack.ProvidePlugin({
+      $: 'jquery',
+      jQuery: 'jquery',
+      'window.jQuery': 'jquery'
+    }),
     new webpack.EnvironmentPlugin({
-      NODE_ENV: 'production',
+      NODE_ENV: isProd ? 'production' : 'development',
       MT_KEY: process.env.MT_KEY || '',
       VEHICLES_URL: '',
       MBTA_API_BASE: '',
@@ -113,28 +119,30 @@ const appConfig = {
       }
     },
     runtimeChunk: false,
-    minimize: true,
-    minimizer: [
-      new TerserPlugin({
-        extractComments: false,
-        parallel: true,
-        terserOptions: {
-          ecma: 2020,
-          compress: {
-            drop_console: true,
-            drop_debugger: true,
-            pure_getters: true,
-            passes: 2,
-            dead_code: true,
-            comparisons: true,
-            inline: 2
-          },
-          mangle: true,
-          format: { comments: false }
-        }
-      }),
-      new CssMinimizerPlugin()
-    ]
+    minimize: isProd,
+    minimizer: isProd
+      ? [
+          new TerserPlugin({
+            extractComments: false,
+            parallel: true,
+            terserOptions: {
+              ecma: 2020,
+              compress: {
+                drop_console: true,
+                drop_debugger: true,
+                pure_getters: true,
+                passes: 2,
+                dead_code: true,
+                comparisons: true,
+                inline: 2
+              },
+              mangle: true,
+              format: { comments: false }
+            }
+          }),
+          new CssMinimizerPlugin()
+        ]
+      : []
   }
 }
 
@@ -149,8 +157,8 @@ const swConfig = {
     clean: false,
     publicPath: '/map/'
   },
-  mode: 'production',
-  devtool: false,
+  mode: isProd ? 'production' : 'development',
+  devtool: isProd ? false : 'eval-source-map',
   resolve: {
     extensions: ['.ts', '.js']
   },
@@ -161,7 +169,10 @@ const swConfig = {
         use: {
           loader: 'ts-loader',
           options: {
-            transpileOnly: true
+            transpileOnly: true,
+            compilerOptions: {
+              sourceMap: !isProd
+            }
           }
         },
         exclude: /node_modules/
@@ -172,31 +183,33 @@ const swConfig = {
   optimization: {
     splitChunks: false,
     runtimeChunk: false,
-    minimize: true,
-    minimizer: [
-      new TerserPlugin({
-        extractComments: false,
-        parallel: true,
-        terserOptions: {
-          ecma: 2020,
-          compress: {
-            drop_console: true,
-            drop_debugger: true,
-            pure_getters: true,
-            passes: 2,
-            dead_code: true,
-            comparisons: true,
-            inline: 2
-          },
-          mangle: true,
-          format: { comments: false }
-        }
-      })
-    ]
+    minimize: isProd,
+    minimizer: isProd
+      ? [
+          new TerserPlugin({
+            extractComments: false,
+            parallel: true,
+            terserOptions: {
+              ecma: 2020,
+              compress: {
+                drop_console: true,
+                drop_debugger: true,
+                pure_getters: true,
+                passes: 2,
+                dead_code: true,
+                comparisons: true,
+                inline: 2
+              },
+              mangle: true,
+              format: { comments: false }
+            }
+          })
+        ]
+      : []
   },
   plugins: [
     new webpack.EnvironmentPlugin({
-      NODE_ENV: 'production',
+      NODE_ENV: isProd ? 'production' : 'development',
       MT_KEY: process.env.MT_KEY || '',
       VEHICLES_URL: '',
       MBTA_API_BASE: '',

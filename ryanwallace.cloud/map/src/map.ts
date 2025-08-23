@@ -28,6 +28,7 @@ import {
   hookZoom,
   trackedId
 } from './tracking'
+import { alerts } from './alerts'
 // Alerts module is loaded immediately
 // Amtrak helpers are lazy-loaded when the layer is enabled
 
@@ -807,22 +808,7 @@ async function loadAlerts(): Promise<void> {
     return
   }
   console.log('Alerts table element found, loading module...')
-
-  try {
-    const mod = await import('./alerts')
-    console.log('Alerts module loaded, calling alerts function...')
-    mod.alerts(vehicles_url)
-  } catch (e) {
-    console.warn('Failed to load alerts module:', e)
-  }
-}
-
-// Wait for DOM to be ready before loading alerts
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', loadAlerts)
-} else {
-  // DOM is already ready
-  loadAlerts()
+  alerts(vehicles_url)
 }
 
 // Wire up tracking stop button
@@ -1407,3 +1393,5 @@ document.getElementById('elf-search-close')!.addEventListener('click', () => {
   const resultsDiv = document.getElementById('elf-search-results')!
   resultsDiv.style.display = 'none'
 })
+
+loadAlerts()

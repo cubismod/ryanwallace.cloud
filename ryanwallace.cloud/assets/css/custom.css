@@ -36,7 +36,7 @@ p,
 div,
 span,
 li,
-a:not(.sidebar-nav-item||.post-title||.page-title) {
+a:not(.sidebar-nav-item):not(.post-title):not(.page-title) {
   font-family: "Inter", sans-serif;
 }
 
@@ -561,6 +561,7 @@ body.dark-theme .pagination-item:hover {
   height: 50%;
   margin: auto;
   display: block;
+  border-radius: 0 !important;
 }
 
 /* Track Predictions Styles */
@@ -2743,4 +2744,58 @@ textarea,
     color 0.3s ease,
     border-color 0.3s ease,
     box-shadow 0.3s ease;
+}
+
+/* Ensure line icons in DataTables don't have rounding */
+#alerts .line,
+#alerts .line img,
+.line img {
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  -moz-border-radius: 0 !important;
+}
+
+/* Alert text truncation styling */
+.alert-text-container {
+  position: relative;
+  max-width: 100%;
+}
+
+.alert-text-truncated {
+  display: inline;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alert-text-full {
+  display: none;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.alert-text-toggle {
+  background: none;
+  border: none;
+  color: var(--link-color, #007acc);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.85em;
+  padding: 2px 4px;
+  margin-left: 8px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.alert-text-toggle:hover {
+  background-color: rgba(0, 122, 204, 0.1);
+  text-decoration: none;
+}
+
+body.dark-theme .alert-text-toggle {
+  color: var(--link-color, #66b3ff);
+}
+
+body.dark-theme .alert-text-toggle:hover {
+  background-color: rgba(102, 179, 255, 0.1);
 }

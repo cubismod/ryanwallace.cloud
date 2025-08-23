@@ -7,6 +7,23 @@ function embedSVG(line: string, alt: string): string {
   return `<img src="/images/icons/lines/${line}.svg" alt="${alt}" class="line">`
 }
 
+function truncateAlertText(text: string, maxLength: number = 80): string {
+  if (text.length <= maxLength) {
+    return text
+  }
+
+  const truncated = text.substring(0, maxLength).trim()
+  const remaining = text.substring(maxLength)
+
+  return `
+    <div class="alert-text-container">
+      <span class="alert-text-truncated">${truncated}...</span>
+      <span class="alert-text-full" style="display: none;">${text}</span>
+      <button class="alert-text-toggle" onclick="toggleAlertText(this)">Show more</button>
+    </div>
+  `
+}
+
 function calculateAffectedLines(data: Array<{ route: string }>): string {
   const routeMap: Record<string, RouteMapping> = {
     Red: { svg: 'rl', alt: 'Red Line' },
@@ -22,6 +39,9 @@ function calculateAffectedLines(data: Array<{ route: string }>): string {
     742: { svg: 'sl2', alt: 'Silver Line 2' },
     Fitchburg: { svg: 'cr-fitchburg', alt: 'Fitchburg Line' },
     Fairmont: { svg: 'cr-fairmont', alt: 'Fairmont Line' },
+    'CR-Fairmont': { svg: 'cr-fairmont', alt: 'Fairmont Line' },
+    Fairmount: { svg: 'cr-fairmont', alt: 'Fairmont Line' },
+    'CR-Fairmount': { svg: 'cr-fairmont', alt: 'Fairmont Line' },
     NewBedford: { svg: 'cr-fall-river', alt: 'Fall River/New Bedford Line' },
     Franklin: { svg: 'cr-franklin', alt: 'Franklin/Foxboro Line' },
     Haverhill: { svg: 'cr-haverhill', alt: 'Haverhill Line' },
@@ -117,7 +137,13 @@ export function alerts(vehicles_url: string): void {
               sort: 'timestamp'
             }
           },
-          { title: 'Alert', className: 'alert-body' }
+          {
+            title: 'Alert',
+            className: 'alert-body',
+            render: function (data: any) {
+              return truncateAlertText(data)
+            }
+          }
         ],
         order: [
           [0, 'desc'],
@@ -131,4 +157,33 @@ export function alerts(vehicles_url: string): void {
     .catch((e) => {
       console.error('Failed to load alerts:', e)
     })
+}
+
+// Global function for toggling alert text (needs to be accessible to onclick)
+declare global {
+  interface Window {
+    toggleAlertText: (button: HTMLButtonElement) => void
+  }
+}
+
+window.toggleAlertText = function (button: HTMLButtonElement) {
+  const container = button.parentElement
+  if (!container) return
+
+  const truncated = container.querySelector(
+    '.alert-text-truncated'
+  ) as HTMLElement
+  const full = container.querySelector('.alert-text-full') as HTMLElement
+
+  if (truncated && full) {
+    if (full.style.display === 'none') {
+      truncated.style.display = 'none'
+      full.style.display = 'inline'
+      button.textContent = 'Show less'
+    } else {
+      truncated.style.display = 'inline'
+      full.style.display = 'none'
+      button.textContent = 'Show more'
+    }
+  }
 }
