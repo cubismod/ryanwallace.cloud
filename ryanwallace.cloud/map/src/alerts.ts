@@ -1,5 +1,3 @@
-import DataTable from 'datatables.net'
-import 'datatables.net-dt/css/dataTables.dataTables.css'
 import { formatDistance } from 'date-fns'
 import { AlertData, RouteMapping } from './types'
 
@@ -7,22 +5,7 @@ function embedSVG(line: string, alt: string): string {
   return `<img src="/images/icons/lines/${line}.svg" alt="${alt}" class="line">`
 }
 
-function truncateAlertText(text: string, maxLength: number = 80): string {
-  if (text.length <= maxLength) {
-    return text
-  }
-
-  const truncated = text.substring(0, maxLength).trim()
-  const remaining = text.substring(maxLength)
-
-  return `
-    <div class="alert-text-container">
-      <span class="alert-text-truncated">${truncated}...</span>
-      <span class="alert-text-full" style="display: none;">${text}</span>
-      <button class="alert-text-toggle" onclick="toggleAlertText(this)">Show more</button>
-    </div>
-  `
-}
+// escapeHtml + clamped rendering helpers are defined later in this file.
 
 function calculateAffectedLines(data: Array<{ route: string }>): string {
   const routeMap: Record<string, RouteMapping> = {
@@ -66,10 +49,9 @@ function calculateAffectedLines(data: Array<{ route: string }>): string {
       }
     }
   }
-  return [...afLines].join('</br>')
+  // Render icons inline; layout handled by CSS flex on .alert-lines
+  return [...afLines].join('')
 }
-
-let alertsTable: any | null = null
 
 export function alerts(vehicles_url: string): void {
   console.log('Fetching alerts from:', `${vehicles_url}/alerts`)
@@ -80,8 +62,8 @@ export function alerts(vehicles_url: string): void {
     })
     .then((data: AlertData) => {
       console.log('Alerts data received:', data)
-      const msgs = new Set()
-      const dataSet = []
+      const msgs = new Set<string>()
+      const cards: string[] = []
 
       for (const alert of data.data) {
         if (alert.attributes && !msgs.has(alert.attributes.header)) {
@@ -94,65 +76,43 @@ export function alerts(vehicles_url: string): void {
               continue
             }
           }
-          const rowData = [
-            calculateAffectedLines(alert.attributes.informed_entity),
-            alert.attributes.severity,
-            {
-              display: formatDistance(
-                new Date(
-                  alert.attributes.updated_at || alert.attributes.created_at
-                ),
-                new Date(),
-                { addSuffix: true }
-              ),
-              timestamp: new Date(
-                alert.attributes.updated_at || alert.attributes.created_at
-              ).getTime()
-            },
-            alert.attributes.header
-          ]
-          dataSet.push(rowData)
+          const lines = calculateAffectedLines(alert.attributes.informed_entity)
+          const sev = alert.attributes.severity
+          const updatedDisplay = formatDistance(
+            new Date(
+              alert.attributes.updated_at || alert.attributes.created_at
+            ),
+            new Date(),
+            { addSuffix: true }
+          )
+          const header = alert.attributes.header
+          const card = renderAlertCard({
+            lines,
+            severity: parseInt(sev),
+            updatedDisplay,
+            text: header
+          })
+          cards.push(card)
+          msgs.add(header)
         }
       }
 
-      // If already initialized, update instead of reinit
-      if (alertsTable) {
-        try {
-          alertsTable.clear()
-          alertsTable.rows.add(dataSet)
-          alertsTable.draw()
-          return
-        } catch {}
+      const container = document.getElementById('alerts')
+      if (!container) {
+        console.warn('Alerts container not found')
+        return
       }
-
-      console.log('Initializing DataTable with', dataSet.length, 'alerts')
-      alertsTable = new DataTable('#alerts', {
-        columns: [
-          { title: 'Lines' },
-          { title: 'Sev', className: 'dt-body-center' },
-          {
-            title: 'Upd',
-            render: {
-              _: 'display',
-              sort: 'timestamp'
-            }
-          },
-          {
-            title: 'Alert',
-            className: 'alert-body',
-            render: function (data: any) {
-              return truncateAlertText(data)
-            }
-          }
-        ],
-        order: [
-          [0, 'desc'],
-          [1, 'desc']
-        ],
-        data: dataSet,
-        ordering: true,
-        paging: false
-      })
+      if (cards.length === 0) {
+        container.innerHTML =
+          '<div class="info-links alert-card"><p>No active alerts.</p></div>'
+      } else {
+        container.innerHTML = cards.join('\n')
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(adjustAlertClampButtons)
+        } else {
+          setTimeout(adjustAlertClampButtons, 0)
+        }
+      }
     })
     .catch((e) => {
       console.error('Failed to load alerts:', e)
@@ -170,20 +130,93 @@ window.toggleAlertText = function (button: HTMLButtonElement) {
   const container = button.parentElement
   if (!container) return
 
-  const truncated = container.querySelector(
-    '.alert-text-truncated'
-  ) as HTMLElement
-  const full = container.querySelector('.alert-text-full') as HTMLElement
+  const expanded = container.classList.toggle('expanded')
+  button.textContent = expanded ? 'Show less' : 'Show more'
+  button.setAttribute('aria-expanded', expanded ? 'true' : 'false')
+}
 
-  if (truncated && full) {
-    if (full.style.display === 'none') {
-      truncated.style.display = 'none'
-      full.style.display = 'inline'
-      button.textContent = 'Show less'
-    } else {
-      truncated.style.display = 'inline'
-      full.style.display = 'none'
-      button.textContent = 'Show more'
+type AlertCardData = {
+  lines: string
+  severity: number
+  updatedDisplay: string
+  text: string
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+function renderAlertTextClamp(text: string): string {
+  const safe = escapeHtml(text)
+  return `
+    <div class="alert-text-container">
+      <span class="alert-text">${safe}</span>
+      <button class="alert-text-toggle" onclick="toggleAlertText(this)" aria-expanded="false">Show more</button>
+    </div>
+  `
+}
+
+function renderAlertCard({
+  lines,
+  severity,
+  updatedDisplay,
+  text
+}: AlertCardData): string {
+  const sevClass = severityClass(severity)
+  const sevLabel = severityLabel(severity)
+  return `
+    <div class="info-links alert-card">
+      <div class="alert-card-meta">
+        <div class="alert-lines">${lines}</div>
+        <div class="alert-sev ${sevClass}" title="${sevLabel}">${sevLabel}</div>
+      </div>
+      <div class="alert-card-body">
+        ${renderAlertTextClamp(text)}
+      </div>
+      <div title="Last updated"><small>${updatedDisplay}</small></div>
+    </div>
+  `
+}
+
+function adjustAlertClampButtons(): void {
+  const containers = document.querySelectorAll(
+    '.alert-text-container'
+  ) as NodeListOf<HTMLElement>
+  containers.forEach((container) => {
+    const textEl = container.querySelector('.alert-text') as HTMLElement | null
+    const btn = container.querySelector(
+      '.alert-text-toggle'
+    ) as HTMLButtonElement | null
+    if (!textEl || !btn) return
+
+    const wasExpanded = container.classList.contains('expanded')
+    if (wasExpanded) container.classList.remove('expanded')
+
+    // If text doesn't overflow the clamped area, remove the button
+    const overflow = textEl.scrollHeight > textEl.clientHeight + 1
+    if (!overflow) {
+      btn.remove()
     }
-  }
+
+    if (wasExpanded) container.classList.add('expanded')
+  })
+}
+
+function severityClass(n: number): string {
+  if (n >= 9) return 'sev-critical'
+  if (n >= 7) return 'sev-high'
+  if (n >= 4) return 'sev-med'
+  return 'sev-low'
+}
+
+function severityLabel(n: number): string {
+  if (n >= 9) return `Critical (Sev ${n})`
+  if (n >= 7) return `High (Sev ${n})`
+  if (n >= 4) return `Medium (Sev ${n})`
+  return `Low (Sev ${n})`
 }
