@@ -1,5 +1,6 @@
 import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.fullscreen'
 
 // Import modules
 import { setCookie, getCookie, return_colors } from './utils'
@@ -48,6 +49,13 @@ declare global {
 
 var map = L.map('map', {
   doubleTouchDragZoom: true,
+  // @ts-expect-error - fullscreenControl is not a valid option
+  fullscreenControl: true,
+  fullscreenControlOptions: {
+    position: 'topleft',
+    title: 'Fullscreen',
+    forcePseudoFullscreen: false
+  },
   preferCanvas: true,
   maxZoom: 50
 }).setView([42.36565, -71.05236], 13)
