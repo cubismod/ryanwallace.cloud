@@ -1,6 +1,6 @@
 import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import 'leaflet.fullscreen'
+// Removed fullscreen plugin; using custom expand behavior on mobile
 
 // Import modules
 import { setCookie, getCookie, return_colors } from './utils'
@@ -49,13 +49,6 @@ declare global {
 
 var map = L.map('map', {
   doubleTouchDragZoom: true,
-  // @ts-expect-error - fullscreenControl is not a valid option
-  fullscreenControl: true,
-  fullscreenControlOptions: {
-    position: 'topleft',
-    title: 'Fullscreen',
-    forcePseudoFullscreen: false
-  },
   preferCanvas: false,
   maxZoom: 50
 }).setView([42.36565, -71.05236], 13)
@@ -102,6 +95,7 @@ let vehicleDataCache: any = null
 let adaptiveRefreshRate: number = 15
 let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
 let isMapExpanded = false
+let mobileExpandCleanup: (() => void) | null = null
 let initialSSEStartTimer: number | null = null
 
 function updateTrackingStatusUI(): void {
@@ -548,14 +542,76 @@ window.untrackVehicle = (): void => {
 window.isTrackingVehicleId = (id: string | number): boolean =>
   isTrackingVehicleId(id)
 
+// Helpers for mobile-friendly expand behavior
+function isSmallScreen(): boolean {
+  try {
+    return window.matchMedia && window.matchMedia('(max-width: 768px)').matches
+  } catch {
+    return window.innerWidth <= 768
+  }
+}
+
 // Non-fullscreen expand toggle
 function setMapExpanded(expand: boolean): void {
-  const el = document.getElementById('map')
+  const el = document.getElementById('map') as HTMLElement | null
   if (!el) return
   isMapExpanded = expand
-  el.classList.toggle('map-expanded', expand)
+
+  // Clear any prior mobile cleanup if switching modes
+  if (mobileExpandCleanup) {
+    mobileExpandCleanup()
+    mobileExpandCleanup = null
+  }
+
+  if (expand && isSmallScreen()) {
+    // Save prior inline styles to restore later
+    const prev = {
+      position: el.style.position,
+      top: el.style.top,
+      right: (el.style as any).right,
+      bottom: (el.style as any).bottom,
+      left: el.style.left,
+      width: el.style.width,
+      height: el.style.height,
+      maxHeight: el.style.maxHeight,
+      zIndex: (el.style as any).zIndex
+    }
+
+    // Mobile-friendly expand: keep in document flow so page can scroll
+    el.style.position = 'sticky'
+    el.style.top = '0'
+    ;(el.style as any).right = ''
+    ;(el.style as any).bottom = ''
+    el.style.left = ''
+    el.style.zIndex = 'auto'
+    // Keep within page layout width to avoid horizontal overflow on mobile
+    el.style.width = '100%'
+    el.style.maxWidth = '100%'
+    // Slightly shorter than device height to avoid tight fit
+    el.style.height = 'calc(100dvh - 12px)'
+    el.style.maxHeight = 'calc(100dvh - 12px)'
+
+    // Do not toggle map-expanded class on mobile to avoid conflicting CSS
+
+    mobileExpandCleanup = () => {
+      // Restore styles
+      el.style.position = prev.position
+      el.style.top = prev.top
+      ;(el.style as any).right = prev.right
+      ;(el.style as any).bottom = prev.bottom
+      el.style.left = prev.left
+      el.style.width = prev.width
+      el.style.height = prev.height
+      el.style.maxHeight = prev.maxHeight
+      ;(el.style as any).zIndex = prev.zIndex
+    }
+  } else {
+    // Desktop behavior: simple height expansion via CSS class
+    el.classList.toggle('map-expanded', expand)
+  }
+
   map.invalidateSize()
-  // run again after transition for crisp tiles
+  // run again after transition or resize for crisp tiles
   window.setTimeout(() => map.invalidateSize(), 220)
   // persist preference
   setCookie('map-expanded', expand.toString())
@@ -807,15 +863,15 @@ if ('serviceWorker' in navigator) {
   }
 }
 
-// Load alerts table when DOM is ready
+// Load alerts cards when DOM is ready
 async function loadAlerts(): Promise<void> {
   console.log('loadAlerts() called')
-  const table = document.getElementById('alerts')
-  if (!table) {
-    console.warn('Alerts table element not found')
+  const el = document.getElementById('alerts')
+  if (!el) {
+    console.warn('Alerts container element not found')
     return
   }
-  console.log('Alerts table element found, loading module...')
+  console.log('Alerts container element found, loading module...')
   alerts(vehicles_url)
 }
 
@@ -974,7 +1030,7 @@ if (refreshRateElement) {
     .addTo(map)
 
   // Add a compact expand toggle (not full-screen)
-  ;(L as any)
+  const expandBtn = (L as any)
     .easyButton({
       position: 'topright',
       states: [
@@ -1007,6 +1063,13 @@ if (refreshRateElement) {
     savedMapExpanded.toString().toLowerCase() === 'true'
   ) {
     setMapExpanded(true)
+    try {
+      ;(expandBtn as any).state('expand-on')
+    } catch {}
+  } else {
+    try {
+      ;(expandBtn as any).state('expand-off')
+    } catch {}
   }
 })()
 
