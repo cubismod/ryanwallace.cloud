@@ -13,9 +13,9 @@ ENV DISABLE_OVERPASS=true
 ENV NODE_ENV=production
 
 # Enable pnpm via corepack and install deps
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate && pnpm install --frozen-lockfile=false
+RUN corepack enable && corepack prepare pnpm@10.15.0 --activate && pnpm install --frozen-lockfile=false --force
 # https://fly.io/docs/apps/build-secrets/
-RUN pnpm build && pnpm move && pnpm title
+RUN pnpm exec webpack --config webpack.config.js --mode production && pnpm move && pnpm title
 
 # hugo build
 FROM hugomods/hugo:0.148.2@sha256:3580c438a87d91fab06209c7e633bd2f8e9cccef2021743272293625f3c2119b AS builder

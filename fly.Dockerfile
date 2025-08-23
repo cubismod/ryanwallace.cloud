@@ -8,12 +8,14 @@ FROM node:24.6.0@sha256:d2b6b5aedb5b729f68ee1129e0f5a5d4713d93f82448249e82241876
 WORKDIR /build
 ADD ryanwallace.cloud .
 WORKDIR /build/map
+
 ENV DISABLE_OVERPASS=true
+ENV NODE_ENV=production
 # Enable pnpm via corepack and install deps
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate && pnpm install --frozen-lockfile=false
+RUN corepack enable && corepack prepare pnpm@10.15.0 --activate && pnpm install --frozen-lockfile=false --force
 # https://fly.io/docs/apps/build-secrets/
 RUN --mount=type=secret,id=MT_KEY \
-     MT_KEY="$(cat /run/secrets/MT_KEY)" pnpm build && pnpm move && pnpm title
+    MT_KEY="$(cat /run/secrets/MT_KEY)" pnpm exec webpack --config webpack.config.js --mode production && pnpm move && pnpm title
 
 # hugo build
 FROM hugomods/hugo:0.148.2@sha256:3580c438a87d91fab06209c7e633bd2f8e9cccef2021743272293625f3c2119b AS builder
