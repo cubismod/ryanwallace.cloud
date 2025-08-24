@@ -46,7 +46,7 @@
     "prettier-config-standard": "7.0.0",
     "style-loader": "4.0.0",
     "terser-webpack-plugin": "5.3.14",
-    "ts-loader": "9.5.2",
+    "ts-loader": "9.5.4",
     "typescript": "5.9.2",
     "webpack": "5.101.3",
     "webpack-bundle-analyzer": "4.10.2",
