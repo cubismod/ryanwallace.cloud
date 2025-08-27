@@ -18,7 +18,7 @@ RUN corepack enable && corepack prepare pnpm@10.15.0 --activate && pnpm install 
 RUN pnpm exec webpack --config webpack.config.js --mode production && pnpm move && pnpm title
 
 # hugo build
-FROM hugomods/hugo:0.148.2@sha256:3580c438a87d91fab06209c7e633bd2f8e9cccef2021743272293625f3c2119b AS builder
+FROM hugomods/hugo:0.149.0@sha256:ceac84d818db61e6514fef53b25bc225ef3364fe2f0a4ae1df2e4a3fe6be37c0 AS builder
 WORKDIR /build
 
 COPY --from=node /build .
