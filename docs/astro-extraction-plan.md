@@ -3,6 +3,7 @@
 This document describes a practical, low‑risk plan to extract the mapping and tracking code under `ryanwallace.cloud/map/` into a separate Astro site. The plan minimizes TypeScript rewrites while improving performance, build speed, and maintainability. The new site targets the bostontraintracker.com domain.
 
 ## Goals
+
 - Isolate the map into its own modern site (primary: `bostontraintracker.com`).
 - Keep existing TypeScript logic intact (near‑zero core changes).
 - Replace Webpack with Vite (via Astro) for faster builds and automatic code‑splitting.
@@ -10,6 +11,7 @@ This document describes a practical, low‑risk plan to extract the mapping and 
 - Decouple Hugo integration (remove the post‑build move step).
 
 ## Outcomes
+
 - New Astro app containing a thin UI shell and pages for `map` and `track`.
 - Existing TS code from `ryanwallace.cloud/map/src` reused as a “core” module.
 - Environment mapping via a tiny shim so `process.env.*` references continue to work unmodified.
@@ -18,6 +20,7 @@ This document describes a practical, low‑risk plan to extract the mapping and 
 ---
 
 ## 0) Prerequisites & Decisions
+
 - Choose DNS/host: `bostontraintracker.com` (recommended). Optionally use a subdomain like `app.bostontraintracker.com`, or serve under a subpath such as `/map` if embedding within another site.
 - Node: align with repo’s current toolchain (Node 20+). Keep `pnpm` as the package manager.
 - Env variables: standardize on `PUBLIC_*` at build time (Astro convention for browser‑exposed vars).
@@ -26,6 +29,7 @@ This document describes a practical, low‑risk plan to extract the mapping and 
 ---
 
 ## 1) Plan the Repository Layout
+
 Adaptation: Reuse existing Astro app at `bostontraintracker/src` instead of creating `apps/map-web`. Keep the core code separate within that app for easier future refactors.
 
 Target structure (adapted):
@@ -49,6 +53,7 @@ Rationale: `map-core` allows reuse of the current logic without mixing it into t
 ---
 
 ## 2) Prepare the Astro App (bostontraintracker/src)
+
 - Reuse existing Astro app under `bostontraintracker/src`.
 - Keep TypeScript strict; optional: add Prettier/ESLint later.
 
@@ -61,6 +66,7 @@ pnpm install
 ```
 
 Key files in `bostontraintracker/src`:
+
 - `src/pages/index.astro` (Home/Map page)
 - `src/pages/track/[id].astro` (Vehicle tracking page)
 - `src/lib/env-shim.ts` (maps `import.meta.env.PUBLIC_*` to `window.process.env`)
@@ -70,6 +76,7 @@ Key files in `bostontraintracker/src`:
 ---
 
 ## 3) Move the Core Map Code (bostontraintracker/src/src/map-core)
+
 - Create `bostontraintracker/src/src/map-core/`.
 - Copy everything from `ryanwallace.cloud/ryanwallace.cloud/map/src/` into `bostontraintracker/src/src/map-core/` unchanged.
   - This includes: `map.ts`, `track.ts`, `markers.ts`, `marker-manager.ts`, `table-manager.ts`, `alerts.ts`, `amtrak.ts`, `geometry-utils.ts`, `utils.ts`, `layer-groups.ts`, `types/**`, `sw.ts`, and `index.html` (used only for reference; Astro supplies the page shell).
@@ -80,6 +87,7 @@ Note: Keep imports like `import 'leaflet/dist/leaflet.css'` as they are; Vite wi
 ---
 
 ## 4) Dependencies and Package Manifests
+
 In `bostontraintracker/src/package.json`, add runtime deps used by the core:
 
 - `leaflet`, `leaflet.markercluster`, `leaflet-easybutton`, `leaflet.fullscreen` (if still required)
@@ -90,9 +98,10 @@ In `bostontraintracker/src/package.json`, add runtime deps used by the core:
 - `jquery` (only if the DataTables UI remains; consider lazy import)
 - `datatables.net`, `datatables.net-dt`, `datatables.net-jqui`, `datatables.net-responsive` (only if table UI remains)
 - Turf modules used: `@turf/along`, `@turf/distance`, `@turf/helpers`, `@turf/length`, `@turf/nearest-point-on-line`
- - Additional: `string-comparison` (for Levenshtein similarity in tracking)
+- Additional: `string-comparison` (for Levenshtein similarity in tracking)
 
 Dev deps:
+
 - `typescript` (Astro template includes this)
 - Optional: `vite-plugin-pwa` (for service worker migration)
 
@@ -110,7 +119,8 @@ Remove deps you don’t actually use to keep bundles lean.
 
 ---
 
-## 5) Environment Variables (PUBLIC_*)
+## 5) Environment Variables (PUBLIC\_\*)
+
 Use `PUBLIC_*` prefixes so Astro exposes values to the browser:
 
 - `PUBLIC_VEHICLES_URL`
@@ -132,6 +142,7 @@ In deployment, define these as real env vars (or `.env.production`).
 ---
 
 ## 6) Env Shim (keep TS unchanged)
+
 Create `bostontraintracker/src/src/lib/env-shim.ts`:
 
 ```ts
@@ -141,18 +152,18 @@ Create `bostontraintracker/src/src/lib/env-shim.ts`:
 
 // Ensure window.process exists
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const g: any = globalThis as any
-if (!g.process) g.process = {}
-if (!g.process.env) g.process.env = {}
+const g: any = globalThis as any;
+if (!g.process) g.process = {};
+if (!g.process.env) g.process.env = {};
 
-const m = import.meta.env
+const m = import.meta.env;
 Object.assign(g.process.env, {
-  NODE_ENV: m.MODE === 'production' ? 'production' : 'development',
-  MT_KEY: m.PUBLIC_MT_KEY || '',
-  VEHICLES_URL: m.PUBLIC_VEHICLES_URL || '',
-  MBTA_API_BASE: m.PUBLIC_MBTA_API_BASE || '',
-  TRACK_PREDICTION_API: m.PUBLIC_TRACK_PREDICTION_API || ''
-})
+  NODE_ENV: m.MODE === "production" ? "production" : "development",
+  MT_KEY: m.PUBLIC_MT_KEY || "",
+  VEHICLES_URL: m.PUBLIC_VEHICLES_URL || "",
+  MBTA_API_BASE: m.PUBLIC_MBTA_API_BASE || "",
+  TRACK_PREDICTION_API: m.PUBLIC_TRACK_PREDICTION_API || "",
+});
 ```
 
 This lets the existing code continue to read `process.env.MT_KEY`, etc., without modification.
@@ -160,6 +171,7 @@ This lets the existing code continue to read `process.env.MT_KEY`, etc., without
 ---
 
 ## 7) Astro Pages that Load the Core
+
 Create/replace `bostontraintracker/src/src/pages/index.astro` (main map):
 
 ```astro
@@ -236,11 +248,12 @@ Note: The unmodified core code should select `#map` and bootstrap itself as it a
 ---
 
 ## 8) Vite/Astro Config
+
 If you need aliases (e.g., to match old Webpack alias for Leaflet), add them in `bostontraintracker/src/astro.config.mjs`:
 
 ```js
 // apps/map-web/astro.config.mjs
-import { defineConfig } from 'astro/config'
+import { defineConfig } from "astro/config";
 
 export default defineConfig({
   vite: {
@@ -248,10 +261,10 @@ export default defineConfig({
       alias: {
         // replicate prior webpack alias if necessary
         // 'leaflet$': 'leaflet/dist/leaflet.js'
-      }
-    }
-  }
-})
+      },
+    },
+  },
+});
 ```
 
 In most cases, the alias is not required because the core already imports Leaflet CSS explicitly.
@@ -259,37 +272,41 @@ In most cases, the alias is not required because the core already imports Leafle
 ---
 
 ## 9) Optional: Service Worker / PWA
+
 Existing `sw.ts` can be migrated via `vite-plugin-pwa` or loaded as a standalone module:
 
 Option A (recommended) – `vite-plugin-pwa` in Astro:
+
 - Install: `pnpm add -D vite-plugin-pwa`
 - Configure in `astro.config.mjs`:
 
 ```js
-import { defineConfig } from 'astro/config'
-import { VitePWA } from 'vite-plugin-pwa'
+import { defineConfig } from "astro/config";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   vite: {
     plugins: [
       VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg'],
-        workbox: { navigateFallbackDenylist: [/^\/track\//] }
-      })
-    ]
-  }
-})
+        registerType: "autoUpdate",
+        includeAssets: ["favicon.svg"],
+        workbox: { navigateFallbackDenylist: [/^\/track\//] },
+      }),
+    ],
+  },
+});
 ```
 
 - Port logic from `apps/map-core/src/sw.ts` into a PWA worker (`src/sw.ts`) or a simple Workbox config.
 
 Option B – Manual registration:
+
 - Build a plain TS worker and register it in a small script in Astro’s pages. Keep this for later if needed.
 
 ---
 
 ## 10) Performance Improvements (No Core Rewrites)
+
 - Lazy‑load optional heavy libs when toggled:
   - Marker clustering: import `leaflet.markercluster` only when clustering is enabled in the UI.
   - DataTables: import jQuery + DataTables only when the table panel opens.
@@ -298,9 +315,9 @@ Example for conditional import (in the core code’s relevant UI handler):
 
 ```ts
 async function enableTable() {
-  const $ = (await import('jquery')).default
-  ;(window as any).$ = (window as any).jQuery = $
-  await import('datatables.net-dt')
+  const $ = (await import("jquery")).default;
+  (window as any).$ = (window as any).jQuery = $;
+  await import("datatables.net-dt");
   // then instantiate the table
 }
 ```
@@ -312,16 +329,19 @@ async function enableTable() {
 ---
 
 ## 11) Styling & UI Shell
+
 - Keep existing Leaflet and plugin CSS imports in the core.
 - In Astro, build a clean layout using modern CSS (variables, flex/grid, prefers‑color‑scheme) for headers/footers/panels.
 - Avoid re‑implementing map UI in Astro components now—treat the map as an “island” the core code controls.
 
 Later enhancements (optional):
+
 - Convert specific UI pieces (filters, legends, settings) into Astro/Svelte components hydrated on interaction.
 
 ---
 
 ## 12) Build & Run
+
 From `bostontraintracker/src`:
 
 ```
@@ -334,6 +354,7 @@ Astro will code‑split and hash assets. Verify map loads and features work.
 ---
 
 ## 13) Deployment (Node SSR)
+
 Run the built Node server behind a reverse proxy. Example Caddy config:
 
 ```
@@ -381,6 +402,7 @@ PORT=4321 pnpm start
 ---
 
 ## 14) CI Pipeline (example with GitHub Actions)
+
 Add a job that builds the Astro app and publishes `dist/` as an artifact or to your server.
 
 ```yaml
@@ -400,7 +422,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
         env:
@@ -418,12 +440,14 @@ Deploy to your host (Fly, Caddy on a VPS, or GitHub Pages). Update Caddy to serv
 ---
 
 ## 15) Remove Old Hugo Coupling (when ready)
+
 - The old `pnpm run move` script in `ryanwallace.cloud/map/package.json` copied build artifacts into Hugo.
 - After the Astro site is live, delete the copy/move step and any Hugo content under `ryanwallace.cloud/content/map/` that is no longer used.
 
 ---
 
 ## 16) Redirects & Rollout
+
 - If the old site served under `/map/`, add a redirect to the new domain/subpath.
 - Test deep links (tracking pages under `/track/[id]`).
 - Keep old path serving a simple HTML that redirects (temporary 302 → permanent 301) to preserve SEO.
@@ -431,6 +455,7 @@ Deploy to your host (Fly, Caddy on a VPS, or GitHub Pages). Update Caddy to serv
 ---
 
 ## 17) Validation & Monitoring
+
 - Lighthouse/Pagespeed: verify initial load, interaction latency, and bundle size.
 - Runtime errors: add basic client logging for SSE reconnects and map tile errors.
 - Error reporting (optional): Sentry or a lightweight logger.
@@ -438,6 +463,7 @@ Deploy to your host (Fly, Caddy on a VPS, or GitHub Pages). Update Caddy to serv
 ---
 
 ## 18) Future Refactors (Optional, Post‑Split)
+
 - Gradually migrate jQuery/DataTables UI pieces to small hydrated components.
 - Introduce a shared `@map/core` package if you split into multiple consumers.
 - Consolidate service worker with `vite-plugin-pwa` (precaching and runtime caching for tiles/data).
@@ -446,6 +472,7 @@ Deploy to your host (Fly, Caddy on a VPS, or GitHub Pages). Update Caddy to serv
 ---
 
 ## Checklist Summary
+
 - [x] Reuse existing Astro app at `bostontraintracker/src`.
 - [x] Copy `ryanwallace.cloud/ryanwallace.cloud/map/src/**` → `bostontraintracker/src/src/map-core/**` (no changes).
 - [x] Add deps to `bostontraintracker/src/package.json`.
@@ -455,6 +482,7 @@ Deploy to your host (Fly, Caddy on a VPS, or GitHub Pages). Update Caddy to serv
 - [x] Configure envs (`PUBLIC_*`), build, and verify locally.
 
 Verification checklist (local):
+
 - Copy envs: `cp .env.example .env` and set `PUBLIC_VEHICLES_URL`, `PUBLIC_MT_KEY`, etc.
 - Dev run: `pnpm dev` → `/` renders map; `/track/123` loads tracking.
 - Prod build: `pnpm build && pnpm preview` → sanity‑check both routes.
@@ -467,6 +495,7 @@ pnpm install
 cp .env.example .env
 pnpm dev
 ```
+
 - [ ] Add Caddy config for the new site and deploy.
 - [ ] Remove old Hugo move/copy logic; add redirects.
 - [ ] Optional PWA and further lazy‑loading improvements.
@@ -474,6 +503,7 @@ pnpm dev
 ---
 
 ## Notes on Minimal Change Guarantees
+
 - The shim ensures `process.env.*` continues to work without modifying core TS.
 - Astro/Vite accepts CSS imports in TS/JS and will emit styles correctly.
 - Dynamic imports allow you to defer heavy libs without touching unrelated logic.
