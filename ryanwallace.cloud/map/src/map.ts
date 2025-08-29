@@ -47,6 +47,16 @@ declare global {
   }
 }
 
+// Detect iOS/iPadOS (including iPadOS on Mac Intel with touch)
+function isIOS(): boolean {
+  const ua = navigator.userAgent || ''
+  const platform = (navigator as any).platform || ''
+  const maxTP = (navigator as any).maxTouchPoints || 0
+  const iOSUA = /iP(ad|hone|od)/.test(ua)
+  const iPadOS = platform === 'MacIntel' && maxTP > 1
+  return iOSUA || iPadOS
+}
+
 var map = L.map('map', {
   doubleTouchDragZoom: true,
   // @ts-expect-error - fullscreenControl is not a valid option
@@ -54,7 +64,7 @@ var map = L.map('map', {
   fullscreenControlOptions: {
     position: 'topleft',
     title: 'Fullscreen',
-    forcePseudoFullscreen: false
+    forcePseudoFullscreen: isIOS()
   },
   preferCanvas: true,
   maxZoom: 50
@@ -69,6 +79,10 @@ function _hookFullscreenPreToggle(): void {
   if (btn) {
     // Use capture to run before Leaflet's own click handler
     const preToggle = () => {
+      // Capture scroll position BEFORE the plugin toggles pseudo-fullscreen
+      if (isIOS()) {
+        _fsPreScrollY = window.scrollY || window.pageYOffset || 0
+      }
       if (isMapExpanded) setMapExpanded(false)
     }
     btn.addEventListener('click', preToggle, { capture: true })
@@ -103,12 +117,104 @@ map.on('popupclose', () => {
 })
 
 // Ensure expanded state is disabled when entering fullscreen to avoid rendering issues
+// Track ancestors we neutralize during pseudo-fullscreen
+let _fsAncestors: HTMLElement[] = []
+let _fsScrollY = 0
+let _fsPreScrollY: number | null = null
+let _removeScrollBlockers: (() => void) | null = null
+
+function _installScrollBlockers(container: HTMLElement): () => void {
+  const prevent = (e: Event) => {
+    // If the event originated outside the map container, prevent scrolling
+    if (!container.contains(e.target as Node)) {
+      e.preventDefault()
+    }
+  }
+  // iOS requires passive: false to allow preventDefault on touchmove
+  document.addEventListener('touchmove', prevent, { passive: false })
+  document.addEventListener('wheel', prevent as any, { passive: false })
+  return () => {
+    document.removeEventListener('touchmove', prevent as any)
+    document.removeEventListener('wheel', prevent as any)
+  }
+}
+
 map.on('enterFullscreen', () => {
   const wasExpanded = isMapExpanded
-  if (wasExpanded) {
-    setMapExpanded(false)
+  if (wasExpanded) setMapExpanded(false)
+  if (isIOS()) {
+    // Freeze background scroll (prefer pre-captured scroll from preToggle)
+    const capturedY = _fsPreScrollY
+    _fsPreScrollY = null
+    _fsScrollY =
+      typeof capturedY === 'number'
+        ? capturedY
+        : window.scrollY || window.pageYOffset || 0
+    const bs = document.body.style
+    bs.position = 'fixed'
+    bs.top = `-${_fsScrollY}px`
+    bs.left = '0'
+    bs.right = '0'
+    bs.width = '100%'
+    bs.overflow = 'hidden'
+
+    // Add a body flag for CSS-based safe-area adjustments (after freezing)
+    document.body.classList.add('map-fs-active')
+    document.documentElement.classList.add('map-fs-active')
   }
-  // Extra safety: invalidate size again shortly after entering
+
+  // Extra guard: block stray scroll events outside the map container (iOS only)
+  if (isIOS()) {
+    const container = map.getContainer()
+    _removeScrollBlockers = _installScrollBlockers(container)
+  }
+
+  // Neutralize transforms on a few ancestors to avoid iOS fixed-position bugs
+  if (isIOS()) {
+    _fsAncestors = []
+    let p: HTMLElement | null = map.getContainer()
+      .parentElement as HTMLElement | null
+    for (let i = 0; i < 5 && p; i++) {
+      p.classList.add('map-fs-no-transform')
+      p.classList.add('map-fs-no-overflow')
+      _fsAncestors.push(p)
+      if (p.tagName === 'BODY') break
+      p = p.parentElement
+    }
+  }
+
+  // Extra safety: invalidate size shortly after entering
+  window.setTimeout(() => map.invalidateSize(), 50)
+})
+
+map.on('exitFullscreen', () => {
+  // Remove iOS-specific patches
+  if (isIOS()) {
+    document.body.classList.remove('map-fs-active')
+    document.documentElement.classList.remove('map-fs-active')
+    for (const n of _fsAncestors) {
+      n.classList.remove('map-fs-no-transform')
+      n.classList.remove('map-fs-no-overflow')
+    }
+    _fsAncestors = []
+    // Unfreeze background scroll and restore position
+    if (_removeScrollBlockers) {
+      _removeScrollBlockers()
+      _removeScrollBlockers = null
+    }
+    const bs = document.body.style
+    bs.position = ''
+    bs.top = ''
+    bs.left = ''
+    bs.right = ''
+    bs.width = ''
+    bs.overflow = ''
+    if (typeof _fsScrollY === 'number') {
+      window.scrollTo(0, _fsScrollY)
+      _fsScrollY = 0
+    }
+  }
+  // Invalidate after exit to settle tiles
   window.setTimeout(() => map.invalidateSize(), 50)
 })
 
