@@ -47,6 +47,16 @@ declare global {
   }
 }
 
+// Detect iOS/iPadOS (including iPadOS on Mac Intel with touch)
+function isIOS(): boolean {
+  const ua = navigator.userAgent || ''
+  const platform = (navigator as any).platform || ''
+  const maxTP = (navigator as any).maxTouchPoints || 0
+  const iOSUA = /iP(ad|hone|od)/.test(ua)
+  const iPadOS = platform === 'MacIntel' && maxTP > 1
+  return iOSUA || iPadOS
+}
+
 var map = L.map('map', {
   doubleTouchDragZoom: true,
   // @ts-expect-error - fullscreenControl is not a valid option
@@ -54,13 +64,37 @@ var map = L.map('map', {
   fullscreenControlOptions: {
     position: 'topleft',
     title: 'Fullscreen',
-    forcePseudoFullscreen: false
+    forcePseudoFullscreen: isIOS()
   },
   preferCanvas: true,
   maxZoom: 50
 }).setView([42.36565, -71.05236], 13)
 
-// Load double-touch drag/zoom enhancement only on touch devices to save bytes on desktop
+// Fullscreen pre-click hook
+let _fsHookAttempts = 0
+function _hookFullscreenPreToggle(): void {
+  const btn = document.querySelector(
+    '.leaflet-control-zoom-fullscreen'
+  ) as HTMLAnchorElement | null
+  if (btn) {
+    const preToggle = (ev: Event) => {
+      try {
+        ev.preventDefault()
+      } catch {}
+      if (isIOS()) _fsPreScrollY = window.scrollY || window.pageYOffset || 0
+      if (isMapExpanded) setMapExpanded(false)
+    }
+    btn.addEventListener('click', preToggle, { capture: true })
+    return
+  }
+  if (_fsHookAttempts < 10) {
+    _fsHookAttempts++
+    window.setTimeout(_hookFullscreenPreToggle, 200)
+  }
+}
+_hookFullscreenPreToggle()
+
+// Load double-touch drag/zoom enhancement only on touch devices
 const isTouchDevice =
   'ontouchstart' in window || (navigator as any).maxTouchPoints > 0
 if (isTouchDevice) {
@@ -72,7 +106,7 @@ if (isTouchDevice) {
   ]).catch(() => {})
 }
 
-// Track popup open state to avoid disrupting user interactions
+// Track popup open state
 let popupOpen = false
 map.on('popupopen', () => {
   popupOpen = true
@@ -81,13 +115,85 @@ map.on('popupclose', () => {
   popupOpen = false
 })
 
-// map.on('enterFullscreen', function () {
-//   let elements = document.getElementsByClassName('leaflet-zoom-animated')
-//   for (const element of elements) {
-//     console.debug(element.tagName)
-//     if (element.tagName === 'CANVAS') element.setAttribute('height', '100%')
-//   }
-// })
+// Fullscreen helpers
+let _fsAncestors: HTMLElement[] = []
+let _fsScrollY = 0
+let _fsPreScrollY: number | null = null
+let _removeScrollBlockers: (() => void) | null = null
+
+function _installScrollBlockers(container: HTMLElement): () => void {
+  const prevent = (e: Event) => {
+    if (!container.contains(e.target as Node)) e.preventDefault()
+  }
+  document.addEventListener('touchmove', prevent, { passive: false })
+  document.addEventListener('wheel', prevent as any, { passive: false })
+  return () => {
+    document.removeEventListener('touchmove', prevent as any)
+    document.removeEventListener('wheel', prevent as any)
+  }
+}
+
+map.on('enterFullscreen', () => {
+  const wasExpanded = isMapExpanded
+  if (wasExpanded) setMapExpanded(false)
+  try {
+    map.getContainer().classList.add('map-fs-on')
+  } catch {}
+  // Remove expand control while fullscreen is active
+  try {
+    if (_expandControl) map.removeControl(_expandControl)
+  } catch {}
+
+  // Block page scroll on iOS
+  if (isIOS()) {
+    const container = map.getContainer()
+    _removeScrollBlockers = _installScrollBlockers(container)
+  }
+
+  // iOS: neutralize transforms on a few ancestors
+  if (isIOS()) {
+    _fsAncestors = []
+    let p: HTMLElement | null = map.getContainer()
+      .parentElement as HTMLElement | null
+    for (let i = 0; i < 5 && p; i++) {
+      p.classList.add('map-fs-no-transform')
+      p.classList.add('map-fs-no-overflow')
+      _fsAncestors.push(p)
+      if (p.tagName === 'BODY') break
+      p = p.parentElement
+    }
+  }
+
+  // Invalidate size shortly after entering
+  window.setTimeout(() => map.invalidateSize(), 50)
+  if (_expandButtonEl) _expandButtonEl.style.display = 'none'
+})
+
+map.on('exitFullscreen', () => {
+  // Remove iOS-specific patches
+  if (isIOS()) {
+    for (const n of _fsAncestors) {
+      n.classList.remove('map-fs-no-transform')
+      n.classList.remove('map-fs-no-overflow')
+    }
+    _fsAncestors = []
+    // Remove scroll blockers
+    if (_removeScrollBlockers) {
+      _removeScrollBlockers()
+      _removeScrollBlockers = null
+    }
+  }
+  // Remove container fullscreen marker
+  try {
+    map.getContainer().classList.remove('map-fs-on')
+  } catch {}
+  // Invalidate size after exit
+  window.setTimeout(() => map.invalidateSize(), 50)
+  // Re-add expand control
+  try {
+    if (_expandControl) map.addControl(_expandControl)
+  } catch {}
+})
 
 // Tracking overlays: keep minimal halo only (no extra panes)
 
@@ -103,6 +209,8 @@ let adaptiveRefreshRate: number = 15
 let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
 let isMapExpanded = false
 let initialSSEStartTimer: number | null = null
+let _expandButtonEl: HTMLElement | null = null
+let _expandControl: any = null
 
 function updateTrackingStatusUI(): void {
   const el = document.getElementById('tracking-status')
@@ -974,7 +1082,7 @@ if (refreshRateElement) {
     .addTo(map)
 
   // Add a compact expand toggle (not full-screen)
-  ;(L as any)
+  _expandControl = (L as any)
     .easyButton({
       position: 'topright',
       states: [
@@ -999,6 +1107,16 @@ if (refreshRateElement) {
       ]
     })
     .addTo(map)
+
+  // Capture reference to expand button element for fullscreen hide/show
+  if (!_expandButtonEl) {
+    const span = document.querySelector(
+      '#map .easy-button-button .expand'
+    ) as HTMLElement | null
+    _expandButtonEl =
+      (span && (span.closest('a.easy-button-button') as HTMLElement)) || null
+    if (_expandButtonEl) _expandButtonEl.classList.add('map-expand-button')
+  }
 
   // Initialize expanded state from cookie
   const savedMapExpanded = getCookie('map-expanded')
