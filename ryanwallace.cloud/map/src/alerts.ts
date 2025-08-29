@@ -61,7 +61,6 @@ export function alerts(vehicles_url: string): void {
       return res.json()
     })
     .then((data: AlertData) => {
-      console.log('Alerts data received:', data)
       const msgs = new Set<string>()
       const cards: string[] = []
 
@@ -172,13 +171,13 @@ function renderAlertCard({
   return `
     <div class="info-links alert-card">
       <div class="alert-card-meta">
-        <div class="alert-lines">${lines}</div>
+        <div class="alert-lines"><span class="sr-only">Affected routes:</span>${lines}</div>
         <div class="alert-sev ${sevClass}" title="${sevLabel}">${sevLabel}</div>
       </div>
       <div class="alert-card-body">
         ${renderAlertTextClamp(text)}
       </div>
-      <div title="Last updated"><small>${updatedDisplay}</small></div>
+      <div class="alert-upd" title="Last updated">${updatedDisplay}</div>
     </div>
   `
 }

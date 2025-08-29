@@ -1104,7 +1104,7 @@ body.dark-theme .info-links {
   }
 }
 
-/* Alerts severity — Catppuccin Mocha palette */
+/* Alerts severity — Catppuccin Mocha palette (dark mode only) */
 :root {
   --ctp-green: #a6e3a1; /* Low */
   --ctp-yellow: #f9e2af; /* Medium */
@@ -1112,8 +1112,8 @@ body.dark-theme .info-links {
   --ctp-red: #f38ba8; /* Critical */
 }
 
-/* Base badge styling (kept light, themed by variants) */
-#alerts .alert-card .alert-sev {
+/* Scope pastel badges to dark theme so light uses higher-contrast set below */
+body.dark-theme #alerts .alert-card .alert-sev {
   padding: 4px 10px;
   border-radius: 999px;
   font-weight: 600;
@@ -1122,28 +1122,28 @@ body.dark-theme .info-links {
 }
 
 /* Low severity (Green) */
-#alerts .alert-card .alert-sev.sev-low {
+body.dark-theme #alerts .alert-card .alert-sev.sev-low {
   background-color: rgba(166, 227, 161, 0.18);
   color: var(--ctp-green);
   border-color: rgba(166, 227, 161, 0.45);
 }
 
 /* Medium severity (Yellow) */
-#alerts .alert-card .alert-sev.sev-med {
+body.dark-theme #alerts .alert-card .alert-sev.sev-med {
   background-color: rgba(249, 226, 175, 0.18);
   color: var(--ctp-yellow);
   border-color: rgba(249, 226, 175, 0.45);
 }
 
 /* High severity (Peach) */
-#alerts .alert-card .alert-sev.sev-high {
+body.dark-theme #alerts .alert-card .alert-sev.sev-high {
   background-color: rgba(250, 179, 135, 0.18);
   color: var(--ctp-peach);
   border-color: rgba(250, 179, 135, 0.45);
 }
 
 /* Critical severity (Red) */
-#alerts .alert-card .alert-sev.sev-critical {
+body.dark-theme #alerts .alert-card .alert-sev.sev-critical {
   background-color: rgba(243, 139, 168, 0.18);
   color: var(--ctp-red);
   border-color: rgba(243, 139, 168, 0.45);
@@ -2820,6 +2820,14 @@ textarea,
   word-wrap: break-word;
 }
 
+/* Toggle sentence preview/full text */
+.alert-text-container.expanded .alert-text-truncated {
+  display: none;
+}
+.alert-text-container.expanded .alert-text-full {
+  display: inline;
+}
+
 .alert-text-toggle {
   background: none;
   border: none;
@@ -2869,6 +2877,7 @@ body.dark-theme .alert-text-toggle:hover {
 .info-links.alert-card {
   padding: 14px 16px;
   font-size: 0.95rem;
+  border-left: 4px solid #363a4f;
 }
 .alert-card .alert-card-meta {
   display: grid;
@@ -2886,10 +2895,17 @@ body.dark-theme .alert-text-toggle:hover {
 }
 .alert-card .alert-lines {
   grid-area: lines;
+  /* Center and space route icons nicely, especially in multi-column layouts */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px; /* replaces per-image margin for true centering */
 }
 .alert-card .alert-sev {
   grid-area: sev;
-  justify-self: start;
+  justify-self: center; /* center the severity badge */
+  text-align: center;
 }
 .alert-card .alert-upd {
   grid-area: upd;
@@ -2899,7 +2915,8 @@ body.dark-theme .alert-text-toggle:hover {
 .alert-card .alert-lines img.line {
   height: 50px;
   width: auto;
-  margin-right: 4px;
+  margin: 0; /* avoid off-center due to trailing margin */
+  display: block;
 }
 .alert-card .alert-sev {
   padding: 4px 10px;
@@ -2934,8 +2951,18 @@ body.dark-theme .alert-text-toggle:hover {
   max-width: 100%;
 }
 .alert-card .alert-card-body {
-  font-size: 1rem;
-  line-height: 1.35;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  text-align: center; /* center the text block within the card */
+}
+.alert-card .alert-card-body .alert-text-container {
+  display: inline-block; /* center block, keep inner text left-aligned */
+  text-align: left;
+}
+.alert-card .alert-card-body .alert-text-toggle {
+  margin-left: 0; /* avoid awkward offset when centered */
+  display: inline-block;
+  margin-top: 6px;
 }
 .alert-text {
   display: -webkit-box;
@@ -2949,6 +2976,28 @@ body.dark-theme .alert-text-toggle:hover {
   -webkit-line-clamp: initial;
   -webkit-box-orient: initial;
   overflow: visible;
+}
+/* Visually hidden but accessible text utility */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+/* Subtle, centered timestamp styling under each alert */
+.alert-card .alert-upd {
+  text-align: center;
+  color: #6b7280; /* gray-500 */
+  font-size: 12px;
+  margin-top: 6px;
+}
+body.dark-theme #alerts .alert-card .alert-upd {
+  color: #9ca3af; /* gray-400 */
 }
 .alert-text-toggle {
   background: none;
