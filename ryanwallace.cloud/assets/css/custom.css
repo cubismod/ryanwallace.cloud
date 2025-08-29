@@ -497,10 +497,7 @@ body.dark-theme .pagination-item:hover {
   min-height: 0 !important;
 }
 
-/* Scope canvas height tweak to pseudo fullscreen only to avoid distortions */
-.leaflet-pseudo-fullscreen .leaflet-zoom-animated canvas {
-  height: 100% !important;
-}
+/* Avoid forcing canvas sizing; let Leaflet manage intrinsic size for stability */
 
 /* Nudge Leaflet controls inside iOS safe areas during fullscreen */
 .leaflet-container:-webkit-full-screen .leaflet-top,

@@ -143,22 +143,7 @@ map.on('enterFullscreen', () => {
   const wasExpanded = isMapExpanded
   if (wasExpanded) setMapExpanded(false)
   if (isIOS()) {
-    // Freeze background scroll (prefer pre-captured scroll from preToggle)
-    const capturedY = _fsPreScrollY
-    _fsPreScrollY = null
-    _fsScrollY =
-      typeof capturedY === 'number'
-        ? capturedY
-        : window.scrollY || window.pageYOffset || 0
-    const bs = document.body.style
-    bs.position = 'fixed'
-    bs.top = `-${_fsScrollY}px`
-    bs.left = '0'
-    bs.right = '0'
-    bs.width = '100%'
-    bs.overflow = 'hidden'
-
-    // Add a body flag for CSS-based safe-area adjustments (after freezing)
+    // Add a body flag for CSS-based safe-area adjustments and scroll lock
     document.body.classList.add('map-fs-active')
     document.documentElement.classList.add('map-fs-active')
   }
@@ -197,21 +182,10 @@ map.on('exitFullscreen', () => {
       n.classList.remove('map-fs-no-overflow')
     }
     _fsAncestors = []
-    // Unfreeze background scroll and restore position
+    // Remove scroll blockers
     if (_removeScrollBlockers) {
       _removeScrollBlockers()
       _removeScrollBlockers = null
-    }
-    const bs = document.body.style
-    bs.position = ''
-    bs.top = ''
-    bs.left = ''
-    bs.right = ''
-    bs.width = ''
-    bs.overflow = ''
-    if (typeof _fsScrollY === 'number') {
-      window.scrollTo(0, _fsScrollY)
-      _fsScrollY = 0
     }
   }
   // Invalidate after exit to settle tiles
