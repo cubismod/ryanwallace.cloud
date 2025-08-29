@@ -472,6 +472,7 @@ body.dark-theme .pagination-item:hover {
 /* Safari still needs this vendor-prefix: https://caniuse.com/mdn-css_selectors_fullscreen */
 /* stylelint-disable-next-line selector-no-vendor-prefix */
 .leaflet-container:-webkit-full-screen,
+.leaflet-container:-moz-full-screen,
 .leaflet-container:fullscreen {
   width: 100% !important;
   height: 100% !important;
@@ -489,7 +490,6 @@ body.dark-theme .pagination-item:hover {
   top: 0 !important;
   left: 0 !important;
   z-index: 2147483647 !important;
-  /* Prevent site styles from clipping or offsetting pseudo fullscreen */
   margin: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -497,9 +497,21 @@ body.dark-theme .pagination-item:hover {
   min-height: 0 !important;
 }
 
-/* Avoid forcing canvas sizing; let Leaflet manage intrinsic size for stability */
+.leaflet-container.map-fs-on .map-expand-button,
+.leaflet-pseudo-fullscreen .map-expand-button,
+.leaflet-container:-webkit-full-screen .map-expand-button,
+.leaflet-container:-moz-full-screen .map-expand-button,
+.leaflet-container:fullscreen .map-expand-button {
+  display: none !important;
+}
+.leaflet-container.map-fs-on .easy-button-button:has(.expand),
+.leaflet-pseudo-fullscreen .easy-button-button:has(.expand),
+.leaflet-container:-webkit-full-screen .easy-button-button:has(.expand),
+.leaflet-container:-moz-full-screen .easy-button-button:has(.expand),
+.leaflet-container:fullscreen .easy-button-button:has(.expand) {
+  display: none !important;
+}
 
-/* Nudge Leaflet controls inside iOS safe areas during fullscreen */
 .leaflet-container:-webkit-full-screen .leaflet-top,
 .leaflet-container:fullscreen .leaflet-top,
 .leaflet-pseudo-fullscreen .leaflet-top {
@@ -520,20 +532,14 @@ body.dark-theme .pagination-item:hover {
 .leaflet-pseudo-fullscreen .leaflet-right {
   right: max(0px, env(safe-area-inset-right)) !important;
 }
-
-/* When map fullscreen is active, neutralize transforms on nearby ancestors */
 .map-fs-no-transform {
   transform: none !important;
   will-change: auto !important;
 }
-
-/* Remove overflow clipping on ancestors while map fullscreen is active */
 .map-fs-no-overflow {
   overflow: visible !important;
   border-radius: 0 !important;
 }
-
-/* Prevent background page scroll while map is fullscreen */
 html.map-fs-active,
 body.map-fs-active {
   overflow: hidden !important;

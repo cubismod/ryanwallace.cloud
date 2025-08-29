@@ -70,23 +70,18 @@ var map = L.map('map', {
   maxZoom: 50
 }).setView([42.36565, -71.05236], 13)
 
-// Try to disable the custom "expanded" state just before fullscreen toggles
+// Fullscreen pre-click hook
 let _fsHookAttempts = 0
 function _hookFullscreenPreToggle(): void {
   const btn = document.querySelector(
     '.leaflet-control-zoom-fullscreen'
   ) as HTMLAnchorElement | null
   if (btn) {
-    // Use capture to run before Leaflet's own click handler
     const preToggle = (ev: Event) => {
-      // Prevent the anchor default navigation to '#', which can cause scroll-to-top
       try {
         ev.preventDefault()
       } catch {}
-      // Capture scroll position BEFORE the plugin toggles pseudo-fullscreen
-      if (isIOS()) {
-        _fsPreScrollY = window.scrollY || window.pageYOffset || 0
-      }
+      if (isIOS()) _fsPreScrollY = window.scrollY || window.pageYOffset || 0
       if (isMapExpanded) setMapExpanded(false)
     }
     btn.addEventListener('click', preToggle, { capture: true })
@@ -99,7 +94,7 @@ function _hookFullscreenPreToggle(): void {
 }
 _hookFullscreenPreToggle()
 
-// Load double-touch drag/zoom enhancement only on touch devices to save bytes on desktop
+// Load double-touch drag/zoom enhancement only on touch devices
 const isTouchDevice =
   'ontouchstart' in window || (navigator as any).maxTouchPoints > 0
 if (isTouchDevice) {
@@ -111,7 +106,7 @@ if (isTouchDevice) {
   ]).catch(() => {})
 }
 
-// Track popup open state to avoid disrupting user interactions
+// Track popup open state
 let popupOpen = false
 map.on('popupopen', () => {
   popupOpen = true
@@ -120,8 +115,7 @@ map.on('popupclose', () => {
   popupOpen = false
 })
 
-// Ensure expanded state is disabled when entering fullscreen to avoid rendering issues
-// Track ancestors we neutralize during pseudo-fullscreen
+// Fullscreen helpers
 let _fsAncestors: HTMLElement[] = []
 let _fsScrollY = 0
 let _fsPreScrollY: number | null = null
@@ -129,12 +123,8 @@ let _removeScrollBlockers: (() => void) | null = null
 
 function _installScrollBlockers(container: HTMLElement): () => void {
   const prevent = (e: Event) => {
-    // If the event originated outside the map container, prevent scrolling
-    if (!container.contains(e.target as Node)) {
-      e.preventDefault()
-    }
+    if (!container.contains(e.target as Node)) e.preventDefault()
   }
-  // iOS requires passive: false to allow preventDefault on touchmove
   document.addEventListener('touchmove', prevent, { passive: false })
   document.addEventListener('wheel', prevent as any, { passive: false })
   return () => {
@@ -146,15 +136,21 @@ function _installScrollBlockers(container: HTMLElement): () => void {
 map.on('enterFullscreen', () => {
   const wasExpanded = isMapExpanded
   if (wasExpanded) setMapExpanded(false)
-  // iOS: avoid modifying html/body to prevent Safari jump-to-top
+  try {
+    map.getContainer().classList.add('map-fs-on')
+  } catch {}
+  // Remove expand control while fullscreen is active
+  try {
+    if (_expandControl) map.removeControl(_expandControl)
+  } catch {}
 
-  // Extra guard: block stray scroll events outside the map container (iOS only)
+  // Block page scroll on iOS
   if (isIOS()) {
     const container = map.getContainer()
     _removeScrollBlockers = _installScrollBlockers(container)
   }
 
-  // Neutralize transforms on a few ancestors to avoid iOS fixed-position bugs
+  // iOS: neutralize transforms on a few ancestors
   if (isIOS()) {
     _fsAncestors = []
     let p: HTMLElement | null = map.getContainer()
@@ -168,8 +164,9 @@ map.on('enterFullscreen', () => {
     }
   }
 
-  // Extra safety: invalidate size shortly after entering
+  // Invalidate size shortly after entering
   window.setTimeout(() => map.invalidateSize(), 50)
+  if (_expandButtonEl) _expandButtonEl.style.display = 'none'
 })
 
 map.on('exitFullscreen', () => {
@@ -186,8 +183,16 @@ map.on('exitFullscreen', () => {
       _removeScrollBlockers = null
     }
   }
-  // Invalidate after exit to settle tiles
+  // Remove container fullscreen marker
+  try {
+    map.getContainer().classList.remove('map-fs-on')
+  } catch {}
+  // Invalidate size after exit
   window.setTimeout(() => map.invalidateSize(), 50)
+  // Re-add expand control
+  try {
+    if (_expandControl) map.addControl(_expandControl)
+  } catch {}
 })
 
 // Tracking overlays: keep minimal halo only (no extra panes)
@@ -204,6 +209,8 @@ let adaptiveRefreshRate: number = 15
 let CACHE_DURATION = 5000 // 5 seconds - will be adjusted based on connection
 let isMapExpanded = false
 let initialSSEStartTimer: number | null = null
+let _expandButtonEl: HTMLElement | null = null
+let _expandControl: any = null
 
 function updateTrackingStatusUI(): void {
   const el = document.getElementById('tracking-status')
@@ -1075,7 +1082,7 @@ if (refreshRateElement) {
     .addTo(map)
 
   // Add a compact expand toggle (not full-screen)
-  ;(L as any)
+  _expandControl = (L as any)
     .easyButton({
       position: 'topright',
       states: [
@@ -1100,6 +1107,16 @@ if (refreshRateElement) {
       ]
     })
     .addTo(map)
+
+  // Capture reference to expand button element for fullscreen hide/show
+  if (!_expandButtonEl) {
+    const span = document.querySelector(
+      '#map .easy-button-button .expand'
+    ) as HTMLElement | null
+    _expandButtonEl =
+      (span && (span.closest('a.easy-button-button') as HTMLElement)) || null
+    if (_expandButtonEl) _expandButtonEl.classList.add('map-expand-button')
+  }
 
   // Initialize expanded state from cookie
   const savedMapExpanded = getCookie('map-expanded')
