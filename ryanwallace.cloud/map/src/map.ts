@@ -78,7 +78,11 @@ function _hookFullscreenPreToggle(): void {
   ) as HTMLAnchorElement | null
   if (btn) {
     // Use capture to run before Leaflet's own click handler
-    const preToggle = () => {
+    const preToggle = (ev: Event) => {
+      // Prevent the anchor default navigation to '#', which can cause scroll-to-top
+      try {
+        ev.preventDefault()
+      } catch {}
       // Capture scroll position BEFORE the plugin toggles pseudo-fullscreen
       if (isIOS()) {
         _fsPreScrollY = window.scrollY || window.pageYOffset || 0
@@ -142,11 +146,7 @@ function _installScrollBlockers(container: HTMLElement): () => void {
 map.on('enterFullscreen', () => {
   const wasExpanded = isMapExpanded
   if (wasExpanded) setMapExpanded(false)
-  if (isIOS()) {
-    // Add a body flag for CSS-based safe-area adjustments and scroll lock
-    document.body.classList.add('map-fs-active')
-    document.documentElement.classList.add('map-fs-active')
-  }
+  // iOS: avoid modifying html/body to prevent Safari jump-to-top
 
   // Extra guard: block stray scroll events outside the map container (iOS only)
   if (isIOS()) {
@@ -175,8 +175,6 @@ map.on('enterFullscreen', () => {
 map.on('exitFullscreen', () => {
   // Remove iOS-specific patches
   if (isIOS()) {
-    document.body.classList.remove('map-fs-active')
-    document.documentElement.classList.remove('map-fs-active')
     for (const n of _fsAncestors) {
       n.classList.remove('map-fs-no-transform')
       n.classList.remove('map-fs-no-overflow')
