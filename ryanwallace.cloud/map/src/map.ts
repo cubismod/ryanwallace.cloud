@@ -54,11 +54,32 @@ var map = L.map('map', {
   fullscreenControlOptions: {
     position: 'topleft',
     title: 'Fullscreen',
-    forcePseudoFullscreen: false
+    forcePseudoFullscreen: true
   },
   preferCanvas: true,
   maxZoom: 50
 }).setView([42.36565, -71.05236], 13)
+
+// Try to disable the custom "expanded" state just before fullscreen toggles
+let _fsHookAttempts = 0
+function _hookFullscreenPreToggle(): void {
+  const btn = document.querySelector(
+    '.leaflet-control-zoom-fullscreen'
+  ) as HTMLAnchorElement | null
+  if (btn) {
+    // Use capture to run before Leaflet's own click handler
+    const preToggle = () => {
+      if (isMapExpanded) setMapExpanded(false)
+    }
+    btn.addEventListener('click', preToggle, { capture: true })
+    return
+  }
+  if (_fsHookAttempts < 10) {
+    _fsHookAttempts++
+    window.setTimeout(_hookFullscreenPreToggle, 200)
+  }
+}
+_hookFullscreenPreToggle()
 
 // Load double-touch drag/zoom enhancement only on touch devices to save bytes on desktop
 const isTouchDevice =
@@ -81,13 +102,15 @@ map.on('popupclose', () => {
   popupOpen = false
 })
 
-// map.on('enterFullscreen', function () {
-//   let elements = document.getElementsByClassName('leaflet-zoom-animated')
-//   for (const element of elements) {
-//     console.debug(element.tagName)
-//     if (element.tagName === 'CANVAS') element.setAttribute('height', '100%')
-//   }
-// })
+// Ensure expanded state is disabled when entering fullscreen to avoid rendering issues
+map.on('enterFullscreen', () => {
+  const wasExpanded = isMapExpanded
+  if (wasExpanded) {
+    setMapExpanded(false)
+  }
+  // Extra safety: invalidate size again shortly after entering
+  window.setTimeout(() => map.invalidateSize(), 50)
+})
 
 // Tracking overlays: keep minimal halo only (no extra panes)
 
