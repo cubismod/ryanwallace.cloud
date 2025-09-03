@@ -24,7 +24,8 @@ const MomentTimezoneDataPlugin = tryRequire(
 const appConfig = {
   entry: {
     map: path.resolve(__dirname, 'src/map.ts'),
-    track: path.resolve(__dirname, 'src/track.ts')
+    track: path.resolve(__dirname, 'src/track.ts'),
+    alerts: path.resolve(__dirname, 'src/alerts-page.ts')
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -70,6 +71,12 @@ const appConfig = {
       template: path.resolve(__dirname, 'src/index.html'),
       filename: 'index.html',
       chunks: ['map'],
+      inject: 'body'
+    }),
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'src/alerts.html'),
+      filename: 'alerts.html',
+      chunks: ['alerts'],
       inject: 'body'
     }),
     new webpack.ProvidePlugin({

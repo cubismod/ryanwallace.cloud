@@ -2856,3 +2856,150 @@ body.dark-theme .alert-text-toggle {
 body.dark-theme .alert-text-toggle:hover {
   background-color: rgba(102, 179, 255, 0.1);
 }
+
+/* Alerts page responsive cards (light + dark) */
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.alert-card {
+  border: 1px solid var(--light-border-color, #e5e7eb);
+  border-radius: 10px;
+  background: var(--light-surface, #ffffff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  padding: 12px;
+  min-width: 0; /* allow grid item to shrink without overflow */
+}
+body.dark-theme .alert-card {
+  border-color: var(--dark-border-color, #374151);
+  background: var(--dark-surface, #111827);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.alert-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.alert-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.alert-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.sev {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.sev.sev-high {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.sev.sev-med {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fde68a;
+}
+.sev.sev-low {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+body.dark-theme .sev.sev-high {
+  background: #3b0a0a;
+  color: #fecaca;
+  border-color: #7f1d1d;
+}
+body.dark-theme .sev.sev-med {
+  background: #3a2a0a;
+  color: #fde68a;
+  border-color: #92400e;
+}
+body.dark-theme .sev.sev-low {
+  background: #0a2f1d;
+  color: #bbf7d0;
+  border-color: #065f46;
+}
+.time {
+  color: #6b7280;
+  font-size: 12px;
+}
+body.dark-theme .time {
+  color: #9ca3af;
+}
+
+.alert-card-body {
+  color: #111827;
+  font-size: 14px;
+}
+body.dark-theme .alert-card-body {
+  color: #e5e7eb;
+}
+/* Strong wrapping rules to avoid horizontal overflow */
+.alert-card-body,
+.alert-card-body * {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.alert-card-body a {
+  word-break: break-all;
+}
+
+/* Anchor presentation inside alerts */
+.alert-link {
+  color: var(--link-color, #2563eb);
+  text-decoration: none;
+}
+.alert-link:hover {
+  text-decoration: underline;
+}
+body.dark-theme .alert-link {
+  color: var(--link-color, #93c5fd);
+}
+
+/* Link icon in alert header */
+.alert-head-link {
+  color: var(--link-color, #2563eb);
+  text-decoration: none;
+  font-size: 16px;
+  margin-left: 6px;
+}
+.alert-head-link:hover {
+  text-decoration: underline;
+}
+body.dark-theme .alert-head-link {
+  color: var(--link-color, #93c5fd);
+}
+
+/* Truncation blocks should occupy full width for ellipsis */
+.alert-card-body .alert-text-container {
+  display: block;
+  max-width: 100%;
+}
+.alert-card-body .alert-text-truncated {
+  display: block;
+}
+.alert-card-body .alert-text-full {
+  display: none;
+}
+
+/* Route badges: inherit colors from line classes (.rl,.gl,.bl,.ol,.sl,.cr) */
+.route-badge {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+}

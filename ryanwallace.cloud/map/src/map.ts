@@ -81,7 +81,7 @@ function _hookFullscreenPreToggle(): void {
       try {
         ev.preventDefault()
       } catch {}
-      if (isIOS()) _fsPreScrollY = window.scrollY || window.pageYOffset || 0
+      // capture scroll not used currently; noop
       if (isMapExpanded) setMapExpanded(false)
     }
     btn.addEventListener('click', preToggle, { capture: true })
@@ -117,8 +117,7 @@ map.on('popupclose', () => {
 
 // Fullscreen helpers
 let _fsAncestors: HTMLElement[] = []
-let _fsScrollY = 0
-let _fsPreScrollY: number | null = null
+// removed unused fullscreen scroll state variables
 let _removeScrollBlockers: (() => void) | null = null
 
 function _installScrollBlockers(container: HTMLElement): () => void {

@@ -1,75 +1,53 @@
-import DataTable from 'datatables.net'
-import 'datatables.net-dt/css/dataTables.dataTables.css'
 import { formatDistance } from 'date-fns'
-import { AlertData, RouteMapping } from './types'
-
-function embedSVG(line: string, alt: string): string {
-  return `<img src="/images/icons/lines/${line}.svg" alt="${alt}" class="line">`
-}
-
-function truncateAlertText(text: string, maxLength: number = 80): string {
-  if (text.length <= maxLength) {
-    return text
-  }
-
-  const truncated = text.substring(0, maxLength).trim()
-  const remaining = text.substring(maxLength)
-
-  return `
-    <div class="alert-text-container">
-      <span class="alert-text-truncated">${truncated}...</span>
-      <span class="alert-text-full" style="display: none;">${text}</span>
-      <button class="alert-text-toggle" onclick="toggleAlertText(this)">Show more</button>
-    </div>
-  `
-}
+import { AlertData } from './types'
 
 function calculateAffectedLines(data: Array<{ route: string }>): string {
-  const routeMap: Record<string, RouteMapping> = {
-    Red: { svg: 'rl', alt: 'Red Line' },
-    Blue: { svg: 'bl', alt: 'Blue Line' },
-    Greenbush: { svg: 'cr-greenbush', alt: 'Greenbush Line' },
-    Green: { svg: 'gl', alt: 'Green Line' },
-    Orange: { svg: 'ol', alt: 'Orange Line' },
-    749: { svg: 'sl5', alt: 'Silver Line 5' },
-    751: { svg: 'sl4', alt: 'Silver Line 4' },
-    746: { svg: 'slw', alt: 'Silver Line Way' },
-    743: { svg: 'sl3', alt: 'Silver Line 3' },
-    741: { svg: 'sl1', alt: 'Silver Line 1 (Airport)' },
-    742: { svg: 'sl2', alt: 'Silver Line 2' },
-    Fitchburg: { svg: 'cr-fitchburg', alt: 'Fitchburg Line' },
-    Fairmont: { svg: 'cr-fairmont', alt: 'Fairmont Line' },
-    'CR-Fairmont': { svg: 'cr-fairmont', alt: 'Fairmont Line' },
-    Fairmount: { svg: 'cr-fairmont', alt: 'Fairmont Line' },
-    'CR-Fairmount': { svg: 'cr-fairmont', alt: 'Fairmont Line' },
-    NewBedford: { svg: 'cr-fall-river', alt: 'Fall River/New Bedford Line' },
-    Franklin: { svg: 'cr-franklin', alt: 'Franklin/Foxboro Line' },
-    Haverhill: { svg: 'cr-haverhill', alt: 'Haverhill Line' },
-    Kingston: { svg: 'cr-kingston', alt: 'Kingston Line' },
-    Lowell: { svg: 'cr-lowell', alt: 'Lowell Line' },
-    Needham: { svg: 'cr-needham', alt: 'Needham Line' },
-    Newburyport: { svg: 'cr-newburyport', alt: 'Newburyport/Rockport Line' },
-    Providence: { svg: 'cr-providence', alt: 'Providence Line' },
-    Worcester: { svg: 'cr-worcester', alt: 'Worcester Line' }
+  const routeMap: Record<string, { label: string; cls: string }> = {
+    Red: { label: 'Red Line', cls: 'rl' },
+    Blue: { label: 'Blue Line', cls: 'bl' },
+    Green: { label: 'Green Line', cls: 'gl' },
+    Orange: { label: 'Orange Line', cls: 'ol' },
+    749: { label: 'Silver Line 5', cls: 'sl' },
+    751: { label: 'Silver Line 4', cls: 'sl' },
+    746: { label: 'Silver Line Way', cls: 'sl' },
+    743: { label: 'Silver Line 3', cls: 'sl' },
+    741: { label: 'Silver Line 1', cls: 'sl' },
+    742: { label: 'Silver Line 2', cls: 'sl' },
+    Fitchburg: { label: 'Fitchburg Line', cls: 'cr' },
+    Fairmont: { label: 'Fairmount Line', cls: 'cr' },
+    'CR-Fairmont': { label: 'Fairmount Line', cls: 'cr' },
+    Fairmount: { label: 'Fairmount Line', cls: 'cr' },
+    'CR-Fairmount': { label: 'Fairmount Line', cls: 'cr' },
+    NewBedford: { label: 'Fall River/New Bedford Line', cls: 'cr' },
+    Franklin: { label: 'Franklin/Foxboro Line', cls: 'cr' },
+    Haverhill: { label: 'Haverhill Line', cls: 'cr' },
+    Kingston: { label: 'Kingston Line', cls: 'cr' },
+    Lowell: { label: 'Lowell Line', cls: 'cr' },
+    Needham: { label: 'Needham Line', cls: 'cr' },
+    Newburyport: { label: 'Newburyport/Rockport Line', cls: 'cr' },
+    Providence: { label: 'Providence Line', cls: 'cr' },
+    Worcester: { label: 'Worcester Line', cls: 'cr' },
+    Greenbush: { label: 'Greenbush Line', cls: 'cr' }
   }
 
-  const afLines = new Set()
+  const labels = new Map<string, string>()
   for (const entity of data) {
     for (const routePattern in routeMap) {
       if (
         entity.route === routePattern ||
         entity.route.includes(routePattern)
       ) {
-        const { svg, alt } = routeMap[routePattern]
-        afLines.add(embedSVG(svg, alt))
+        const { label, cls } = routeMap[routePattern]
+        labels.set(label, cls)
         break
       }
     }
   }
-  return [...afLines].join('</br>')
+  if (labels.size === 0) return ''
+  return Array.from(labels.entries())
+    .map(([label, cls]) => `<span class="route-badge ${cls}">${label}</span>`)
+    .join(' ')
 }
-
-let alertsTable: any | null = null
 
 export function alerts(vehicles_url: string): void {
   console.log('Fetching alerts from:', `${vehicles_url}/alerts`)
@@ -80,8 +58,16 @@ export function alerts(vehicles_url: string): void {
     })
     .then((data: AlertData) => {
       console.log('Alerts data received:', data)
-      const msgs = new Set()
-      const dataSet = []
+      const msgs = new Set<string>()
+      type Row = {
+        linesHtml: string
+        severity: number | string
+        displayTime: string
+        timestamp: number
+        text: string
+        url?: string
+      }
+      const rows: Row[] = []
 
       for (const alert of data.data) {
         if (alert.attributes && !msgs.has(alert.attributes.header)) {
@@ -94,96 +80,87 @@ export function alerts(vehicles_url: string): void {
               continue
             }
           }
-          const rowData = [
-            calculateAffectedLines(alert.attributes.informed_entity),
-            alert.attributes.severity,
-            {
-              display: formatDistance(
-                new Date(
-                  alert.attributes.updated_at || alert.attributes.created_at
-                ),
-                new Date(),
-                { addSuffix: true }
-              ),
-              timestamp: new Date(
-                alert.attributes.updated_at || alert.attributes.created_at
-              ).getTime()
-            },
-            alert.attributes.header
-          ]
-          dataSet.push(rowData)
+          const ts = new Date(
+            alert.attributes.updated_at || alert.attributes.created_at
+          ).getTime()
+          rows.push({
+            linesHtml: calculateAffectedLines(alert.attributes.informed_entity),
+            severity: alert.attributes.severity,
+            displayTime: formatDistance(new Date(ts), new Date(), {
+              addSuffix: true
+            }),
+            timestamp: ts,
+            text: alert.attributes.header,
+            url: alert.attributes.url
+          })
         }
       }
 
-      // If already initialized, update instead of reinit
-      if (alertsTable) {
-        try {
-          alertsTable.clear()
-          alertsTable.rows.add(dataSet)
-          alertsTable.draw()
-          return
-        } catch {}
-      }
-
-      console.log('Initializing DataTable with', dataSet.length, 'alerts')
-      alertsTable = new DataTable('#alerts', {
-        columns: [
-          { title: 'Lines' },
-          { title: 'Sev', className: 'dt-body-center' },
-          {
-            title: 'Upd',
-            render: {
-              _: 'display',
-              sort: 'timestamp'
-            }
-          },
-          {
-            title: 'Alert',
-            className: 'alert-body',
-            render: function (data: any) {
-              return truncateAlertText(data)
-            }
-          }
-        ],
-        order: [
-          [0, 'desc'],
-          [1, 'desc']
-        ],
-        data: dataSet,
-        ordering: true,
-        paging: false
+      // Sort: severity desc, then most recent first
+      rows.sort((a, b) => {
+        const sevA = typeof a.severity === 'number' ? a.severity : 0
+        const sevB = typeof b.severity === 'number' ? b.severity : 0
+        if (sevB !== sevA) return sevB - sevA
+        return b.timestamp - a.timestamp
       })
+
+      const container = document.getElementById('alerts')
+      if (!container) return
+      container.innerHTML = ''
+      container.classList.add('alerts-grid')
+
+      for (const r of rows) {
+        const card = document.createElement('div')
+        card.className = 'alert-card'
+
+        const head = document.createElement('div')
+        head.className = 'alert-card-head'
+        const lines = document.createElement('div')
+        lines.className = 'alert-lines'
+        lines.innerHTML = r.linesHtml
+        const meta = document.createElement('div')
+        meta.className = 'alert-meta'
+        const sev = document.createElement('span')
+        sev.className = `sev sev-${severityClass(r.severity)}`
+        sev.textContent = `Sev ${r.severity}`
+        const time = document.createElement('span')
+        time.className = 'time'
+        time.textContent = r.displayTime
+        meta.appendChild(sev)
+        meta.appendChild(time)
+        head.appendChild(lines)
+        head.appendChild(meta)
+
+        const body = document.createElement('div')
+        body.className = 'alert-card-body'
+        body.textContent = r.text
+
+        // Optional link icon in header
+        if (r.url && /^https?:\/\//i.test(r.url)) {
+          const link = document.createElement('a')
+          link.className = 'alert-head-link'
+          link.href = r.url
+          link.target = '_blank'
+          link.rel = 'noopener noreferrer'
+          link.textContent = '🔗'
+          link.title = 'Open full alert'
+          link.setAttribute('aria-label', 'Open full alert')
+          meta.appendChild(link)
+        }
+
+        card.appendChild(head)
+        card.appendChild(body)
+        container.appendChild(card)
+      }
     })
     .catch((e) => {
       console.error('Failed to load alerts:', e)
     })
 }
 
-// Global function for toggling alert text (needs to be accessible to onclick)
-declare global {
-  interface Window {
-    toggleAlertText: (button: HTMLButtonElement) => void
-  }
-}
-
-window.toggleAlertText = function (button: HTMLButtonElement) {
-  const container = button.parentElement
-  if (!container) return
-
-  const truncated = container.querySelector(
-    '.alert-text-truncated'
-  ) as HTMLElement
-  const full = container.querySelector('.alert-text-full') as HTMLElement
-
-  if (truncated && full) {
-    if (full.style.display === 'none') {
-      truncated.style.display = 'none'
-      full.style.display = 'inline'
-      button.textContent = 'Show less'
-    } else {
-      truncated.style.display = 'inline'
-      full.style.display = 'none'
-      button.textContent = 'Show more'
-    }
-  }
+function severityClass(sev: number | string): string {
+  const s = typeof sev === 'number' ? sev : parseInt(String(sev) || '0', 10)
+  if (s >= 8) return 'high'
+  if (s >= 5) return 'med'
+  return 'low'
 }

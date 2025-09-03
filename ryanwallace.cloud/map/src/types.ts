@@ -30,6 +30,7 @@ export interface AlertEntity {
     header: string
     severity: string
     updated_at?: string
+    url?: string
     created_at: string
     active_period: Array<{
       end?: string
