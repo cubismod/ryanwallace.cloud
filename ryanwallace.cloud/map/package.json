@@ -52,9 +52,9 @@
     "webpack-bundle-analyzer": "4.10.2",
     "webpack-cli": "6.0.1"
   },
-  "packageManager": "pnpm@10.15.0",
+  "packageManager": "pnpm@10.15.1",
   "scripts": {
-    "build": "webpack --config webpack.config.js --mode production",
+    "build": "webpack --config webpack.config.js",
     "build:dev": "webpack --config webpack.config.js --mode development",
     "build:nocache": "webpack --config webpack.config.js --mode production --no-cache",
     "move": "mkdir -p ../static/map; mkdir -p ../content/map; mv dist/* ../content/map/",
