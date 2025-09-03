@@ -2893,6 +2893,7 @@ body.dark-theme .alert-card {
   align-items: center;
   gap: 8px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .sev {
   display: inline-block;
@@ -2946,6 +2947,12 @@ body.dark-theme .time {
 }
 body.dark-theme .alert-card-body {
   color: #e5e7eb;
+}
+/* Footer timestamp pinned to bottom for narrow views */
+.alert-card-footer {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
 }
 /* Strong wrapping rules to avoid horizontal overflow */
 .alert-card-body,

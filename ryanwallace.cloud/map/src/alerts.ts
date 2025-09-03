@@ -123,11 +123,7 @@ export function alerts(vehicles_url: string): void {
         const sev = document.createElement('span')
         sev.className = `sev sev-${severityClass(r.severity)}`
         sev.textContent = `Sev ${r.severity}`
-        const time = document.createElement('span')
-        time.className = 'time'
-        time.textContent = r.displayTime
         meta.appendChild(sev)
-        meta.appendChild(time)
         head.appendChild(lines)
         head.appendChild(meta)
 
@@ -150,6 +146,15 @@ export function alerts(vehicles_url: string): void {
 
         card.appendChild(head)
         card.appendChild(body)
+
+        // Footer with timestamp moved to bottom
+        const footer = document.createElement('div')
+        footer.className = 'alert-card-footer'
+        const timeEl = document.createElement('span')
+        timeEl.className = 'time'
+        timeEl.textContent = r.displayTime
+        footer.appendChild(timeEl)
+        card.appendChild(footer)
         container.appendChild(card)
       }
     })
