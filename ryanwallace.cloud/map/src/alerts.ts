@@ -66,6 +66,7 @@ export function alerts(vehicles_url: string): void {
         timestamp: number
         text: string
         url?: string
+        image?: string
       }
       const rows: Row[] = []
 
@@ -91,7 +92,8 @@ export function alerts(vehicles_url: string): void {
             }),
             timestamp: ts,
             text: alert.attributes.header,
-            url: alert.attributes.url
+            url: alert.attributes.url,
+            image: alert.attributes.image
           })
         }
       }
@@ -129,7 +131,37 @@ export function alerts(vehicles_url: string): void {
 
         const body = document.createElement('div')
         body.className = 'alert-card-body'
-        body.textContent = r.text
+
+        // Optional image (if provided)
+        if (r.image && /^https?:\/\//i.test(r.image)) {
+          const imgWrap = document.createElement('div')
+          imgWrap.className = 'alert-image'
+
+          const link = document.createElement('a')
+          // Prefer linking to the alert URL; otherwise link to the image
+          link.href = r.url && /^https?:\/\//i.test(r.url) ? r.url : r.image
+          link.target = '_blank'
+          link.rel = 'noopener noreferrer'
+          link.title = 'Open alert'
+          link.setAttribute('aria-label', 'Open alert')
+
+          const img = document.createElement('img')
+          img.src = r.image
+          img.alt = 'Alert image'
+          ;(img as any).loading = 'lazy'
+          ;(img as any).decoding = 'async'
+          img.addEventListener('error', () => {
+            imgWrap.remove()
+          })
+
+          link.appendChild(img)
+          imgWrap.appendChild(link)
+          body.appendChild(imgWrap)
+        }
+
+        const textEl = document.createElement('div')
+        textEl.textContent = r.text
+        body.appendChild(textEl)
 
         // Optional link icon in header
         if (r.url && /^https?:\/\//i.test(r.url)) {

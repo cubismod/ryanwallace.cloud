@@ -416,10 +416,21 @@ body.dark-theme .pagination-item:hover {
 .cr,
 .sl {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
-  color: white !important;
   transition: all 0.3s ease !important;
   position: relative !important;
   overflow: hidden !important;
+}
+
+/* Ensure readable text contrast per line color */
+.bl,
+.gl,
+.cr {
+  color: #ffffff !important;
+}
+.rl,
+.ol,
+.sl {
+  color: #000000 !important;
 }
 
 .bl::before,
@@ -2812,6 +2823,18 @@ textarea,
   -moz-border-radius: 0 !important;
 }
 
+/* Slight shadow for alert badge icons (route line images) */
+.alert-lines img.line,
+#alerts .line,
+#alerts .line img {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+body.dark-theme .alert-lines img.line,
+body.dark-theme #alerts .line,
+body.dark-theme #alerts .line img {
+  box-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.45);
+}
+
 /* Alert text truncation styling */
 .alert-text-container {
   position: relative;
@@ -2875,6 +2898,38 @@ body.dark-theme .alert-card {
   border-color: var(--dark-border-color, #374151);
   background: var(--dark-surface, #111827);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* Optional image inside alert cards */
+.alert-image {
+  margin: 6px 0 8px;
+}
+.alert-image a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  /* Remove any extra line box space around the image link */
+  line-height: 0;
+  /* Ensure image links are not broken into pieces */
+  word-break: normal;
+  overflow-wrap: normal;
+}
+.alert-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--light-border-color, #e5e7eb);
+}
+body.dark-theme .alert-image img {
+  border-color: var(--dark-border-color, #374151);
+}
+
+/* Do not aggressively break words for media blocks */
+.alert-card-body .alert-image,
+.alert-card-body .alert-image * {
+  word-break: normal;
+  overflow-wrap: normal;
 }
 .alert-card-head {
   display: flex;

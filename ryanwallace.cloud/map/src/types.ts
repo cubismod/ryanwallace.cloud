@@ -29,6 +29,7 @@ export interface AlertEntity {
   attributes: {
     header: string
     severity: string
+    image?: string
     updated_at?: string
     url?: string
     created_at: string
