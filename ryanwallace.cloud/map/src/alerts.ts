@@ -51,6 +51,64 @@ function calculateAffectedLines(data: Array<{ route: string }>): string {
 
 export function alerts(vehicles_url: string): void {
   console.log('Fetching alerts from:', `${vehicles_url}/alerts`)
+
+  // Insert skeleton placeholders while loading
+  const skeletonContainer = document.getElementById('alerts')
+  if (skeletonContainer) {
+    skeletonContainer.classList.add('alerts-grid')
+    skeletonContainer.setAttribute('aria-busy', 'true')
+    skeletonContainer.innerHTML = ''
+    const skCount = 6
+    for (let i = 0; i < skCount; i++) {
+      const card = document.createElement('div')
+      card.className = 'alert-card alert-skeleton-card'
+      card.setAttribute('aria-hidden', 'true')
+
+      const head = document.createElement('div')
+      head.className = 'alert-card-head'
+      const lines = document.createElement('div')
+      lines.className = 'alert-lines'
+      for (let j = 0; j < 3; j++) {
+        const icon = document.createElement('div')
+        icon.className = 'skeleton icon'
+        lines.appendChild(icon)
+      }
+      const meta = document.createElement('div')
+      meta.className = 'alert-meta'
+      const sev = document.createElement('div')
+      sev.className = 'skeleton pill'
+      meta.appendChild(sev)
+      head.appendChild(lines)
+      head.appendChild(meta)
+
+      const imgWrap = document.createElement('div')
+      imgWrap.className = 'alert-image'
+      const imgPh = document.createElement('div')
+      imgPh.className = 'skeleton img'
+      imgWrap.appendChild(imgPh)
+
+      const body = document.createElement('div')
+      body.className = 'alert-card-body'
+      const l1 = document.createElement('div')
+      l1.className = 'skeleton line'
+      const l2 = document.createElement('div')
+      l2.className = 'skeleton line short'
+      body.appendChild(l1)
+      body.appendChild(l2)
+
+      const footer = document.createElement('div')
+      footer.className = 'alert-card-footer'
+      const timePh = document.createElement('div')
+      timePh.className = 'skeleton line xshort'
+      footer.appendChild(timePh)
+
+      card.appendChild(head)
+      card.appendChild(imgWrap)
+      card.appendChild(body)
+      card.appendChild(footer)
+      skeletonContainer.appendChild(card)
+    }
+  }
   fetch(`${vehicles_url}/alerts`)
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -110,6 +168,7 @@ export function alerts(vehicles_url: string): void {
       if (!container) return
       container.innerHTML = ''
       container.classList.add('alerts-grid')
+      container.removeAttribute('aria-busy')
 
       for (const r of rows) {
         const card = document.createElement('div')
@@ -192,6 +251,13 @@ export function alerts(vehicles_url: string): void {
     })
     .catch((e) => {
       console.error('Failed to load alerts:', e)
+      const container = document.getElementById('alerts')
+      if (container) {
+        container.innerHTML =
+          '<div class="alert-error">Failed to load alerts.</div>'
+        container.classList.add('alerts-grid')
+        container.removeAttribute('aria-busy')
+      }
     })
 }
 
