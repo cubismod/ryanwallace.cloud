@@ -52,6 +52,19 @@ function calculateAffectedLines(data: Array<{ route: string }>): string {
 export function alerts(vehicles_url: string): void {
   console.log('Fetching alerts from:', `${vehicles_url}/alerts`)
 
+  // Ensure a search input exists even if the template didn't include one
+  const alertsEl = document.getElementById('alerts')
+  if (alertsEl && !document.getElementById('alerts-search')) {
+    const search = document.createElement('input')
+    search.type = 'search'
+    search.id = 'alerts-search'
+    search.className = 'alerts-search-input'
+    search.placeholder = 'Search alerts (route, text, severity)'
+    search.setAttribute('aria-label', 'Search alerts')
+    // Insert before alerts grid
+    alertsEl.parentElement?.insertBefore(search, alertsEl)
+  }
+
   // Insert skeleton placeholders while loading
   const skeletonContainer = document.getElementById('alerts')
   if (skeletonContainer) {
@@ -125,6 +138,7 @@ export function alerts(vehicles_url: string): void {
         text: string
         url?: string
         image?: string
+        searchBlob: string
       }
       const rows: Row[] = []
 
@@ -142,8 +156,15 @@ export function alerts(vehicles_url: string): void {
           const ts = new Date(
             alert.attributes.updated_at || alert.attributes.created_at
           ).getTime()
+          const linesHtml = calculateAffectedLines(
+            alert.attributes.informed_entity
+          )
+          const plainLines = linesHtml
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
           rows.push({
-            linesHtml: calculateAffectedLines(alert.attributes.informed_entity),
+            linesHtml,
             severity: alert.attributes.severity,
             displayTime: formatDistance(new Date(ts), new Date(), {
               addSuffix: true
@@ -151,7 +172,9 @@ export function alerts(vehicles_url: string): void {
             timestamp: ts,
             text: alert.attributes.header,
             url: alert.attributes.url,
-            image: alert.attributes.image
+            image: alert.attributes.image,
+            searchBlob:
+              `${plainLines} sev${alert.attributes.severity} ${alert.attributes.header}`.toLowerCase()
           })
         }
       }
@@ -164,90 +187,150 @@ export function alerts(vehicles_url: string): void {
         return b.timestamp - a.timestamp
       })
 
-      const container = document.getElementById('alerts')
-      if (!container) return
-      container.innerHTML = ''
-      container.classList.add('alerts-grid')
-      container.removeAttribute('aria-busy')
+      const renderRows = (list: Row[]) => {
+        const container = document.getElementById('alerts')
+        if (!container) return
+        container.innerHTML = ''
+        container.classList.add('alerts-grid')
+        container.removeAttribute('aria-busy')
 
-      for (const r of rows) {
-        const card = document.createElement('div')
-        card.className = 'alert-card'
+        for (const r of list) {
+          const card = document.createElement('div')
+          card.className = 'alert-card'
 
-        const head = document.createElement('div')
-        head.className = 'alert-card-head'
-        const lines = document.createElement('div')
-        lines.className = 'alert-lines'
-        lines.innerHTML = r.linesHtml
-        const meta = document.createElement('div')
-        meta.className = 'alert-meta'
-        const sev = document.createElement('span')
-        sev.className = `sev sev-${severityClass(r.severity)}`
-        sev.textContent = `Sev ${r.severity}`
-        meta.appendChild(sev)
-        head.appendChild(lines)
-        head.appendChild(meta)
-
-        const body = document.createElement('div')
-        body.className = 'alert-card-body'
-
-        // Optional image (if provided)
-        if (r.image && /^https?:\/\//i.test(r.image)) {
-          const imgWrap = document.createElement('div')
-          imgWrap.className = 'alert-image'
-
-          const link = document.createElement('a')
-          // Prefer linking to the alert URL; otherwise link to the image
-          link.href = r.url && /^https?:\/\//i.test(r.url) ? r.url : r.image
-          link.target = '_blank'
-          link.rel = 'noopener noreferrer'
-          link.title = 'Open alert'
-          link.setAttribute('aria-label', 'Open alert')
-
-          const img = document.createElement('img')
-          img.src = r.image
-          img.alt = 'Alert image'
-          ;(img as any).loading = 'lazy'
-          ;(img as any).decoding = 'async'
-          img.addEventListener('error', () => {
-            imgWrap.remove()
+          const head = document.createElement('div')
+          head.className = 'alert-card-head'
+          const lines = document.createElement('div')
+          lines.className = 'alert-lines'
+          lines.innerHTML = r.linesHtml
+          // Determine route classes present for glow color(s)
+          const present = new Set<string>()
+          lines.querySelectorAll('.route-badge').forEach((el) => {
+            const c = Array.from(el.classList).find((k) =>
+              ['rl', 'gl', 'bl', 'ol', 'sl', 'cr'].includes(k)
+            )
+            if (c) present.add(c)
           })
+          const routeRgb: Record<string, string> = {
+            rl: '250,45,39',
+            gl: '0,129,80',
+            bl: '47,93,166',
+            ol: '253,138,3',
+            sl: '154,156,157',
+            cr: '123,56,140'
+          }
+          if (present.size === 1) {
+            const only = Array.from(present)[0]
+            card.classList.add(`alert-glow-${only}`)
+          } else if (present.size > 1) {
+            const dark = document.body.classList.contains('dark-theme')
+            const alpha = dark ? 0.12 : 0.08
+            const glows: string[] = []
+            present.forEach((k) => {
+              const rgb = routeRgb[k]
+              if (rgb) {
+                glows.push(`0 0 10px rgba(${rgb}, ${alpha})`)
+              }
+            })
+            if (glows.length) {
+              card.classList.add('alert-glow-custom')
+              card.style.setProperty('--alert-glow', glows.join(', '))
+            }
+          }
+          const meta = document.createElement('div')
+          meta.className = 'alert-meta'
+          const sev = document.createElement('span')
+          sev.className = `sev sev-${severityClass(r.severity)}`
+          sev.textContent = `Sev ${r.severity}`
+          meta.appendChild(sev)
+          head.appendChild(lines)
+          head.appendChild(meta)
 
-          link.appendChild(img)
-          imgWrap.appendChild(link)
-          body.appendChild(imgWrap)
+          const body = document.createElement('div')
+          body.className = 'alert-card-body'
+
+          // Optional image (if provided)
+          if (r.image && /^https?:\/\//i.test(r.image)) {
+            const imgWrap = document.createElement('div')
+            imgWrap.className = 'alert-image'
+
+            const link = document.createElement('a')
+            // Prefer linking to the alert URL; otherwise link to the image
+            link.href = r.url && /^https?:\/\//i.test(r.url) ? r.url : r.image
+            link.target = '_blank'
+            link.rel = 'noopener noreferrer'
+            link.title = 'Open alert'
+            link.setAttribute('aria-label', 'Open alert')
+
+            const img = document.createElement('img')
+            img.src = r.image
+            img.alt = 'Alert image'
+            ;(img as any).loading = 'lazy'
+            ;(img as any).decoding = 'async'
+            img.addEventListener('error', () => {
+              imgWrap.remove()
+            })
+
+            link.appendChild(img)
+            imgWrap.appendChild(link)
+            body.appendChild(imgWrap)
+          }
+
+          const textEl = document.createElement('div')
+          textEl.textContent = r.text
+          body.appendChild(textEl)
+
+          // Optional link icon in header
+          if (r.url && /^https?:\/\//i.test(r.url)) {
+            const link = document.createElement('a')
+            link.className = 'alert-head-link'
+            link.href = r.url
+            link.target = '_blank'
+            link.rel = 'noopener noreferrer'
+            link.textContent = '🔗'
+            link.title = 'Open full alert'
+            link.setAttribute('aria-label', 'Open full alert')
+            meta.appendChild(link)
+          }
+
+          card.appendChild(head)
+          card.appendChild(body)
+
+          // Footer with timestamp moved to bottom
+          const footer = document.createElement('div')
+          footer.className = 'alert-card-footer'
+          const timeEl = document.createElement('span')
+          timeEl.className = 'time'
+          timeEl.textContent = r.displayTime
+          footer.appendChild(timeEl)
+          card.appendChild(footer)
+          container.appendChild(card)
         }
-
-        const textEl = document.createElement('div')
-        textEl.textContent = r.text
-        body.appendChild(textEl)
-
-        // Optional link icon in header
-        if (r.url && /^https?:\/\//i.test(r.url)) {
-          const link = document.createElement('a')
-          link.className = 'alert-head-link'
-          link.href = r.url
-          link.target = '_blank'
-          link.rel = 'noopener noreferrer'
-          link.textContent = '🔗'
-          link.title = 'Open full alert'
-          link.setAttribute('aria-label', 'Open full alert')
-          meta.appendChild(link)
-        }
-
-        card.appendChild(head)
-        card.appendChild(body)
-
-        // Footer with timestamp moved to bottom
-        const footer = document.createElement('div')
-        footer.className = 'alert-card-footer'
-        const timeEl = document.createElement('span')
-        timeEl.className = 'time'
-        timeEl.textContent = r.displayTime
-        footer.appendChild(timeEl)
-        card.appendChild(footer)
-        container.appendChild(card)
       }
+
+      // Initial render + wire search
+      const searchInput = document.getElementById(
+        'alerts-search'
+      ) as HTMLInputElement | null
+      const run = () => {
+        if (!searchInput || !searchInput.value.trim()) {
+          renderRows(rows)
+          return
+        }
+        const words = searchInput.value.toLowerCase().trim().split(/\s+/)
+        const filtered = rows.filter((r) =>
+          words.every((w) => r.searchBlob.includes(w))
+        )
+        renderRows(filtered)
+      }
+      if (searchInput) {
+        let t: number | undefined
+        searchInput.addEventListener('input', () => {
+          if (t) window.clearTimeout(t)
+          t = window.setTimeout(run, 120)
+        })
+      }
+      run()
     })
     .catch((e) => {
       console.error('Failed to load alerts:', e)

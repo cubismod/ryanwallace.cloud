@@ -2886,6 +2886,29 @@ body.dark-theme .alert-text-toggle:hover {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
 }
+.alerts-search-input {
+  flex: 1 1 560px;
+  width: min(100%, 560px);
+  max-width: 720px;
+  min-width: 320px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--light-border-color, #e5e7eb);
+  background: var(--light-surface, #ffffff);
+  color: var(--text-color);
+  margin: 0 0 12px 0; /* spacing when not in header */
+}
+body.dark-theme .alerts-search-input {
+  border-color: var(--dark-border-color, #374151);
+  background: var(--dark-surface, #111827);
+  color: #e5e7eb;
+}
+@media (max-width: 560px) {
+  .alerts-search-input {
+    flex-basis: 100%;
+    width: 100%;
+  }
+}
 .alert-card {
   border: 1px solid var(--light-border-color, #e5e7eb);
   border-radius: 10px;
@@ -2893,11 +2916,99 @@ body.dark-theme .alert-text-toggle:hover {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   padding: 12px;
   min-width: 0; /* allow grid item to shrink without overflow */
+  position: relative;
 }
 body.dark-theme .alert-card {
   border-color: var(--dark-border-color, #374151);
   background: var(--dark-surface, #111827);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* Subtle route-colored glow per alert */
+.alert-card[class*="alert-glow-"]::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Red Line */
+.alert-card.alert-glow-rl::after {
+  box-shadow:
+    0 0 0 1px rgba(250, 45, 39, 0.1),
+    0 0 10px rgba(250, 45, 39, 0.08);
+}
+body.dark-theme .alert-card.alert-glow-rl::after {
+  box-shadow:
+    0 0 0 1px rgba(250, 45, 39, 0.16),
+    0 0 12px rgba(250, 45, 39, 0.12);
+}
+
+/* Green Line */
+.alert-card.alert-glow-gl::after {
+  box-shadow:
+    0 0 0 1px rgba(0, 129, 80, 0.1),
+    0 0 10px rgba(0, 129, 80, 0.08);
+}
+body.dark-theme .alert-card.alert-glow-gl::after {
+  box-shadow:
+    0 0 0 1px rgba(0, 129, 80, 0.16),
+    0 0 12px rgba(0, 129, 80, 0.12);
+}
+
+/* Blue Line */
+.alert-card.alert-glow-bl::after {
+  box-shadow:
+    0 0 0 1px rgba(47, 93, 166, 0.1),
+    0 0 10px rgba(47, 93, 166, 0.08);
+}
+body.dark-theme .alert-card.alert-glow-bl::after {
+  box-shadow:
+    0 0 0 1px rgba(47, 93, 166, 0.16),
+    0 0 12px rgba(47, 93, 166, 0.12);
+}
+
+/* Orange Line */
+.alert-card.alert-glow-ol::after {
+  box-shadow:
+    0 0 0 1px rgba(253, 138, 3, 0.1),
+    0 0 10px rgba(253, 138, 3, 0.08);
+}
+body.dark-theme .alert-card.alert-glow-ol::after {
+  box-shadow:
+    0 0 0 1px rgba(253, 138, 3, 0.16),
+    0 0 12px rgba(253, 138, 3, 0.12);
+}
+
+/* Commuter Rail */
+.alert-card.alert-glow-cr::after {
+  box-shadow:
+    0 0 0 1px rgba(123, 56, 140, 0.1),
+    0 0 10px rgba(123, 56, 140, 0.08);
+}
+body.dark-theme .alert-card.alert-glow-cr::after {
+  box-shadow:
+    0 0 0 1px rgba(123, 56, 140, 0.16),
+    0 0 12px rgba(123, 56, 140, 0.12);
+}
+
+/* Silver Line */
+.alert-card.alert-glow-sl::after {
+  box-shadow:
+    0 0 0 1px rgba(154, 156, 157, 0.1),
+    0 0 10px rgba(154, 156, 157, 0.08);
+}
+body.dark-theme .alert-card.alert-glow-sl::after {
+  box-shadow:
+    0 0 0 1px rgba(154, 156, 157, 0.16),
+    0 0 12px rgba(154, 156, 157, 0.12);
+}
+
+/* Custom blended glow using CSS var set inline */
+.alert-card.alert-glow-custom::after {
+  box-shadow: var(--alert-glow) !important;
 }
 
 /* Skeleton loading animation for alerts */
