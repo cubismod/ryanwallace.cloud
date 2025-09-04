@@ -64,6 +64,22 @@ export function alerts(vehicles_url: string): void {
     // Insert before alerts grid
     alertsEl.parentElement?.insertBefore(search, alertsEl)
   }
+  // Ensure a sort select exists even if the template didn't include one
+  if (alertsEl && !document.getElementById('alerts-sort')) {
+    const select = document.createElement('select')
+    select.id = 'alerts-sort'
+    select.className = 'alerts-sort-select'
+    select.setAttribute('aria-label', 'Sort alerts')
+    select.innerHTML = `
+      <option value="relevant" selected>Most relevant (pinned recent, severity, newest)</option>
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="sev-desc">Severity high → low</option>
+      <option value="sev-asc">Severity low → high</option>
+      <option value="route-az">Route A → Z</option>
+    `
+    alertsEl.parentElement?.insertBefore(select, alertsEl)
+  }
 
   // Insert skeleton placeholders while loading
   const skeletonContainer = document.getElementById('alerts')
@@ -179,10 +195,16 @@ export function alerts(vehicles_url: string): void {
         }
       }
 
-      // Sort: severity desc, then most recent first
+      // Base sort (will be refined by user selection later)
       rows.sort((a, b) => {
-        const sevA = typeof a.severity === 'number' ? a.severity : 0
-        const sevB = typeof b.severity === 'number' ? b.severity : 0
+        const sevA =
+          typeof a.severity === 'number'
+            ? a.severity
+            : parseInt(String(a.severity) || '0', 10)
+        const sevB =
+          typeof b.severity === 'number'
+            ? b.severity
+            : parseInt(String(b.severity) || '0', 10)
         if (sevB !== sevA) return sevB - sevA
         return b.timestamp - a.timestamp
       })
@@ -308,27 +330,78 @@ export function alerts(vehicles_url: string): void {
         }
       }
 
-      // Initial render + wire search
+      // Initial render + wire search and sort, with pinning recent (<=15 min)
       const searchInput = document.getElementById(
         'alerts-search'
       ) as HTMLInputElement | null
-      const run = () => {
-        if (!searchInput || !searchInput.value.trim()) {
-          renderRows(rows)
-          return
+      const sortSelect = document.getElementById(
+        'alerts-sort'
+      ) as HTMLSelectElement | null
+      const sortRows = (arr: Row[], mode: string): Row[] => {
+        const cmpNum = (a: number, b: number) => (a < b ? -1 : a > b ? 1 : 0)
+        const getSev = (r: Row) =>
+          typeof r.severity === 'number'
+            ? r.severity
+            : parseInt(String(r.severity) || '0', 10)
+        const getLines = (r: Row) =>
+          r.linesHtml
+            .replace(/<[^>]*>/g, ' ')
+            .trim()
+            .toLowerCase()
+        const copy = arr.slice()
+        switch (mode) {
+          case 'newest':
+            return copy.sort((a, b) => cmpNum(b.timestamp, a.timestamp))
+          case 'oldest':
+            return copy.sort((a, b) => cmpNum(a.timestamp, b.timestamp))
+          case 'sev-desc':
+            return copy.sort(
+              (a, b) =>
+                cmpNum(getSev(b), getSev(a)) || cmpNum(b.timestamp, a.timestamp)
+            )
+          case 'sev-asc':
+            return copy.sort(
+              (a, b) =>
+                cmpNum(getSev(a), getSev(b)) || cmpNum(b.timestamp, a.timestamp)
+            )
+          case 'route-az':
+            return copy.sort(
+              (a, b) =>
+                getLines(a).localeCompare(getLines(b)) ||
+                cmpNum(b.timestamp, a.timestamp)
+            )
+          case 'relevant':
+          default:
+            return copy.sort(
+              (a, b) =>
+                cmpNum(getSev(b), getSev(a)) || cmpNum(b.timestamp, a.timestamp)
+            )
         }
-        const words = searchInput.value.toLowerCase().trim().split(/\s+/)
-        const filtered = rows.filter((r) =>
-          words.every((w) => r.searchBlob.includes(w))
-        )
-        renderRows(filtered)
       }
+      const run = () => {
+        const q = searchInput?.value.toLowerCase().trim() || ''
+        const words = q ? q.split(/\s+/) : []
+        const filtered = !words.length
+          ? rows
+          : rows.filter((r) => words.every((w) => r.searchBlob.includes(w)))
+        const mode = sortSelect?.value || 'relevant'
+        const now = Date.now()
+        const pinWindowMs = 25 * 60 * 1000
+        const pinned = filtered.filter((r) => now - r.timestamp <= pinWindowMs)
+        const others = filtered.filter((r) => now - r.timestamp > pinWindowMs)
+        const pinnedSorted = pinned.sort((a, b) => b.timestamp - a.timestamp)
+        const othersSorted = sortRows(others, mode)
+        renderRows([...pinnedSorted, ...othersSorted])
+      }
+      let debounce: number | undefined
       if (searchInput) {
-        let t: number | undefined
         searchInput.addEventListener('input', () => {
-          if (t) window.clearTimeout(t)
-          t = window.setTimeout(run, 120)
+          if (debounce) window.clearTimeout(debounce)
+          debounce = window.setTimeout(run, 120)
         })
+      }
+      if (sortSelect) {
+        sortSelect.addEventListener('change', run)
       }
       run()
     })
