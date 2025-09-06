@@ -74,6 +74,12 @@ const appConfig = {
       inject: 'body'
     }),
     new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'src/track.html'),
+      filename: 'track.html',
+      chunks: ['track'],
+      inject: 'body'
+    }),
+    new HtmlWebpackPlugin({
       template: path.resolve(__dirname, 'src/alerts.html'),
       filename: 'alerts.html',
       chunks: ['alerts'],

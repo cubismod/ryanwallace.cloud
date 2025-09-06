@@ -20,6 +20,7 @@ tasks:
       - pnpm move
       - pnpm title
       - pnpm title:alerts
+      - pnpm title:track
   builddev:
     dir: ryanwallace.cloud/map
     cmds:
@@ -28,6 +29,7 @@ tasks:
       - pnpm move
       - pnpm title
       - pnpm title:alerts
+      - pnpm title:track
   clean:
     dir: ryanwallace.cloud/map
     cmds:
@@ -55,3 +57,4 @@ tasks:
       - pnpm move
       - pnpm title
       - pnpm title:alerts
+      - pnpm title:track
