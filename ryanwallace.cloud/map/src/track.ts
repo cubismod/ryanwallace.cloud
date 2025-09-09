@@ -274,6 +274,33 @@ function getStopName(stopId: string): string {
   return STOP_NAMES[stopId] || stopId
 }
 
+// Check if headsign indicates train is arriving at (rather than departing from) the station
+function isArrivingAtStation(headsign: string, stationName: string): boolean {
+  if (!headsign || !stationName) return false
+
+  // Normalize both strings for comparison
+  const normalizedHeadsign = headsign.toLowerCase().trim()
+  const normalizedStation = stationName.toLowerCase().trim()
+
+  // Handle common station name variations
+  const stationVariations = [
+    normalizedStation,
+    normalizedStation + ' station',
+    normalizedStation.replace(' station', ''),
+    normalizedStation.replace(' bay', ''), // "Back Bay" -> "Back"
+    normalizedStation.replace('south ', ''), // "South Station" -> "Station"
+    normalizedStation.replace('north ', '') // "North Station" -> "Station"
+  ]
+
+  // Check if headsign contains any variation of the station name
+  // Examples: "South Station via Fairmont Line", "North Station", "Back Bay Station", "Boston South"
+  return stationVariations.some(
+    (variation) =>
+      variation.length > 2 && normalizedHeadsign.includes(variation)
+  )
+}
+
+// Format functions for table display
 // function getDirectionName(directionId: number): string {
 //   return DIRECTION_NAMES[directionId.toString()] || 'Unknown'
 // }
@@ -408,22 +435,16 @@ function restructureData(
     const directionId = prediction.attributes.direction_id
     const tripId = prediction.relationships.trip.data.id
 
-    // For terminal stations, show outbound departures; for intermediate stations, show inbound arrivals
-    if (stopId.includes('place-north') && directionId === 0) continue // Skip inbound arrivals at North Station
-    if (stopId.includes('place-sstat') && directionId === 0) continue // Skip inbound arrivals at South Station
-    if (
-      (stopId.includes('place-bbsta') ||
-        stopId.includes('place-rugg') ||
-        stopId.includes('place-NEC-1851')) &&
-      directionId === 1
-    )
-      continue // Skip outbound departures at intermediate stations
+    // Skip predictions where headsign indicates train is arriving at this station
+    const stationName = getStopName(stopId)
 
     // Try to find matching track prediction
     const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
     const trackPrediction = trackPredictionMap.get(trackKey)
 
     if (trackPrediction && trackPrediction.confidence_score >= 0.25) {
+      // Skip if headsign indicates train is arriving at this station (not departing)
+      if (isArrivingAtStation(trackPrediction.headsign, stationName)) continue
       const tripKey = `${tripId}-${stopId}-${departureTime}`
       processedTrips.add(tripKey)
 
@@ -465,18 +486,12 @@ function restructureData(
     const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
     const trackPrediction = trackPredictionMap.get(trackKey)
 
-    // For terminal stations, show outbound departures; for intermediate stations, show inbound arrivals
-    if (stopId.includes('place-north') && directionId === 0) continue // Skip inbound arrivals at North Station
-    if (stopId.includes('place-sstat') && directionId === 0) continue // Skip inbound arrivals at South Station
-    if (
-      (stopId.includes('place-bbsta') ||
-        stopId.includes('place-rugg') ||
-        stopId.includes('place-NEC-1851')) &&
-      directionId === 1
-    )
-      continue // Skip outbound departures at intermediate stations
+    // Skip predictions where headsign indicates train is arriving at this station
+    const stationName = getStopName(stopId)
 
     if (trackPrediction && trackPrediction.confidence_score >= 0.25) {
+      // Skip if headsign indicates train is arriving at this station (not departing)
+      if (isArrivingAtStation(trackPrediction.headsign, stationName)) continue
       const row: PredictionRow = {
         station: getStopName(stopId),
         time: depDate,

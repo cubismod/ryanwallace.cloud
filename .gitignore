@@ -34,4 +34,6 @@ dist/
 **/assets/js/map/*
 **/static/map/*
 
+# these are generated during the build process
 ryanwallace.cloud/content/track/index.html
+ryanwallace.cloud/content/alerts/index.html
