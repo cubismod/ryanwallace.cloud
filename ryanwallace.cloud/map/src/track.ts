@@ -323,10 +323,9 @@ async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   const minTime = toZonedTime(new Date(), tz)
   let timeFilter = ''
   if (minTime.getHours() > 2) {
-    const maxTime = addHours(minTime, 3)
-    timeFilter = `&filter[min_time]=${formatInTimeZone(minTime, tz, 'HH:mm')}&filter[max_time]=${formatInTimeZone(maxTime, tz, 'HH:mm')}`
+    timeFilter = `&filter[min_time]=${formatInTimeZone(minTime, tz, 'HH:mm')}`
   }
-  const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&page[limit]=75&filter[route_type]=2&sort=departure_time${timeFilter}`
+  const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time${timeFilter}`
 
   try {
     const res = await fetch(url)
