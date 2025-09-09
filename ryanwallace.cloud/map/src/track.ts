@@ -197,6 +197,7 @@ interface PredictionStats {
 // DataTable instance for progressive updates
 let predictionsTable: any | null = null
 let DataTableCtor: any | null = null
+let tableInitPromise: Promise<void> | null = null
 
 // jQuery typings removed; using fetch and vanilla APIs.
 
@@ -268,13 +269,7 @@ function formatDestination(headsign: string, routeId: string): string {
 }
 
 function formatConfidence(confidence: number): string {
-  if (confidence >= 0.6) {
-    return `<span class="confidence-high">${Math.round(confidence * 100)}%</span>`
-  } else if (confidence >= 0.5) {
-    return `<span class="confidence-medium">${Math.round(confidence * 100)}%</span>`
-  } else {
-    return `<span class="confidence-low">${Math.round(confidence * 100)}%</span>`
-  }
+  return `${Math.round(confidence * 100)}%`
 }
 
 function formatPlatform(platform: string): string {
@@ -313,7 +308,7 @@ async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
   const minTime = toZonedTime(new Date(), tz)
   let timeFilter = ''
   if (minTime.getHours() > 2) {
-    const maxTime = addHours(minTime, 2)
+    const maxTime = addHours(minTime, 3)
     timeFilter = `&filter[min_time]=${formatInTimeZone(minTime, tz, 'HH:mm')}&filter[max_time]=${formatInTimeZone(maxTime, tz, 'HH:mm')}`
   }
   const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&page[limit]=75&filter[route_type]=2&sort=departure_time${timeFilter}`
@@ -389,7 +384,7 @@ function restructureData(
     const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
     const trackPrediction = trackPredictionMap.get(trackKey)
 
-    if (trackPrediction?.confidence_score) {
+    if (trackPrediction && trackPrediction.confidence_score >= 0.25) {
       const tripKey = `${tripId}-${stopId}-${departureTime}`
       processedTrips.add(tripKey)
 
@@ -434,7 +429,7 @@ function restructureData(
     if (stopId.includes('place-north') && directionId === 1) continue
     if (stopId.includes('place-sstat') && directionId === 1) continue
 
-    if (trackPrediction?.confidence_score) {
+    if (trackPrediction && trackPrediction.confidence_score >= 0.25) {
       const row: PredictionRow = {
         station: getStopName(stopId),
         time: depDate,
@@ -451,7 +446,44 @@ function restructureData(
     }
   }
 
-  return rows.sort((a, b) => a.time.getTime() - b.time.getTime())
+  // Deduplicate likely duplicate live & schedule entries.
+  // Key by station + minute bucket + destination text; prefer live and higher confidence.
+  const deduped = new Map<string, PredictionRow>()
+
+  for (const row of rows) {
+    const minuteBucket = Math.floor(row.time.getTime() / 60000)
+    const destKey = row.destination
+      .replace(/<[^>]*>/g, '')
+      .trim()
+      .toLowerCase()
+    const key = `${row.station}|${minuteBucket}|${destKey}`
+
+    const existing = deduped.get(key)
+    if (!existing) {
+      deduped.set(key, row)
+      continue
+    }
+
+    // Choose the better row
+    const prefer = (() => {
+      // Prefer live over schedule
+      if (row.realtime !== existing.realtime) return row.realtime
+      // Prefer higher confidence
+      if (row.confidence !== existing.confidence)
+        return row.confidence > existing.confidence
+      // Prefer known track over TBD/Unknown
+      const isKnown = (t: string) => t && t !== 'TBD' && t !== 'Unknown'
+      if (isKnown(row.track) !== isKnown(existing.track))
+        return isKnown(row.track)
+      // Otherwise keep existing
+      return false
+    })()
+
+    if (prefer) deduped.set(key, row)
+  }
+
+  const dedupedRows = Array.from(deduped.values())
+  return dedupedRows.sort((a, b) => a.time.getTime() - b.time.getTime())
 }
 
 function showLoading(): void {
@@ -487,80 +519,96 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
   // Hide spinner on first render
   hideLoading()
 
+  // Reuse existing instance if present (avoid any reinit)
+  if (!predictionsTable && typeof window !== 'undefined') {
+    const existing = (window as any).__predictionsTable
+    if (existing) predictionsTable = existing
+  }
+
   const tableData = rows.map((row) => [
-    formatTime(row.time),
     formatPlatform(DOMPurify.sanitize(row.track)),
-    `<span class="stop-name">${DOMPurify.sanitize(row.station)}</span>`,
+    `<span class=\"stop-name\">${DOMPurify.sanitize(row.station)}</span>`,
+    formatTime(row.time),
     formatConfidence(row.confidence),
     DOMPurify.sanitize(row.destination),
-    row.realtime ? 'Yes' : 'No'
   ])
 
   if (!predictionsTable) {
-    if (!DataTableCtor) {
-      const mod = await import('datatables.net')
-      DataTableCtor = (mod as any).default || (mod as any)
+    // If another call is already initializing, wait for it
+    if (tableInitPromise) {
+      await tableInitPromise
+    } else {
+      tableInitPromise = (async () => {
+        // Reuse any existing instance stored on window
+        if (
+          typeof window !== 'undefined' &&
+          (window as any).__predictionsTable
+        ) {
+          predictionsTable = (window as any).__predictionsTable
+          return
+        }
+        if (!DataTableCtor) {
+          const mod = await import('datatables.net')
+          DataTableCtor = (mod as any).default || (mod as any)
+        }
+        if (!predictionsTable) {
+          predictionsTable = new DataTableCtor('#predictions-table', {
+            data: tableData,
+            columns: [
+              { title: 'Track', width: '10%' },
+              { title: 'Station', width: '20%' },
+              { title: 'Time', type: 'date', width: '10%' },
+              { title: 'Score', width: '10%' },
+              { title: 'Destination', width: '50%' }
+            ],
+            order: [[2, 'asc']],
+            pageLength: 25,
+            searching: false,
+            autoWidth: true,
+            ordering: false,
+            info: true,
+            lengthChange: false
+          })
+          if (typeof window !== 'undefined') {
+            ;(window as any).__predictionsTable = predictionsTable
+          }
+        }
+      })()
+      try {
+        await tableInitPromise
+      } finally {
+        tableInitPromise = null
+      }
     }
-    predictionsTable = new DataTableCtor('#predictions-table', {
-      data: tableData,
-      columns: [
-        { title: 'Time', type: 'date', width: '5%' },
-        { title: 'Track', width: '5%' },
-        { title: 'Station', width: '10%' },
-        { title: 'Score', width: '5%' },
-        { title: 'Destination', width: '10%' },
-        { title: 'Live', width: '5%' }
-      ],
-      order: [[3, 'asc']], // Sort by departure time
-      pageLength: 25,
-      searching: false,
-      autoWidth: true,
-      ordering: false,
-      info: true,
-      lengthChange: false
-    })
-    return
   }
 
-  if (predictionsTable && typeof predictionsTable.clear === 'function') {
-    // Progressive update without reinitializing the table
+  // Progressive update without reinitializing the table
+  // Try clear via top-level or rows() API depending on build
+  if (typeof predictionsTable.clear === 'function') {
     predictionsTable.clear()
-    if (
-      predictionsTable.rows &&
-      typeof predictionsTable.rows.add === 'function'
-    ) {
-      predictionsTable.rows.add(tableData)
-    } else if (typeof predictionsTable.rows === 'function') {
-      // Some builds expose rows() as a function
-      predictionsTable.rows().add(tableData)
-    }
-    if (typeof predictionsTable.draw === 'function') {
-      predictionsTable.draw(false)
-    }
-  } else {
-    // Fallback: reinitialize
-    if (!DataTableCtor) {
-      const mod = await import('datatables.net')
-      DataTableCtor = (mod as any).default || (mod as any)
-    }
-    predictionsTable = new DataTableCtor('#predictions-table', {
-      data: tableData,
-      columns: [
-        { title: 'Time', type: 'date', width: '5%' },
-        { title: 'Track', width: '5%' },
-        { title: 'Station', width: '10%' },
-        { title: 'Score', width: '5%' },
-        { title: 'Destination', width: '10%' },
-        { title: 'Live', width: '5%' }
-      ],
-      order: [[3, 'asc']],
-      pageLength: 25,
-      searching: false,
-      autoWidth: true,
-      ordering: false,
-      info: true,
-      lengthChange: false
-    })
+  } else if (
+    predictionsTable.rows && typeof predictionsTable.rows.clear === 'function'
+  ) {
+    predictionsTable.rows.clear()
+  } else if (typeof predictionsTable.rows === 'function') {
+    const api = predictionsTable.rows()
+    if (api && typeof api.clear === 'function') api.clear()
+  }
+
+  // Add new data via rows API variants
+  if (
+    predictionsTable.rows && typeof predictionsTable.rows.add === 'function'
+  ) {
+    predictionsTable.rows.add(tableData)
+  } else if (typeof predictionsTable.rows === 'function') {
+    predictionsTable.rows().add(tableData)
+  }
+
+  if (typeof predictionsTable.draw === 'function') {
+    predictionsTable.draw(false)
+  } else if (typeof predictionsTable.rows === 'function') {
+    const api = predictionsTable.rows()
+    if (api && typeof api.draw === 'function') api.draw(false)
   }
 }
 
@@ -671,24 +719,17 @@ async function refreshPredictions(): Promise<void> {
 
     const collectedPredictions: TrackPrediction[] = []
 
-    for (let i = 0; i < batches.length; i += CONCURRENCY) {
-      const wave = batches.slice(i, i + CONCURRENCY)
-      const waveResults = await Promise.all(
-        wave.map((b) =>
-          fetchChainedTrackPredictions(b).catch(
-            () => [] as TrackPredictionResponse[]
-          )
-        )
-      )
-
-      // Append successes from this wave
-      for (const res of waveResults) {
+    // Process batches with limited concurrency, updating UI as each completes
+    let nextBatchIndex = 0
+    const handleBatch = async (batch: PredictionRequest[]) => {
+      try {
+        const res = await fetchChainedTrackPredictions(batch)
         for (const item of res) {
           if (item.success) collectedPredictions.push(item.prediction)
         }
+      } catch {
+        // ignore errors for this batch
       }
-
-      // Recompute and update table + stats with what we have so far
       const rows = restructureData(
         mbtaPredictions,
         mbtaSchedules,
@@ -702,6 +743,16 @@ async function refreshPredictions(): Promise<void> {
         fetchDuration: performance.now() - startTime
       })
     }
+
+    const worker = async () => {
+      while (true) {
+        const i = nextBatchIndex++
+        if (i >= batches.length) break
+        await handleBatch(batches[i])
+      }
+    }
+
+    await Promise.all(new Array(CONCURRENCY).fill(0).map(() => worker()))
   } catch (error) {
     hideLoading()
     console.error('Error refreshing predictions:', error)
