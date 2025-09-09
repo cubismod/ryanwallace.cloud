@@ -1,6 +1,5 @@
 // Defer DataTables to reduce initial chunk size on /map/track
 import DOMPurify from 'dompurify'
-import { addHours } from 'date-fns'
 import { toZonedTime, formatInTimeZone } from 'date-fns-tz'
 import levenshtein from 'string-comparison'
 
@@ -199,7 +198,26 @@ let predictionsTable: any | null = null
 let DataTableCtor: any | null = null
 let tableInitPromise: Promise<void> | null = null
 
+// Filter state
+let showBackBay = false
+
 // jQuery typings removed; using fetch and vanilla APIs.
+
+// Initialize filter checkbox event listener
+function initializeFilters(): void {
+  const backBayCheckbox = document.getElementById(
+    'show-back-bay'
+  ) as HTMLInputElement
+  if (backBayCheckbox) {
+    backBayCheckbox.checked = showBackBay
+    backBayCheckbox.addEventListener('change', (event) => {
+      const target = event.target as HTMLInputElement
+      showBackBay = target.checked
+      // Refresh predictions with new filter
+      refreshPredictions()
+    })
+  }
+}
 
 document
   .getElementById('predictions-container')
@@ -305,7 +323,7 @@ function transferDotsHTML(stationName: string): string {
 
 async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
   const stopIds = STOP_IDS.join(',')
-  const url = `${MBTA_API_BASE}/predictions?filter[direction_id]=0&filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time`
+  const url = `${MBTA_API_BASE}/predictions?filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time`
   try {
     const res = await fetch(url)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -390,9 +408,16 @@ function restructureData(
     const directionId = prediction.attributes.direction_id
     const tripId = prediction.relationships.trip.data.id
 
-    // skip inbound arrivals for terminal stations
-    if (stopId.includes('place-north') && directionId === 0) continue
-    if (stopId.includes('place-sstat') && directionId === 0) continue
+    // For terminal stations, show outbound departures; for intermediate stations, show inbound arrivals
+    if (stopId.includes('place-north') && directionId === 0) continue // Skip inbound arrivals at North Station
+    if (stopId.includes('place-sstat') && directionId === 0) continue // Skip inbound arrivals at South Station
+    if (
+      (stopId.includes('place-bbsta') ||
+        stopId.includes('place-rugg') ||
+        stopId.includes('place-NEC-1851')) &&
+      directionId === 1
+    )
+      continue // Skip outbound departures at intermediate stations
 
     // Try to find matching track prediction
     const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
@@ -440,8 +465,16 @@ function restructureData(
     const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
     const trackPrediction = trackPredictionMap.get(trackKey)
 
-    if (stopId.includes('place-north') && directionId === 1) continue
-    if (stopId.includes('place-sstat') && directionId === 1) continue
+    // For terminal stations, show outbound departures; for intermediate stations, show inbound arrivals
+    if (stopId.includes('place-north') && directionId === 0) continue // Skip inbound arrivals at North Station
+    if (stopId.includes('place-sstat') && directionId === 0) continue // Skip inbound arrivals at South Station
+    if (
+      (stopId.includes('place-bbsta') ||
+        stopId.includes('place-rugg') ||
+        stopId.includes('place-NEC-1851')) &&
+      directionId === 1
+    )
+      continue // Skip outbound departures at intermediate stations
 
     if (trackPrediction && trackPrediction.confidence_score >= 0.25) {
       const row: PredictionRow = {
@@ -529,6 +562,16 @@ function hideLoading(): void {
   }
 }
 
+function filterRows(rows: PredictionRow[]): PredictionRow[] {
+  return rows.filter((row) => {
+    // Filter out Back Bay unless specifically enabled
+    if (row.station === 'Back Bay' && !showBackBay) {
+      return false
+    }
+    return true
+  })
+}
+
 async function updateTable(rows: PredictionRow[]): Promise<void> {
   // Hide spinner on first render
   hideLoading()
@@ -539,7 +582,8 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
     if (existing) predictionsTable = existing
   }
 
-  const tableData = rows.map((row) => [
+  const filteredRows = filterRows(rows)
+  const tableData = filteredRows.map((row) => [
     formatPlatform(DOMPurify.sanitize(row.track)),
     DOMPurify.sanitize(
       `<span class="stop-name">${row.station}</span>${transferDotsHTML(
@@ -667,6 +711,16 @@ function updateStats(stats: PredictionStats): void {
 }
 
 async function refreshPredictions(): Promise<void> {
+  // Initialize filters on first run
+  if (
+    document.getElementById('show-back-bay') &&
+    !document.getElementById('show-back-bay')?.hasAttribute('data-initialized')
+  ) {
+    initializeFilters()
+    document
+      .getElementById('show-back-bay')
+      ?.setAttribute('data-initialized', 'true')
+  }
   try {
     const startTime = performance.now()
     showLoading()
@@ -755,10 +809,11 @@ async function refreshPredictions(): Promise<void> {
         mbtaSchedules,
         collectedPredictions
       )
+      const filteredRows = filterRows(rows)
       updateTable(rows)
       updateStats({
-        generated: rows.length,
-        notGenerated: predictionRequests.length - rows.length,
+        generated: filteredRows.length,
+        notGenerated: predictionRequests.length - filteredRows.length,
         total: predictionRequests.length,
         fetchDuration: performance.now() - startTime
       })
