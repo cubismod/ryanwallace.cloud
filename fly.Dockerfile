@@ -1,9 +1,9 @@
 ARG caddy_version=2.10@sha256:4163a5c7b7631707956db4057720ec75de429992d5e3aa518d54872c01644dbe
-ARG caddy_builder_version=2.10-builder@sha256:3c711fcf9a64d31e8927a2efb538cf99e6f758f737aadcde5fd7dfadc93287a8
+ARG caddy_builder_version=2.10-builder@sha256:5d3e2fc2ba02ecf51ebbfbbea2ce0ab64d3aa80c99722ed929f8bf973be7e831
 
 
 # node bundling
-FROM node:24.7.0@sha256:701c8a634cb3ddbc1dc9584725937619716882525356f0989f11816ba3747a22 as node
+FROM node:24.7.0@sha256:ccb086eb457ad144b1157af458bba3ed1352422f1f672609f54f8db567e55eb4 as node
 
 WORKDIR /build
 ADD ryanwallace.cloud .
