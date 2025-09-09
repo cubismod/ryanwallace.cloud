@@ -285,7 +285,22 @@ function formatRoute(routeId: string): string {
 
 function formatTime(date: Date): string {
   const tz = 'America/New_York'
-  return `<span class="departure-time">${formatInTimeZone(date, tz, 'HH:mm')}</span>`
+  return `<span class="departure-time">${formatInTimeZone(date, tz, 'h:mm a')}</span>`
+}
+
+// Render small colored circles indicating transfers for key stations
+function transferDotsHTML(stationName: string): string {
+  const transfers: Record<string, string[]> = {
+    'South Station': ['red', 'silver'],
+    'Back Bay': ['orange'],
+    'North Station': ['orange', 'green']
+  }
+  const colors = transfers[stationName]
+  if (!colors || colors.length === 0) return ''
+  const dots = colors
+    .map((c) => `<span class="transfer-dot dot-${c}"></span>`)
+    .join('')
+  return `<span class="transfer-dots" aria-label="Transfers">${dots}</span>`
 }
 
 async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
@@ -527,10 +542,14 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
 
   const tableData = rows.map((row) => [
     formatPlatform(DOMPurify.sanitize(row.track)),
-    `<span class=\"stop-name\">${DOMPurify.sanitize(row.station)}</span>`,
+    DOMPurify.sanitize(
+      `<span class="stop-name">${row.station}</span>${transferDotsHTML(
+        row.station
+      )}`
+    ),
     formatTime(row.time),
     formatConfidence(row.confidence),
-    DOMPurify.sanitize(row.destination),
+    DOMPurify.sanitize(row.destination)
   ])
 
   if (!predictionsTable) {
@@ -587,7 +606,8 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
   if (typeof predictionsTable.clear === 'function') {
     predictionsTable.clear()
   } else if (
-    predictionsTable.rows && typeof predictionsTable.rows.clear === 'function'
+    predictionsTable.rows &&
+    typeof predictionsTable.rows.clear === 'function'
   ) {
     predictionsTable.rows.clear()
   } else if (typeof predictionsTable.rows === 'function') {
@@ -597,7 +617,8 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
 
   // Add new data via rows API variants
   if (
-    predictionsTable.rows && typeof predictionsTable.rows.add === 'function'
+    predictionsTable.rows &&
+    typeof predictionsTable.rows.add === 'function'
   ) {
     predictionsTable.rows.add(tableData)
   } else if (typeof predictionsTable.rows === 'function') {

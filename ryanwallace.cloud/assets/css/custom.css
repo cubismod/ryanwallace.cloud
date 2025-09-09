@@ -734,6 +734,38 @@ body.dark-theme .live-polling {
   font-weight: normal;
 }
 
+/* Transfer dots next to station names */
+.transfer-dots {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.transfer-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+body.dark-theme .transfer-dot {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Line colors for transfer dots */
+.dot-red {
+  background-color: #fa2d27;
+}
+.dot-orange {
+  background-color: #fd8a03;
+}
+.dot-green {
+  background-color: #008150;
+}
+.dot-silver {
+  background-color: #9a9c9d;
+}
+
 .destination {
   font-weight: bold;
 }
