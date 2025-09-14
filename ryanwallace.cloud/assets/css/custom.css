@@ -3502,15 +3502,22 @@ body.dark-theme .mobile-menu {
 }
 
 /* Mobile sidebar content styling */
-.mobile-sidebar-content {
-  padding: 1.5rem;
-  color: var(--sidebar-a-color);
-  background: transparent;
-}
+@media (max-width: 47.9em) {
+  .mobile-sidebar-content {
+    padding: 1.5rem;
+    color: var(--sidebar-a-color);
+    background: transparent;
+  }
 
-/* Ensure all content is visible in mobile menu */
-.mobile-menu * {
-  color: var(--sidebar-a-color) !important;
+  /* Ensure text content is visible in mobile menu */
+  .mobile-menu p,
+  .mobile-menu a:not(.btn-light-dark),
+  .mobile-menu h1,
+  .mobile-menu h2,
+  .mobile-menu h3,
+  .mobile-menu li {
+    color: var(--sidebar-a-color) !important;
+  }
 }
 
 /* Adjust sidebar elements for mobile menu */
@@ -3594,16 +3601,18 @@ body.dark-theme .mobile-menu {
 }
 
 /* Light/Dark mode toggle in mobile menu */
-.mobile-menu .btn-light-dark {
-  background-color: var(--moon-sun-background-color);
-  border-radius: 50%;
-  margin: 1rem auto;
-  display: block;
-}
+@media (max-width: 47.9em) {
+  .mobile-menu .btn-light-dark {
+    background-color: var(--moon-sun-background-color);
+    border-radius: 50%;
+    margin: 1rem auto;
+    display: block;
+  }
 
-.mobile-menu .btn-light-dark .moon,
-.mobile-menu .btn-light-dark .sun {
-  color: var(--moon-sun-color);
+  .mobile-menu .btn-light-dark .moon,
+  .mobile-menu .btn-light-dark .sun {
+    color: var(--moon-sun-color);
+  }
 }
 
 /* Copyright in mobile menu */
