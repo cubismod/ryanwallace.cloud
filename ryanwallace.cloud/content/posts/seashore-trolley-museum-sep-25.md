@@ -1,6 +1,6 @@
 +++
 date = '2025-09-14T09:50:32-04:00'
-draft = true
+draft = false
 title = 'Seashore Trolley Museum'
 hideToc = true
 +++
