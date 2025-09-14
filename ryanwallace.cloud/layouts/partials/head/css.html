@@ -1,0 +1,127 @@
+<style>
+    /* Mixed Typography - Inter for body, Quicksand for headers */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap');
+    
+    * {
+        font-family: "Inter", sans-serif !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6, .post-title, .page-title {
+        font-family: "Quicksand", sans-serif !important;
+    }
+    
+    code, pre, .highlight {
+        font-family: "JetBrains Mono", "Courier New", monospace !important;
+    }
+    
+    body {
+        /* Catppuccin Mocha Light Theme */
+        --sidebar-bg-color: {{ with .Site.Params.sidebar_bg_color }}{{ . }}{{ else }}#45475A{{ end }};
+        --sidebar-bg-color-dark: {{ with .Site.Params.sidebar_bg_color_dark }}{{ . }}{{ else }}#11111B{{ end }};
+        --sidebar-img-border-color: {{ with .Site.Params.sidebar_img_border_color }}{{ . }}{{ else }}#585B70{{ end }};
+        --sidebar-p-color: {{ with .Site.Params.sidebar_p_color }}{{ . }}{{ else }}#BAC2DE{{ end }};
+        --sidebar-h1-color: {{ with .Site.Params.sidebar_h1_color }}{{ . }}{{ else }}#CDD6F4{{ end }};
+        --sidebar-a-color: {{ with .Site.Params.sidebar_a_color }}{{ . }}{{ else }}#CDD6F4{{ end }};
+        --sidebar-socials-color: {{ with .Site.Params.sidebar_socials_color }}{{ . }}{{ else }}#F5E0DC{{ end }};
+        --text-color: {{ with .Site.Params.text_color }}{{ . }}{{ else }}#4C4F69{{ end }};
+        --bkg-color: {{ with .Site.Params.content_bg_color }}{{ . }}{{ else }}#EFF1F5{{ end }};
+        --post-title-color: {{ with .Site.Params.post_title_color }}{{ . }}{{ else }}#4C4F69{{ end }};
+        --list-color: {{ with .Site.Params.list_color }}{{ . }}{{ else }}#6C7086{{ end }};
+        --link-color: {{ with .Site.Params.link_color }}{{ . }}{{ else }}#1E66F5{{ end }};
+        --date-color: {{ with .Site.Params.date_color }}{{ . }}{{ else }}#7F849C{{ end }};
+        --table-border-color: {{ with .Site.Params.table_border_color }}{{ . }}{{ else }}#ACB0BE{{ end }};
+        --table-stripe-color: {{ with .Site.Params.table_stripe_color }}{{ . }}{{ else }}#E6E9EF{{ end }};
+        --code-color: {{ with .Site.Params.code_color }}{{ . }}{{ else }}#4C4F69{{ end }};
+        --code-background-color: {{ with .Site.Params.code_background_color }}{{ . }}{{ else }}#E6E9EF{{ end }};
+        --code-block-color: {{ with .Site.Params.code_block_color }}{{ . }}{{ else }}#CDD6F4{{ end }};
+        --code-block-background-color: {{ with .Site.Params.code_block_background_color }}{{ . }}{{ else }}#313244{{ end }};
+        --moon-sun-color: {{ with .Site.Params.moon_sun_color }}{{ . }}{{ else }}#CDD6F4{{ end }};
+        --moon-sun-background-color: {{ with .Site.Params.moon_sun_background_color }}{{ . }}{{ else }}#585B70{{ end }};
+    }
+    body.dark-theme {
+        /* Catppuccin Mocha Dark Theme */
+        --text-color: {{ with .Site.Params.text_color_dark }}{{ . }}{{ else }}#CDD6F4{{ end }};
+        --bkg-color: {{ with .Site.Params.content_bg_color_dark }}{{ . }}{{ else }}#1E1E2E{{ end }};
+        --post-title-color: {{ with .Site.Params.post_title_color_dark }}{{ . }}{{ else }}#CDD6F4{{ end }};
+        --list-color: {{ with .Site.Params.list_color_dark }}{{ . }}{{ else }}#A6ADC8{{ end }};
+        --link-color: {{ with .Site.Params.link_color_dark }}{{ . }}{{ else }}#89B4FA{{ end }};
+        --date-color: {{ with .Site.Params.date_color_dark }}{{ . }}{{ else }}#9399B2{{ end }};
+        --table-border-color: {{ with .Site.Params.table_border_color_dark }}{{ . }}{{ else }}#585B70{{ end }};
+        --table-stripe-color: {{ with .Site.Params.table_stripe_color_dark }}{{ . }}{{ else }}#313244{{ end }};
+        --code-color: {{ with .Site.Params.code_color_dark }}{{ . }}{{ else }}#CDD6F4{{ end }};
+        --code-background-color: {{ with .Site.Params.code_background_color_dark }}{{ . }}{{ else }}#313244{{ end }};
+        --code-block-color: {{ with .Site.Params.code_block_color_dark }}{{ . }}{{ else }}#CDD6F4{{ end }};
+        --code-block-background-color: {{ with .Site.Params.code_block_background_color_dark }}{{ . }}{{ else }}#181825{{ end }};
+        /* Darker sidebar colors for better contrast in dark mode */
+        --sidebar-p-color: {{ with .Site.Params.sidebar_p_color_dark }}{{ . }}{{ else }}#8B93A5{{ end }};
+        --sidebar-a-color: {{ with .Site.Params.sidebar_a_color_dark }}{{ . }}{{ else }}#A6ADC8{{ end }};
+        --sidebar-h1-color: {{ with .Site.Params.sidebar_h1_color_dark }}{{ . }}{{ else }}#b4befe{{ end }};
+        --sidebar-socials-color: {{ with .Site.Params.sidebar_socials_color_dark }}{{ . }}{{ else }}#F5C2E7{{ end }};
+    }
+    body {
+        background: linear-gradient(135deg, var(--bkg-color) 0%, #E6E9EF 50%, var(--bkg-color) 100%);
+        background-attachment: fixed;
+    }
+    
+    body.dark-theme {
+        background: linear-gradient(135deg, var(--bkg-color) 0%, #181825 50%, var(--bkg-color) 100%);
+        background-attachment: fixed;
+    }
+    
+    /* Subtle gradients and shadows */
+    .sidebar {
+        background: linear-gradient(180deg, var(--sidebar-bg-color) 0%, rgba(108, 112, 134, 0.95) 100%);
+        backdrop-filter: blur(10px);
+        box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    body.dark-theme .sidebar {
+        background: linear-gradient(180deg, var(--sidebar-bg-color-dark) 0%, rgba(17, 17, 27, 0.98) 100%);
+        box-shadow: 2px 0 25px rgba(0, 0, 0, 0.5);
+    }
+    
+    .container.content {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(8px);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        margin: 1rem;
+        padding: 2rem !important;
+    }
+    
+    body.dark-theme .container.content {
+        background: rgba(30, 30, 46, 0.9);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Lazy loading styles */
+    .lazy-load {
+        opacity: 0.7;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    .lazy-loaded {
+        opacity: 1;
+    }
+
+    /* Prevent layout shift during loading */
+    img[data-src] {
+        display: block;
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* Loading placeholder styling */
+    img[data-src]:not(.lazy-loaded) {
+        background-color: var(--table-stripe-color);
+        background-size: 50px 50px;
+        background-position: center;
+        background-repeat: no-repeat;
+        min-height: 200px;
+        object-fit: cover;
+    }
+
+    body.dark-theme img[data-src]:not(.lazy-loaded) {
+        background-color: var(--table-stripe-color);
+    }
+</style>

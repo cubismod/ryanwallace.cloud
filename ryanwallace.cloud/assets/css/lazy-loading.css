@@ -1,0 +1,26 @@
+/* Lazy loading styles */
+.lazy-load {
+  opacity: 0.7;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.lazy-loaded {
+  opacity: 1;
+}
+
+/* Prevent layout shift during loading */
+img[data-src] {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Loading placeholder styling */
+img[data-src]:not(.lazy-loaded) {
+  background-color: #f3f4f6;
+  background-size: 50px 50px;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 200px;
+  object-fit: cover;
+}

@@ -1,0 +1,26 @@
+{{ $src := .Get "src" }}
+{{ $alt := .Get "alt" | default "" }}
+{{ $width := .Get "width" | default "" }}
+{{ $height := .Get "height" | default "" }}
+{{ $class := .Get "class" | default "" }}
+{{ $loading := .Get "loading" | default "lazy" }}
+{{ $link := .Get "link" | default "" }}
+{{ $placeholder := .Get "placeholder" | default "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNS4wMDAzIDI1SDE3LjVDMTYuMTE5MyAyNSAxNSAyNi4xMTkzIDE1IDI3LjVWNzIuNUMxNSA3My44ODA3IDE2LjExOTMgNzUgMTcuNSA3NUg4Mi41QzgzLjg4MDcgNzUgODUgNzMuODgwNyA4NSA3Mi41VjI3LjVDODUgMjYuMTE5MyA4My44ODA3IDI1IDgyLjUgMjVINzUiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg==" }}
+
+{{ if $link }}
+<a href="{{ $link }}" target="_blank" rel="noopener noreferrer">
+{{ end }}
+<img 
+  src="{{ $placeholder }}" 
+  data-src="{{ $src }}" 
+  alt="{{ $alt }}"
+  {{ with $width }}width="{{ . }}"{{ end }}
+  {{ with $height }}height="{{ . }}"{{ end }}
+  class="lazy-load{{ with $class }} {{ . }}{{ end }}"
+  loading="{{ $loading }}"
+  decoding="async"
+  style="background-color: #f3f4f6; min-height: 200px; object-fit: cover; transition: opacity 0.3s ease-in-out;"
+/>
+{{ if $link }}
+</a>
+{{ end }}
