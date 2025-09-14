@@ -1,6 +1,3 @@
 [submodule "ryanwallace.cloud/themes/poison"]
 	path = ryanwallace.cloud/themes/poison
 	url = git@github.com:cubismod/poison.git
-[submodule "ryanwallace.cloud/themes/hugo-video"]
-	path = ryanwallace.cloud/themes/hugo-video
-	url = https://github.com/martignoni/hugo-video.git
