@@ -1,0 +1,17 @@
+{{ $src := .Get "src" }} {{ $type := .Get "type" | default "video/mp4" }} {{
+$width := .Get "width" | default "100%" }} {{ $height := .Get "height" | default
+"auto" }} {{ $poster := .Get "poster" }}
+<video
+  src="{{ $src }}"
+  type="{{ $type }}"
+  width="{{ $width }}"
+  height="{{ $height }}"
+  {{
+  with
+  $poster
+  }}poster="{{ . }}"
+  {{
+  end
+  }}
+  controls
+></video>

@@ -1,7 +1,7 @@
 baseURL = 'https://ryanwallace.cloud'
 languageCode = 'en-us'
 title = 'ryanwallace.cloud'
-theme = "poison"
+theme = ["poison"]
 pygmentsCodefences = true
 pygmentsUseClasses = true
 copyright = "Ryan Wallace"
