@@ -545,7 +545,7 @@ function disableElfEmojiMode(): void {
 let mapLoading = true
 let mapInitialized = false
 
-document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
+// document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' })
 
 // Check if MapTiler key is available and use MapTiler if possible, otherwise fall back to OpenStreetMap
 const effectiveType = (navigator as any).connection?.effectiveType || ''
