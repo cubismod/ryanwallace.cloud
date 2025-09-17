@@ -79,8 +79,8 @@ importers:
         specifier: 1.9.20
         version: 1.9.20
       '@types/node':
-        specifier: 24.5.0
-        version: 24.5.0
+        specifier: 24.5.1
+        version: 24.5.1
       buffer:
         specifier: 6.0.3
         version: 6.0.3
@@ -278,8 +278,8 @@ packages:
   '@types/leaflet@1.9.20':
     resolution: {integrity: sha512-rooalPMlk61LCaLOvBF2VIf9M47HgMQqi5xQ9QRi7c8PkdIe0WrIi5IxXUXQjAdL0c+vcQ01mYWbthzmp9GHWw==}
 
-  '@types/node@24.5.0':
-    resolution: {integrity: sha512-y1dMvuvJspJiPSDZUQ+WMBvF7dpnEqN4x9DDC9ie5Fs/HUZJA3wFp7EhHoVaKX/iI0cRoECV8X2jL8zi0xrHCg==}
+  '@types/node@24.5.1':
+    resolution: {integrity: sha512-/SQdmUP2xa+1rdx7VwB9yPq8PaKej8TD5cQ+XfKDPWWC+VDJU4rvVVagXqKUzhKjtFoNA8rXDJAkCxQPAe00+Q==}
 
   '@types/sizzle@2.3.10':
     resolution: {integrity: sha512-TC0dmN0K8YcWEAEfiPi5gJP14eJe30TTGjkvek3iM/1NdHHsdCA/Td6GvNndMOo/iSnIsZ4HuuhrYPDAmbxzww==}
@@ -1490,7 +1490,7 @@ snapshots:
       '@jest/schemas': 29.6.3
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 24.5.0
+      '@types/node': 24.5.1
       '@types/yargs': 17.0.33
       chalk: 4.1.2
 
@@ -1690,7 +1690,7 @@ snapshots:
     dependencies:
       '@types/geojson': 7946.0.16
 
-  '@types/node@24.5.0':
+  '@types/node@24.5.1':
     dependencies:
       undici-types: 7.12.0
 
@@ -2237,7 +2237,7 @@ snapshots:
   jest-util@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 24.5.0
+      '@types/node': 24.5.1
       chalk: 4.1.2
       ci-info: 3.9.0
       graceful-fs: 4.2.11
@@ -2245,13 +2245,13 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 24.5.0
+      '@types/node': 24.5.1
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
   jest-worker@29.7.0:
     dependencies:
-      '@types/node': 24.5.0
+      '@types/node': 24.5.1
       jest-util: 29.7.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
