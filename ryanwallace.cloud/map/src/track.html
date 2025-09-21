@@ -34,98 +34,23 @@
   </ul>
 </div>
 
-<div id="stats-container" class="stats-container">
-  <h4>Prediction Statistics</h4>
-  <div id="prediction-stats" class="prediction-stats">
-    <span id="predictions-generated">Generated: 0</span>
-    <span id="predictions-not-generated">Failed: 0</span>
-    <span id="predictions-total">Total: 0</span>
-    <span id="fetch-duration">Fetch Time: --</span>
-  </div>
-  <style>
-    .stats-container {
-      margin: 10px 0 16px;
-    }
-    .prediction-stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 16px;
-      font-size: 14px;
-      color: #374151;
-    }
-    @media (max-width: 768px) {
-      .prediction-stats {
-        font-size: 13px;
-        gap: 8px 12px;
-      }
-    }
-  </style>
-</div>
-
 <div id="filter-container" class="filter-container">
-  <h4>Station Filters</h4>
-  <div class="filter-options">
-    <label class="filter-checkbox">
-      <input type="checkbox" id="show-back-bay" />
-      <span>Show Back Bay</span>
-    </label>
-  </div>
-  <style>
-    .filter-container {
-      margin: 8px 0 12px;
-      padding: 0;
-      background: transparent;
-    }
-    .filter-container h4 {
-      margin: 0 0 6px;
-      font-size: 13px;
-      color: #6b7280;
-      font-weight: normal;
-    }
-    .filter-options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px 12px;
-    }
-    .filter-checkbox {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 13px;
-      color: #6b7280;
-      cursor: pointer;
-      user-select: none;
-    }
-    .filter-checkbox:hover {
-      color: #374151;
-    }
-    .filter-checkbox input[type='checkbox'] {
-      margin: 0;
-      transform: scale(0.9);
-    }
-    @media (max-width: 768px) {
-      .filter-container {
-        margin: 6px 0 10px;
-      }
-      .filter-container h4 {
-        font-size: 12px;
-      }
-      .filter-checkbox {
-        font-size: 12px;
-      }
-    }
-  </style>
+  <h3>Station Filters</h3>
+  <label class="filter-checkbox">
+    <input type="checkbox" id="show-back-bay" />
+    <span>Include Back Bay</span>
+  </label>
 </div>
 
 <div id="predictions-container">
   <table id="predictions-table" class="compact display responsive" width="100%">
     <thead>
       <tr>
+        <th>Destination</th>
         <th>Track</th>
         <th>Station</th>
         <th>Time</th>
         <th>Score</th>
-        <th>Destination</th>
       </tr>
     </thead>
     <tbody></tbody>

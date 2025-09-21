@@ -670,8 +670,8 @@ body.map-fs-active {
 }
 
 body.dark-theme .platform-prediction {
-  background-color: var(--dark-badge-bg, #334155);
-  border-color: var(--dark-border-color, #475569);
+  background-color: var(--dark-badge-bg, #45475a);
+  border-color: var(--dark-border-color, #313244);
 }
 
 .route-badge {
@@ -931,6 +931,15 @@ body.dark-theme .loading-spinner {
     white-space: nowrap;
   }
 
+  /* Destination column (first column) - constrain width and show ellipsis */
+  #predictions-table th:nth-child(1),
+  #predictions-table td:nth-child(1) {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .route-badge {
     font-size: 0.75rem;
     padding: 0.125rem 0.375rem;
@@ -944,7 +953,16 @@ body.dark-theme .loading-spinner {
 @media (max-width: 480px) {
   #predictions-table {
     font-size: 0.75rem;
-    min-width: 500px;
+    min-width: 420px;
+  }
+
+  /* Tighten destination column further on small screens */
+  #predictions-table th:nth-child(1),
+  #predictions-table td:nth-child(1) {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .route-badge {
@@ -3295,7 +3313,7 @@ body.dark-theme .alert-head-link {
 /* Route badges: inherit colors from line classes (.rl,.gl,.bl,.ol,.sl,.cr) */
 .route-badge {
   display: inline-block;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1;
   padding: 4px 8px;
   border-radius: 999px;
