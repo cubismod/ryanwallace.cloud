@@ -349,8 +349,6 @@ async function fetchDateTrackPredictions(
 }
 
 function restructureData(
-  // mbtaPredictions: MBTAPrediction[],
-  // mbtaSchedules: MBTASchedule[],
   trackPredictions: TrackPrediction[]
 ): PredictionRow[] {
   const rows: PredictionRow[] = []
