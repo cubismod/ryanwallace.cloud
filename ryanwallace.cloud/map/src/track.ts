@@ -326,22 +326,52 @@ async function fetchDateTrackPredictions(
   targetDate: string
 ): Promise<TrackPrediction[]> {
   const url = `${TRACK_PREDICTION_API}/predictions/date`
-  const requestBody = { target_date: targetDate }
+
+  const tz = 'America/New_York'
+  const currentZoned = toZonedTime(new Date(), tz)
+  const nextDay = new Date(currentZoned.getTime() + 24 * 60 * 60 * 1000)
+  const nextDate = formatInTimeZone(nextDay, tz, 'yyyy-MM-dd')
+
+  const datesToFetch = Array.from(new Set([targetDate, nextDate]))
 
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
-      headers: { 'Content-Type': 'application/json' }
+    async function fetchForDate(dateStr: string): Promise<TrackPrediction[]> {
+      const requestBody = { target_date: dateStr }
+      const res = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      if (!res.ok) {
+        console.warn(
+          `Track predictions fetch returned HTTP ${res.status} for ${dateStr}`
+        )
+        return []
+      }
+      const data = await res.json()
+      if (!data || !Array.isArray(data.departures)) return []
+      return data.departures
+        .map((d: any) => d && d.prediction)
+        .filter(Boolean) as TrackPrediction[]
+    }
+
+    const results = await Promise.all(datesToFetch.map((d) => fetchForDate(d)))
+    const allPreds = results.flat()
+
+    // Deduplicate by station + route + direction + scheduled_time, keeping highest-confidence
+    const dedup = new Map<string, TrackPrediction>()
+    allPreds.forEach((p) => {
+      const key = `${p.station_id}-${p.route_id}-${p.direction_id}-${p.scheduled_time}`
+      const existing = dedup.get(key)
+      if (
+        !existing ||
+        (p.confidence_score || 0) > (existing.confidence_score || 0)
+      ) {
+        dedup.set(key, p)
+      }
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data = await res.json()
-    if (!data || !Array.isArray(data.departures)) return []
-    // Map to TrackPrediction array (each departure contains a 'prediction' object)
-    const preds: TrackPrediction[] = data.departures
-      .map((d: any) => d && d.prediction)
-      .filter(Boolean)
-    return preds
+
+    return Array.from(dedup.values())
   } catch (e) {
     console.error('Error fetching track predictions by date:', e)
     throw e
