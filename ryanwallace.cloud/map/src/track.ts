@@ -289,7 +289,16 @@ function formatDestination(headsign: string, routeId: string): string {
 }
 
 function formatConfidence(confidence: number): string {
-  return `${Math.round(confidence * 100)}%`
+  const percentage = Math.round(confidence * 100)
+  let confidenceClass = 'confidence-low'
+
+  if (confidence >= 0.7) {
+    confidenceClass = 'confidence-high'
+  } else if (confidence >= 0.55) {
+    confidenceClass = 'confidence-medium'
+  }
+
+  return `<span class="${confidenceClass}">${percentage}%</span>`
 }
 function formatPlatform(platform: string): string {
   if (platform && platform !== 'Unknown') {
@@ -363,10 +372,7 @@ async function fetchDateTrackPredictions(
     allPreds.forEach((p) => {
       const key = `${p.station_id}-${p.route_id}-${p.direction_id}-${p.scheduled_time}`
       const existing = dedup.get(key)
-      if (
-        !existing ||
-        (p.confidence_score || 0) > (existing.confidence_score || 0)
-      ) {
+      if (!existing || (p.confidence_score || 0) > (existing.confidence_score || 0)) {
         dedup.set(key, p)
       }
     })

@@ -642,21 +642,105 @@ body.map-fs-active {
 }
 
 .confidence-high {
-  color: #16a34a;
   font-weight: 500;
   opacity: 0.9;
+  text-shadow: 0 0 8px rgba(22, 163, 74, 0.4),
+               0 0 16px rgba(22, 163, 74, 0.2);
+  filter: drop-shadow(0 0 4px rgba(22, 163, 74, 0.3));
+  transition: all 0.3s ease;
+}
+
+.confidence-high:hover {
+  text-shadow: 0 0 12px rgba(22, 163, 74, 0.6),
+               0 0 20px rgba(22, 163, 74, 0.3);
 }
 
 .confidence-medium {
-  color: #ea580c;
   font-weight: 500;
   opacity: 0.9;
+  text-shadow: 0 0 6px rgba(234, 88, 12, 0.3),
+               0 0 12px rgba(234, 88, 12, 0.15);
+  filter: drop-shadow(0 0 3px rgba(234, 88, 12, 0.1));
+  transition: all 0.3s ease;
+}
+
+.confidence-medium:hover {
+  text-shadow: 0 0 10px rgba(234, 88, 12, 0.5),
+               0 0 16px rgba(234, 88, 12, 0.25);
 }
 
 .confidence-low {
-  color: #f87171;
   font-weight: 500;
   opacity: 0.9;
+  text-shadow: 0 0 4px rgba(248, 113, 113, 0.2),
+               0 0 8px rgba(248, 113, 113, 0.1);
+  filter: drop-shadow(0 0 2px rgba(248, 113, 113, 0.05));
+  transition: all 0.3s ease;
+}
+
+.confidence-low:hover {
+  text-shadow: 0 0 8px rgba(248, 113, 113, 0.4),
+               0 0 12px rgba(248, 113, 113, 0.2);
+}
+
+/* Dark theme adjustments for confidence glow */
+body.dark-theme .confidence-high {
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.5),
+               0 0 18px rgba(34, 197, 94, 0.25);
+  filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.35));
+}
+
+body.dark-theme .confidence-high:hover {
+  text-shadow: 0 0 15px rgba(34, 197, 94, 0.7),
+               0 0 25px rgba(34, 197, 94, 0.4);
+}
+
+body.dark-theme .confidence-medium {
+  text-shadow: 0 0 8px rgba(251, 146, 60, 0.4),
+               0 0 14px rgba(251, 146, 60, 0.2);
+  filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.3));
+}
+
+body.dark-theme .confidence-medium:hover {
+  text-shadow: 0 0 12px rgba(251, 146, 60, 0.6),
+               0 0 20px rgba(251, 146, 60, 0.3);
+}
+
+body.dark-theme .confidence-low {
+  text-shadow: 0 0 6px rgba(252, 165, 165, 0.3),
+               0 0 10px rgba(252, 165, 165, 0.15);
+  filter: drop-shadow(0 0 3px rgba(252, 165, 165, 0.25));
+}
+
+body.dark-theme .confidence-low:hover {
+  text-shadow: 0 0 10px rgba(252, 165, 165, 0.5),
+               0 0 16px rgba(252, 165, 165, 0.25);
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .confidence-high, .confidence-medium, .confidence-low {
+    text-shadow: none;
+    filter: none;
+    transition: none;
+  }
+
+  .confidence-high:hover, .confidence-medium:hover, .confidence-low:hover {
+    text-shadow: none;
+  }
+
+  body.dark-theme .confidence-high,
+  body.dark-theme .confidence-medium,
+  body.dark-theme .confidence-low {
+    text-shadow: none;
+    filter: none;
+  }
+
+  body.dark-theme .confidence-high:hover,
+  body.dark-theme .confidence-medium:hover,
+  body.dark-theme .confidence-low:hover {
+    text-shadow: none;
+  }
 }
 
 .platform-prediction {
