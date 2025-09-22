@@ -238,31 +238,6 @@ const STOP_NAMES: Record<string, string> = {
   'place-north': 'North Station'
 }
 
-// Direction mapping
-// const DIRECTION_NAMES: Record<string, string> = {
-//   '0': 'Outbound',
-//   '1': 'Inbound'
-// }
-
-function fullStationName(stopId: string): string {
-  if (stopId.includes('BNT')) {
-    return 'place-north'
-  }
-  if (stopId.includes('NEC-2287')) {
-    return 'place-sstat'
-  }
-  if (stopId.includes('NEC-1851')) {
-    return 'place-bbsta'
-  }
-  if (stopId.includes('NEC-2265')) {
-    return 'place-rugg'
-  }
-  if (stopId.includes('NEC-1851')) {
-    return 'place-NEC-1851' // Providence
-  }
-  return stopId
-}
-
 // function shortLineName(routeId: string): string {
 //   if (routeId.includes('CR-')) {
 //     return routeId.replace('CR-', '')
@@ -314,9 +289,17 @@ function formatDestination(headsign: string, routeId: string): string {
 }
 
 function formatConfidence(confidence: number): string {
-  return `${Math.round(confidence * 100)}%`
-}
+  const percentage = Math.round(confidence * 100)
+  let confidenceClass = 'confidence-low'
 
+  if (confidence >= 0.7) {
+    confidenceClass = 'confidence-high'
+  } else if (confidence >= 0.55) {
+    confidenceClass = 'confidence-medium'
+  }
+
+  return `<span class="${confidenceClass}">${percentage}%</span>`
+}
 function formatPlatform(platform: string): string {
   if (platform && platform !== 'Unknown') {
     return `<span class="platform-prediction">${platform}</span>`
@@ -348,65 +331,63 @@ function transferDotsHTML(stationName: string): string {
   return `<span class="transfer-dots" aria-label="Transfers">${dots}</span>`
 }
 
-async function fetchMBTAPredictions(): Promise<MBTAPrediction[]> {
-  const stopIds = STOP_IDS.join(',')
-  const url = `${MBTA_API_BASE}/predictions?filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time`
-  try {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data: MBTAResponse = await res.json()
-    return data.data
-  } catch (e) {
-    console.error('Error fetching MBTA predictions:', e)
-    throw e
-  }
-}
+async function fetchDateTrackPredictions(
+  targetDate: string
+): Promise<TrackPrediction[]> {
+  const url = `${TRACK_PREDICTION_API}/predictions/date`
 
-async function fetchMBTASchedules(): Promise<MBTASchedule[]> {
-  const stopIds = STOP_IDS.join(',')
   const tz = 'America/New_York'
-  const minTime = toZonedTime(new Date(), tz)
-  let timeFilter = ''
-  if (minTime.getHours() > 2) {
-    timeFilter = `&filter[min_time]=${formatInTimeZone(minTime, tz, 'HH:mm')}`
-  }
-  const url = `${MBTA_API_BASE}/schedules?filter[stop]=${stopIds}&include=stop,route,trip&filter[route_type]=2&sort=departure_time${timeFilter}`
+  const currentZoned = toZonedTime(new Date(), tz)
+  const nextDay = new Date(currentZoned.getTime() + 24 * 60 * 60 * 1000)
+  const nextDate = formatInTimeZone(nextDay, tz, 'yyyy-MM-dd')
+
+  const datesToFetch = Array.from(new Set([targetDate, nextDate]))
 
   try {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data: MBTAScheduleResponse = await res.json()
-    return data.data
-  } catch (e) {
-    console.error('Error fetching MBTA schedules:', e)
-    throw e
-  }
-}
+    async function fetchForDate(dateStr: string): Promise<TrackPrediction[]> {
+      const requestBody = { target_date: dateStr }
+      const res = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      if (!res.ok) {
+        console.warn(
+          `Track predictions fetch returned HTTP ${res.status} for ${dateStr}`
+        )
+        return []
+      }
+      const data = await res.json()
+      if (!data || !Array.isArray(data.departures)) return []
+      return data.departures
+        .map((d: any) => d && d.prediction)
+        .filter(Boolean) as TrackPrediction[]
+    }
 
-async function fetchChainedTrackPredictions(
-  requests: PredictionRequest[]
-): Promise<TrackPredictionResponse[]> {
-  const url = `${TRACK_PREDICTION_API}/chained-predictions`
-  const requestBody: ChainedPredictionsRequest = { predictions: requests }
+    const results = await Promise.all(datesToFetch.map((d) => fetchForDate(d)))
+    const allPreds = results.flat()
 
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
+    // Deduplicate by station + route + direction + scheduled_time, keeping highest-confidence
+    const dedup = new Map<string, TrackPrediction>()
+    allPreds.forEach((p) => {
+      const key = `${p.station_id}-${p.route_id}-${p.direction_id}-${p.scheduled_time}`
+      const existing = dedup.get(key)
+      if (
+        !existing ||
+        (p.confidence_score || 0) > (existing.confidence_score || 0)
+      ) {
+        dedup.set(key, p)
+      }
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const data: ChainedPredictionsResponse = await res.json()
-    return data.results
+
+    return Array.from(dedup.values())
   } catch (e) {
-    console.error('Error fetching chained track predictions:', e)
+    console.error('Error fetching track predictions by date:', e)
     throw e
   }
 }
 
 function restructureData(
-  mbtaPredictions: MBTAPrediction[],
-  mbtaSchedules: MBTASchedule[],
   trackPredictions: TrackPrediction[]
 ): PredictionRow[] {
   const rows: PredictionRow[] = []
@@ -418,134 +399,36 @@ function restructureData(
     trackPredictionMap.set(key, tp)
   })
 
-  // Track processed trips to prevent duplicates between predictions and schedules
-  const processedTrips = new Set<string>()
-
   // Process MBTA predictions
-  for (const prediction of mbtaPredictions) {
-    const departureTime =
-      prediction.attributes.departure_time || prediction.attributes.arrival_time
-    if (!departureTime) continue
-
-    const depDate = new Date(departureTime)
+  for (const prediction of trackPredictions) {
+    const depDate = new Date(prediction.scheduled_time)
     if (depDate.getTime() < Date.now()) continue
 
-    const stopId = fullStationName(prediction.relationships.stop.data.id)
-    const routeId = prediction.relationships.route.data.id
-    const directionId = prediction.attributes.direction_id
-    const tripId = prediction.relationships.trip.data.id
+    const stopId = prediction.station_id
+    const routeId = prediction.route_id
 
     // Skip predictions where headsign indicates train is arriving at this station
     const stationName = getStopName(stopId)
 
-    // Try to find matching track prediction
-    const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
-    const trackPrediction = trackPredictionMap.get(trackKey)
-
-    if (trackPrediction && trackPrediction.confidence_score >= 0.25) {
+    if (prediction.confidence_score >= 0.25) {
       // Skip if headsign indicates train is arriving at this station (not departing)
-      if (isArrivingAtStation(trackPrediction.headsign, stationName)) continue
-      const tripKey = `${tripId}-${stopId}-${departureTime}`
-      processedTrips.add(tripKey)
-
+      if (isArrivingAtStation(prediction.headsign, stationName)) continue
       const row: PredictionRow = {
         station: getStopName(stopId),
         time: depDate,
         destination: formatDestination(
-          trackPrediction.headsign,
+          prediction.headsign,
           formatRoute(routeId)
         ),
-        track: trackPrediction?.track_number || 'TBD',
-        confidence: trackPrediction?.confidence_score || 0,
+        track: prediction?.track_number || 'TBD',
+        confidence: prediction?.confidence_score || 0,
         realtime: true
       }
 
       rows.push(row)
     }
   }
-
-  // Process MBTA schedules (only if not already processed as predictions)
-  for (const schedule of mbtaSchedules) {
-    const departureTime =
-      schedule.attributes.departure_time || schedule.attributes.arrival_time
-    if (!departureTime) continue
-
-    const depDate = new Date(departureTime)
-    if (depDate.getTime() < Date.now()) continue
-
-    const stopId = fullStationName(schedule.relationships.stop.data.id)
-    const routeId = schedule.relationships.route.data.id
-    const directionId = schedule.attributes.direction_id
-    const tripId = schedule.relationships.trip.data.id
-
-    // Skip if this trip was already processed as a prediction
-    const tripKey = `${tripId}-${stopId}-${departureTime}`
-    if (processedTrips.has(tripKey)) continue
-
-    // Try to find matching track prediction
-    const trackKey = `${stopId}-${routeId}-${directionId}-${departureTime}`
-    const trackPrediction = trackPredictionMap.get(trackKey)
-
-    // Skip predictions where headsign indicates train is arriving at this station
-    const stationName = getStopName(stopId)
-
-    if (trackPrediction && trackPrediction.confidence_score >= 0.25) {
-      // Skip if headsign indicates train is arriving at this station (not departing)
-      if (isArrivingAtStation(trackPrediction.headsign, stationName)) continue
-      const row: PredictionRow = {
-        station: getStopName(stopId),
-        time: depDate,
-        destination: formatDestination(
-          trackPrediction.headsign,
-          formatRoute(routeId)
-        ),
-        track: trackPrediction?.track_number || 'TBD',
-        confidence: trackPrediction?.confidence_score || 0,
-        realtime: false
-      }
-
-      rows.push(row)
-    }
-  }
-
-  // Deduplicate likely duplicate live & schedule entries.
-  // Key by station + minute bucket + destination text; prefer live and higher confidence.
-  const deduped = new Map<string, PredictionRow>()
-
-  for (const row of rows) {
-    const minuteBucket = Math.floor(row.time.getTime() / 60000)
-    const destKey = row.destination
-      .replace(/<[^>]*>/g, '')
-      .trim()
-      .toLowerCase()
-    const key = `${row.station}|${minuteBucket}|${destKey}`
-
-    const existing = deduped.get(key)
-    if (!existing) {
-      deduped.set(key, row)
-      continue
-    }
-
-    // Choose the better row
-    const prefer = (() => {
-      // Prefer live over schedule
-      if (row.realtime !== existing.realtime) return row.realtime
-      // Prefer higher confidence
-      if (row.confidence !== existing.confidence)
-        return row.confidence > existing.confidence
-      // Prefer known track over TBD/Unknown
-      const isKnown = (t: string) => t && t !== 'TBD' && t !== 'Unknown'
-      if (isKnown(row.track) !== isKnown(existing.track))
-        return isKnown(row.track)
-      // Otherwise keep existing
-      return false
-    })()
-
-    if (prefer) deduped.set(key, row)
-  }
-
-  const dedupedRows = Array.from(deduped.values())
-  return dedupedRows.sort((a, b) => a.time.getTime() - b.time.getTime())
+  return rows.sort((a, b) => a.time.getTime() - b.time.getTime())
 }
 
 function showLoading(): void {
@@ -599,15 +482,15 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
 
   const filteredRows = filterRows(rows)
   const tableData = filteredRows.map((row) => [
+    formatTime(row.time),
     formatPlatform(DOMPurify.sanitize(row.track)),
+    formatConfidence(row.confidence),
+    DOMPurify.sanitize(row.destination),
     DOMPurify.sanitize(
       `<span class="stop-name">${row.station}</span>${transferDotsHTML(
         row.station
       )}`
-    ),
-    formatTime(row.time),
-    formatConfidence(row.confidence),
-    DOMPurify.sanitize(row.destination)
+    )
   ])
 
   if (!predictionsTable) {
@@ -632,13 +515,13 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
           predictionsTable = new DataTableCtor('#predictions-table', {
             data: tableData,
             columns: [
+              { title: 'Time', type: 'date', width: '15%' },
               { title: 'Track', width: '10%' },
-              { title: 'Station', width: '20%' },
-              { title: 'Time', type: 'date', width: '10%' },
               { title: 'Score', width: '10%' },
-              { title: 'Destination', width: '50%' }
+              { title: 'Destination', width: '35%' },
+              { title: 'Station', width: '30%' }
             ],
-            order: [[2, 'asc']],
+            order: [[0, 'asc']],
             pageLength: 25,
             searching: false,
             autoWidth: true,
@@ -691,40 +574,6 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
   }
 }
 
-function updateStats(stats: PredictionStats): void {
-  const generatedElement = document.getElementById('predictions-generated')
-  const notGeneratedElement = document.getElementById(
-    'predictions-not-generated'
-  )
-  const totalElement = document.getElementById('predictions-total')
-  const durationElement = document.getElementById('fetch-duration')
-
-  // Use shorter text on mobile screens
-  const isMobile = window.innerWidth <= 768
-
-  if (generatedElement) {
-    generatedElement.textContent = isMobile
-      ? `Generated: ${stats.generated}`
-      : `Predictions Generated: ${stats.generated}`
-  }
-  if (notGeneratedElement) {
-    notGeneratedElement.textContent = isMobile
-      ? `Failed: ${stats.notGenerated}`
-      : `No Prediction Found: ${stats.notGenerated}`
-  }
-  if (totalElement) {
-    totalElement.textContent = isMobile
-      ? `Total: ${stats.total}`
-      : `Total Requests: ${stats.total}`
-  }
-  if (durationElement) {
-    const seconds = (stats.fetchDuration / 1000).toFixed(1)
-    durationElement.textContent = isMobile
-      ? `${seconds}s`
-      : `Fetch Time: ${seconds}s`
-  }
-}
-
 async function refreshPredictions(): Promise<void> {
   // Initialize filters on first run
   if (
@@ -736,113 +585,24 @@ async function refreshPredictions(): Promise<void> {
       .getElementById('show-back-bay')
       ?.setAttribute('data-initialized', 'true')
   }
+  const tz = 'America/New_York'
+  const targetDate = formatInTimeZone(
+    toZonedTime(new Date(), tz),
+    tz,
+    'yyyy-MM-dd'
+  )
+
+  let collectedPredictions: TrackPrediction[] = []
   try {
-    const startTime = performance.now()
-    showLoading()
+    collectedPredictions = await fetchDateTrackPredictions(targetDate)
+  } catch (e) {
+    // If the date endpoint fails, fall back to empty predictions
+    collectedPredictions = []
+  }
 
-    const mbtaPredictions = await fetchMBTAPredictions()
-    const mbtaSchedules = await fetchMBTASchedules()
-
-    // Prepare batch requests for track predictions
-    const predictionRequestsMap = new Map<string, PredictionRequest>()
-
-    // Add requests for MBTA predictions
-    for (const prediction of mbtaPredictions) {
-      const departureTime =
-        prediction.attributes.departure_time ||
-        prediction.attributes.arrival_time
-      if (!departureTime) continue
-
-      const key = `${prediction.relationships.stop.data.id}-${prediction.relationships.route.data.id}-${prediction.relationships.trip.data.id}-${departureTime}`
-      predictionRequestsMap.set(key, {
-        station_id: prediction.relationships.stop.data.id,
-        route_id: prediction.relationships.route.data.id,
-        trip_id: prediction.relationships.trip.data.id,
-        headsign: prediction.relationships.route.data.id,
-        direction_id: prediction.attributes.direction_id,
-        scheduled_time: departureTime
-      })
-    }
-
-    // Add requests for schedules (only if not already present)
-    for (const schedule of mbtaSchedules) {
-      const departureTime =
-        schedule.attributes.departure_time || schedule.attributes.arrival_time
-      if (!departureTime) continue
-
-      const key = `${schedule.relationships.stop.data.id}-${schedule.relationships.route.data.id}-${schedule.relationships.trip.data.id}-${departureTime}`
-      if (!predictionRequestsMap.has(key)) {
-        predictionRequestsMap.set(key, {
-          station_id: schedule.relationships.stop.data.id,
-          route_id: schedule.relationships.route.data.id,
-          trip_id: schedule.relationships.trip.data.id,
-          headsign: schedule.relationships.route.data.id,
-          direction_id: schedule.attributes.direction_id,
-          scheduled_time: departureTime
-        })
-      }
-    }
-
-    const predictionRequests = Array.from(predictionRequestsMap.values())
-
-    // Progressive loading: split into batches and fetch with limited concurrency
-    const BATCH_SIZE = 10
-    const CONCURRENCY = 3
-    const batches: PredictionRequest[][] = []
-    for (let i = 0; i < predictionRequests.length; i += BATCH_SIZE) {
-      batches.push(predictionRequests.slice(i, i + BATCH_SIZE))
-    }
-
-    // Show totals immediately
-    updateStats({
-      generated: 0,
-      notGenerated: predictionRequests.length,
-      total: predictionRequests.length,
-      fetchDuration: 0
-    })
-
-    if (predictionRequests.length === 0) {
-      updateTable([])
-      return
-    }
-
-    const collectedPredictions: TrackPrediction[] = []
-
-    // Process batches with limited concurrency, updating UI as each completes
-    let nextBatchIndex = 0
-    const handleBatch = async (batch: PredictionRequest[]) => {
-      try {
-        const res = await fetchChainedTrackPredictions(batch)
-        for (const item of res) {
-          if (item.success) collectedPredictions.push(item.prediction)
-        }
-      } catch {
-        // ignore errors for this batch
-      }
-      const rows = restructureData(
-        mbtaPredictions,
-        mbtaSchedules,
-        collectedPredictions
-      )
-      const filteredRows = filterRows(rows)
-      updateTable(rows)
-      updateStats({
-        generated: filteredRows.length,
-        notGenerated: predictionRequests.length - filteredRows.length,
-        total: predictionRequests.length,
-        fetchDuration: performance.now() - startTime
-      })
-    }
-
-    const worker = async () => {
-      while (true) {
-        const i = nextBatchIndex++
-        if (i >= batches.length) break
-        await handleBatch(batches[i])
-      }
-    }
-
-    await Promise.all(new Array(CONCURRENCY).fill(0).map(() => worker()))
+  try {
+    const rows = restructureData(collectedPredictions)
+    updateTable(rows)
   } catch (error) {
     hideLoading()
     console.error('Error refreshing predictions:', error)
