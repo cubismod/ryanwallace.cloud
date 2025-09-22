@@ -372,7 +372,10 @@ async function fetchDateTrackPredictions(
     allPreds.forEach((p) => {
       const key = `${p.station_id}-${p.route_id}-${p.direction_id}-${p.scheduled_time}`
       const existing = dedup.get(key)
-      if (!existing || (p.confidence_score || 0) > (existing.confidence_score || 0)) {
+      if (
+        !existing ||
+        (p.confidence_score || 0) > (existing.confidence_score || 0)
+      ) {
         dedup.set(key, p)
       }
     })
