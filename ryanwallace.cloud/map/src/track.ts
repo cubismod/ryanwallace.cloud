@@ -2,144 +2,8 @@
 import DOMPurify from 'dompurify'
 import { toZonedTime, formatInTimeZone } from 'date-fns-tz'
 import levenshtein from 'string-comparison'
-
-// Type definitions
-interface MBTAPrediction {
-  id: string
-  type: string
-  attributes: {
-    arrival_time: string | null
-    departure_time: string | null
-    direction_id: number
-    schedule_relationship: string | null
-    status: string | null
-    stop_sequence: number
-    track: string | null
-    vehicle_id: string | null
-  }
-  relationships: {
-    route: {
-      data: {
-        id: string
-        type: string
-      }
-    }
-    stop: {
-      data: {
-        id: string
-        type: string
-      }
-    }
-    trip: {
-      data: {
-        id: string
-        type: string
-      }
-    }
-    vehicle: {
-      data: {
-        id: string
-        type: string
-      } | null
-    }
-  }
-}
-interface MBTAStop {
-  id: string
-  type: string
-  attributes: {
-    address: string | null
-    at_street: string | null
-    description: string | null
-    latitude: number
-    longitude: number
-    location_type: number
-    municipality: string | null
-    name: string
-    on_street: string | null
-    platform_code: string | null
-    platform_name: string | null
-    vehicle_type: number | null
-    wheelchair_boarding: number
-    zone_id: string | null
-  }
-}
-
-interface MBTARoute {
-  id: string
-  type: string
-  attributes: {
-    color: string
-    description: string
-    direction_destinations: string[]
-    direction_names: string[]
-    fare_class: string
-    long_name: string
-    short_name: string
-    sort_order: number
-    text_color: string
-    type: number
-  }
-}
-
-interface MBTATrip {
-  id: string
-  type: string
-  attributes: {
-    block_id: string | null
-    direction_id: number
-    headsign: string
-    name: string
-    service_id: string
-    short_name: string | null
-    wheelchair_accessible: number
-  }
-}
-
-interface MBTAResponse {
-  data: MBTAPrediction[]
-  included: Array<MBTAStop | MBTARoute | MBTATrip>
-}
-
-interface MBTASchedule {
-  id: string
-  type: string
-  attributes: {
-    arrival_time: string | null
-    departure_time: string | null
-    direction_id: number
-    drop_off_type: number
-    pickup_type: number
-    stop_headsign: string | null
-    stop_sequence: number
-    timepoint: boolean
-  }
-  relationships: {
-    route: {
-      data: {
-        id: string
-        type: string
-      }
-    }
-    stop: {
-      data: {
-        id: string
-        type: string
-      }
-    }
-    trip: {
-      data: {
-        id: string
-        type: string
-      }
-    }
-  }
-}
-
-interface MBTAScheduleResponse {
-  data: MBTASchedule[]
-  included: Array<MBTAStop | MBTARoute | MBTATrip>
-}
+import { add } from 'date-fns'
+import { TZDate } from '@date-fns/tz'
 
 interface TrackPrediction {
   station_id: string
@@ -155,28 +19,6 @@ interface TrackPrediction {
   created_at: string
 }
 
-interface TrackPredictionResponse {
-  success: boolean
-  prediction: TrackPrediction
-}
-
-interface PredictionRequest {
-  station_id: string
-  route_id: string
-  trip_id: string
-  headsign: string
-  direction_id: number
-  scheduled_time: string
-}
-
-interface ChainedPredictionsRequest {
-  predictions: PredictionRequest[]
-}
-
-interface ChainedPredictionsResponse {
-  results: TrackPredictionResponse[]
-}
-
 interface PredictionRow {
   station: string
   time: Date
@@ -186,12 +28,7 @@ interface PredictionRow {
   realtime: boolean
 }
 
-interface PredictionStats {
-  generated: number
-  notGenerated: number
-  total: number
-  fetchDuration: number
-}
+const TZ = 'America/New_York'
 
 // DataTable instance for progressive updates
 let predictionsTable: any | null = null
@@ -223,9 +60,6 @@ document
   .getElementById('predictions-container')
   ?.scrollIntoView({ behavior: 'smooth' })
 
-// Constants
-const STOP_IDS = ['place-NEC-1851', 'place-bbsta', 'place-sstat', 'place-north']
-const MBTA_API_BASE = process.env.MBTA_API_BASE || 'https://api-v3.mbta.com'
 const TRACK_PREDICTION_API =
   process.env.TRACK_PREDICTION_API || 'https://imt.ryanwallace.cloud'
 
@@ -336,12 +170,17 @@ async function fetchDateTrackPredictions(
 ): Promise<TrackPrediction[]> {
   const url = `${TRACK_PREDICTION_API}/predictions/date`
 
-  const tz = 'America/New_York'
-  const currentZoned = toZonedTime(new Date(), tz)
-  const nextDay = new Date(currentZoned.getTime() + 24 * 60 * 60 * 1000)
-  const nextDate = formatInTimeZone(nextDay, tz, 'yyyy-MM-dd')
+  const currentZoned = toZonedTime(new Date(), TZ)
+  const nextDay = add(currentZoned, { days: 1 })
+  const twoDays = add(nextDay, { days: 1 })
 
-  const datesToFetch = Array.from(new Set([targetDate, nextDate]))
+  const datesToFetch = Array.from(
+    new Set([
+      targetDate,
+      formatInTimeZone(nextDay, TZ, 'yyyy-MM-dd'),
+      formatInTimeZone(twoDays, TZ, 'yyyy-MM-dd')
+    ])
+  )
 
   try {
     async function fetchForDate(dateStr: string): Promise<TrackPrediction[]> {
@@ -367,42 +206,26 @@ async function fetchDateTrackPredictions(
     const results = await Promise.all(datesToFetch.map((d) => fetchForDate(d)))
     const allPreds = results.flat()
 
-    // Deduplicate by station + route + direction + scheduled_time, keeping highest-confidence
-    const dedup = new Map<string, TrackPrediction>()
-    allPreds.forEach((p) => {
-      const key = `${p.station_id}-${p.route_id}-${p.direction_id}-${p.scheduled_time}`
-      const existing = dedup.get(key)
-      if (
-        !existing ||
-        (p.confidence_score || 0) > (existing.confidence_score || 0)
-      ) {
-        dedup.set(key, p)
-      }
-    })
-
-    return Array.from(dedup.values())
+    return allPreds
   } catch (e) {
     console.error('Error fetching track predictions by date:', e)
     throw e
   }
 }
 
-function restructureData(
-  trackPredictions: TrackPrediction[]
-): PredictionRow[] {
+function restructureData(trackPredictions: TrackPrediction[]): PredictionRow[] {
   const rows: PredictionRow[] = []
 
-  // Create a map of track predictions by stop_id + route_id + direction_id + departure_time
-  const trackPredictionMap = new Map<string, TrackPrediction>()
-  trackPredictions.forEach((tp) => {
-    const key = `${tp.station_id}-${tp.route_id}-${tp.direction_id}-${tp.scheduled_time}`
-    trackPredictionMap.set(key, tp)
-  })
+  // dedupe
+  const trackPredictionsSet = new Set<string>()
 
-  // Process MBTA predictions
   for (const prediction of trackPredictions) {
-    const depDate = new Date(prediction.scheduled_time)
-    if (depDate.getTime() < Date.now()) continue
+    const key = `${prediction.station_id}-${prediction.route_id}-${prediction.direction_id}-${prediction.scheduled_time}`
+    if (trackPredictionsSet.has(key)) {
+      continue
+    }
+    const depDate = new TZDate(prediction.scheduled_time, 'America/New_York')
+    if (depDate < TZDate.tz(TZ)) continue
 
     const stopId = prediction.station_id
     const routeId = prediction.route_id
@@ -424,33 +247,11 @@ function restructureData(
         confidence: prediction?.confidence_score || 0,
         realtime: true
       }
-
+      trackPredictionsSet.add(key)
       rows.push(row)
     }
   }
   return rows.sort((a, b) => a.time.getTime() - b.time.getTime())
-}
-
-function showLoading(): void {
-  const container =
-    document.querySelector('#predictions-table_wrapper') ||
-    document.querySelector('#predictions-table')?.parentElement
-  if (container) {
-    const existingLoader = container.querySelector('.loading-overlay')
-    if (!existingLoader) {
-      const loadingOverlay = document.createElement('div')
-      loadingOverlay.className = 'loading-overlay'
-      loadingOverlay.innerHTML = `
-        <div class="loading-spinner">
-          <div class="spinner"></div>
-        </div>
-      `
-      if (container instanceof HTMLElement) {
-        container.style.position = 'relative'
-      }
-      container.appendChild(loadingOverlay)
-    }
-  }
 }
 
 function hideLoading(): void {
@@ -585,10 +386,9 @@ async function refreshPredictions(): Promise<void> {
       .getElementById('show-back-bay')
       ?.setAttribute('data-initialized', 'true')
   }
-  const tz = 'America/New_York'
   const targetDate = formatInTimeZone(
-    toZonedTime(new Date(), tz),
-    tz,
+    toZonedTime(new Date(), TZ),
+    TZ,
     'yyyy-MM-dd'
   )
 

@@ -6,6 +6,7 @@
   "author": "Ryan Wallace",
   "license": "Apache-2.0",
   "dependencies": {
+    "@date-fns/tz": "^1.4.1",
     "@maptiler/leaflet-maptilersdk": "^4.0.2",
     "@petoc/leaflet-double-touch-drag-zoom": "^1.0.3",
     "@turf/along": "^7.2.0",

@@ -2737,15 +2737,6 @@ h6 {
   position: relative;
 }
 
-h1:hover,
-h2:hover,
-h3:hover,
-h4:hover,
-h5:hover,
-h6:hover {
-  /* Removed transform to prevent unwanted movement */
-}
-
 /* Enhanced details/summary animations */
 .posts-section details {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
