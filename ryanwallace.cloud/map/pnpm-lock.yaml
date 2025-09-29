@@ -46,7 +46,7 @@ importers:
         version: 2.3.4
       datatables.net-responsive:
         specifier: ^3.0.4
-        version: 3.0.6
+        version: 3.0.7
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
@@ -601,8 +601,8 @@ packages:
   datatables.net-jqui@2.3.4:
     resolution: {integrity: sha512-K42CDTg4zN9ady+QbELsyV/VHWI47Pzvmnd564PddA28PcGq0vvRPOkKgiGJIJdGG1QTplAj+R7EWO/D/rH5Lw==}
 
-  datatables.net-responsive@3.0.6:
-    resolution: {integrity: sha512-GHVgU7k7/ST7F/z1/0ieaJiNghrO1mgH8PbikAaL9MH1pw+GMcCuL5sFaFzIyMRzZz7tnrmVnjrkNX+W01VzhA==}
+  datatables.net-responsive@3.0.7:
+    resolution: {integrity: sha512-MngWU41M1LDDMjKFJ3rAHc4Zb3QhOysDTh+TfKE1ycrh5dpnKa1vobw2MKMMbvbx4q05OXZY9jtLSPIkaJRsuw==}
 
   datatables.net@2.3.4:
     resolution: {integrity: sha512-fKuRlrBIdpAl2uIFgl9enKecHB41QmFd/2nN9LBbOvItV/JalAxLcyqdZXex7wX4ZXjnJQEnv6xeS9veOpKzSw==}
@@ -2043,7 +2043,7 @@ snapshots:
       datatables.net: 2.3.4
       jquery: 3.7.1
 
-  datatables.net-responsive@3.0.6:
+  datatables.net-responsive@3.0.7:
     dependencies:
       datatables.net: 2.3.4
       jquery: 3.7.1
