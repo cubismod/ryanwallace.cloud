@@ -45,6 +45,8 @@ const VEHICLE_TYPE_MAPPING: Record<keyof VehicleCountsByType, string> = {
 const vehicles_url: string =
   process.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
 
+// Amtrak ('amtrak') has been removed from the lines array since it's not supported by the API.
+// This is a breaking change from the original implementation.
 // Exclude Amtrak from table counts since it's not in the API
 export const lines: string[] = ['rl', 'gl', 'bl', 'ol', 'sl', 'cr']
 export const vehicleTypes: string[] = ['light', 'heavy', 'regional', 'bus']
