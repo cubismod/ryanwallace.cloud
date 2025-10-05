@@ -19,7 +19,7 @@ import {
   jumpToElfTrain,
   currentMarkers
 } from './marker-manager'
-import { updateTable } from './table-manager'
+import { initializeTable } from './table-manager'
 import {
   trackById,
   untrack,
@@ -798,22 +798,7 @@ function processVehicleData(data: any): void {
 
     // After first vehicle render, schedule shapes load during idle time
     scheduleShapesLoad()
-
-    // Use debounced table update
-    debounceUpdateTable()
   })
-}
-
-// Debounced table update function
-let tableUpdateTimeout: number | null = null
-function debounceUpdateTable(): void {
-  if (tableUpdateTimeout) {
-    window.clearTimeout(tableUpdateTimeout)
-  }
-  tableUpdateTimeout = window.setTimeout(() => {
-    updateTable()
-    tableUpdateTimeout = null
-  }, 150)
 }
 
 function loadShapesOnce(): void {
@@ -1520,3 +1505,4 @@ document.getElementById('elf-search-close')!.addEventListener('click', () => {
 })
 
 loadAlerts()
+initializeTable()

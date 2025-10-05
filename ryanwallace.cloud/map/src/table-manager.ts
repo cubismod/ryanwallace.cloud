@@ -2,20 +2,27 @@ import DOMPurify from 'dompurify'
 import {
   lines,
   vehicleTypes,
-  vehicleCountMap,
-  calculateTotal
+  calculateTotal,
+  fetchVehicleCounts,
+  getCount
 } from './vehicle-counter'
 
-export function updateTable(): void {
+export async function updateTable(): Promise<void> {
+  try {
+    // Fetch latest counts from API before updating table
+    await fetchVehicleCounts()
+  } catch (error) {
+    console.error('Failed to fetch vehicle counts for table update:', error)
+    // Continue with empty counts if API fails
+  }
+
   for (const line of lines) {
     for (const vehicleType of vehicleTypes) {
       const id = `${line}-${vehicleType}`
       const element = document.getElementById(id)
       if (element) {
         element.innerHTML = String(
-          DOMPurify.sanitize(
-            String(vehicleCountMap.get(line)?.get(vehicleType) || 0)
-          )
+          DOMPurify.sanitize(String(getCount(line, vehicleType)))
         )
       }
     }
@@ -40,4 +47,12 @@ export function updateTable(): void {
       DOMPurify.sanitize(String(calculateTotal('all')))
     )
   }
+}
+
+// Initialize table on load
+export function initializeTable(): void {
+  // Trigger initial table update
+  updateTable().catch((error) => {
+    console.error('Failed to initialize table:', error)
+  })
 }
