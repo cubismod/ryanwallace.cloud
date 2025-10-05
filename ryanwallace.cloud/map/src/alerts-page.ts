@@ -1,7 +1,7 @@
 import { alerts } from './alerts'
 
 const vehicles_url: string =
-  process.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
+  import.meta.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
 
 function init(): void {
   const table = document.getElementById('alerts')

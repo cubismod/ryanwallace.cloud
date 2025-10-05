@@ -31,8 +31,8 @@ interface PredictionRow {
 const TZ = 'America/New_York'
 
 // DataTable instance for progressive updates
-let predictionsTable: any | null = null
-let DataTableCtor: any | null = null
+let predictionsTable: import('datatables.net').default | null = null
+let DataTableCtor: typeof import('datatables.net').default | null = null
 let tableInitPromise: Promise<void> | null = null
 
 // Filter state
@@ -61,7 +61,7 @@ document
   ?.scrollIntoView({ behavior: 'smooth' })
 
 const TRACK_PREDICTION_API =
-  process.env.TRACK_PREDICTION_API || 'https://imt.ryanwallace.cloud'
+  import.meta.env.TRACK_PREDICTION_API || 'https://imt.ryanwallace.cloud'
 
 // Stop name mapping
 const STOP_NAMES: Record<string, string> = {
@@ -310,7 +310,7 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
         }
         if (!DataTableCtor) {
           const mod = await import('datatables.net')
-          DataTableCtor = (mod as any).default || (mod as any)
+          DataTableCtor = mod.default
         }
         if (!predictionsTable) {
           predictionsTable = new DataTableCtor('#predictions-table', {
@@ -344,35 +344,14 @@ async function updateTable(rows: PredictionRow[]): Promise<void> {
   }
 
   // Progressive update without reinitializing the table
-  // Try clear via top-level or rows() API depending on build
-  if (typeof predictionsTable.clear === 'function') {
-    predictionsTable.clear()
-  } else if (
-    predictionsTable.rows &&
-    typeof predictionsTable.rows.clear === 'function'
-  ) {
-    predictionsTable.rows.clear()
-  } else if (typeof predictionsTable.rows === 'function') {
-    const api = predictionsTable.rows()
-    if (api && typeof api.clear === 'function') api.clear()
+  if (!predictionsTable) {
+    return
   }
 
-  // Add new data via rows API variants
-  if (
-    predictionsTable.rows &&
-    typeof predictionsTable.rows.add === 'function'
-  ) {
-    predictionsTable.rows.add(tableData)
-  } else if (typeof predictionsTable.rows === 'function') {
-    predictionsTable.rows().add(tableData)
-  }
-
-  if (typeof predictionsTable.draw === 'function') {
-    predictionsTable.draw(false)
-  } else if (typeof predictionsTable.rows === 'function') {
-    const api = predictionsTable.rows()
-    if (api && typeof api.draw === 'function') api.draw(false)
-  }
+  // Clear existing data and add new data
+  predictionsTable.clear()
+  predictionsTable.rows.add(tableData)
+  predictionsTable.draw(false)
 }
 
 async function refreshPredictions(): Promise<void> {
