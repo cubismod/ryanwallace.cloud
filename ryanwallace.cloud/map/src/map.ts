@@ -19,7 +19,7 @@ import {
   jumpToElfTrain,
   currentMarkers
 } from './marker-manager'
-import { updateTable } from './table-manager'
+import { initializeTable } from './table-manager'
 import {
   trackById,
   untrack,
@@ -198,6 +198,16 @@ map.on('exitFullscreen', () => {
 
 const vehicles_url: string =
   process.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
+
+// Helper function to convert features object to array
+function getFeaturesArray(features: any): any[] {
+  if (Array.isArray(features)) {
+    return features
+  } else if (features && typeof features === 'object') {
+    return Object.values(features)
+  }
+  return []
+}
 const bos_url: string = 'https://bos.ryanwallace.cloud'
 
 let baseLayerLoaded: boolean = false
@@ -643,7 +653,7 @@ window.trackVehicleById = (id: string | number): void => {
   trackById(
     id,
     map,
-    () => ((vehicleDataCache && vehicleDataCache.features) || []) as any[],
+    () => (vehicleDataCache ? getFeaturesArray(vehicleDataCache.features) : []),
     () => updateTrackingStatusUI()
   )
 }
@@ -730,11 +740,28 @@ function annotate_map(): void {
 function processVehicleData(data: any): void {
   // Use requestAnimationFrame for smoother updates
   requestAnimationFrame(() => {
-    updateVehicleFeatures(data.features || [])
+    // Add debugging and validation
+    if (!data) {
+      console.warn('processVehicleData: data is null/undefined')
+      return
+    }
+
+    // Convert features object to array
+    const featuresArray = getFeaturesArray(data.features)
+    if (featuresArray.length === 0 && data.features) {
+      console.warn(
+        'processVehicleData: could not convert features to array:',
+        typeof data.features,
+        data.features
+      )
+      return
+    }
+
+    updateVehicleFeatures(featuresArray)
 
     // Update vehicle markers efficiently
     if (!popupOpen) {
-      updateMarkers(data.features || [])
+      updateMarkers(featuresArray)
     }
 
     // If many markers, enable clustering dynamically
@@ -798,22 +825,7 @@ function processVehicleData(data: any): void {
 
     // After first vehicle render, schedule shapes load during idle time
     scheduleShapesLoad()
-
-    // Use debounced table update
-    debounceUpdateTable()
   })
-}
-
-// Debounced table update function
-let tableUpdateTimeout: number | null = null
-function debounceUpdateTable(): void {
-  if (tableUpdateTimeout) {
-    window.clearTimeout(tableUpdateTimeout)
-  }
-  tableUpdateTimeout = window.setTimeout(() => {
-    updateTable()
-    tableUpdateTimeout = null
-  }, 150)
 }
 
 function loadShapesOnce(): void {
@@ -998,9 +1010,8 @@ window.addEventListener('offline', () => {
 })
 
 // Recompute halo/pulse sizes and alignment when zoom changes
-hookZoom(
-  map,
-  () => ((vehicleDataCache && vehicleDataCache.features) || []) as any[]
+hookZoom(map, () =>
+  vehicleDataCache ? getFeaturesArray(vehicleDataCache.features) : []
 )
 
 function startUpdateInterval(): void {
@@ -1413,7 +1424,7 @@ document
     setCookie('show-elf-mode', target.checked.toString())
     // Refresh all marker classes immediately
     if (vehicleDataCache && vehicleDataCache.features) {
-      refreshAllElfClasses(vehicleDataCache.features)
+      refreshAllElfClasses(getFeaturesArray(vehicleDataCache.features))
     }
     // Toggle elf emoji scatter overlay
     if (target.checked) {
@@ -1463,7 +1474,9 @@ document
     resultsDiv.style.display = 'block'
 
     // Find top elf trains (lazy-load elf scoring)
-    const topElves = await findTopElfTrains(vehicleDataCache.features)
+    const topElves = await findTopElfTrains(
+      getFeaturesArray(vehicleDataCache.features)
+    )
 
     // Clear previous results
     resultsList.innerHTML = ''
@@ -1520,3 +1533,4 @@ document.getElementById('elf-search-close')!.addEventListener('click', () => {
 })
 
 loadAlerts()
+initializeTable()

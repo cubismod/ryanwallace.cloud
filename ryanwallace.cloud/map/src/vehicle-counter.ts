@@ -1,69 +1,132 @@
-export const lines: string[] = ['rl', 'gl', 'bl', 'ol', 'sl', 'cr', 'amtrak']
+// API types based on OpenAPI specification
+interface VehicleLineTotals {
+  RL: number
+  GL: number
+  BL: number
+  OL: number
+  SL: number
+  CR: number
+  total: number
+}
+
+interface VehicleCountsByType {
+  light_rail: VehicleLineTotals
+  heavy_rail: VehicleLineTotals
+  regional_rail: VehicleLineTotals
+  bus: VehicleLineTotals
+}
+
+interface VehiclesCountResponse {
+  success: boolean
+  counts: VehicleCountsByType
+  totals_by_line: VehicleLineTotals
+  generated_at: string
+}
+
+// Map internal line codes to API line codes
+const INTERNAL_TO_API_LINE: Record<string, string> = {
+  rl: 'RL',
+  gl: 'GL',
+  bl: 'BL',
+  ol: 'OL',
+  sl: 'SL',
+  cr: 'CR'
+}
+
+// Map API vehicle types to internal vehicle types
+const VEHICLE_TYPE_MAPPING: Record<keyof VehicleCountsByType, string> = {
+  light_rail: 'light',
+  heavy_rail: 'heavy',
+  regional_rail: 'regional',
+  bus: 'bus'
+}
+
+// API configuration
+const vehicles_url: string =
+  process.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
+
+// Amtrak ('amtrak') has been removed from the lines array since it's not supported by the API.
+// This is a breaking change from the original implementation.
+// Exclude Amtrak from table counts since it's not in the API
+export const lines: string[] = ['rl', 'gl', 'bl', 'ol', 'sl', 'cr']
 export const vehicleTypes: string[] = ['light', 'heavy', 'regional', 'bus']
 
-export const vehicleCountMap: Map<
-  string,
-  Map<string, number>
-> = createVehicleCountMap()
-export const markerIdInfo: Map<string, { route: string; vehicleType: string }> =
-  new Map()
+// Current vehicle counts fetched from API
+let currentCounts: VehiclesCountResponse | null = null
 
-function createVehicleCountMap(): Map<string, Map<string, number>> {
-  const vehicleCountMap = new Map<string, Map<string, number>>()
-  for (const line of lines) {
-    vehicleCountMap.set(line, new Map<string, number>())
-  }
-  return vehicleCountMap
-}
-
-export function incrementMapItem(
-  id: string,
-  route: string,
-  vehicleType: string
-): void {
-  const existingInfo = markerIdInfo.get(id)
-  if (!existingInfo) {
-    markerIdInfo.set(id, { route, vehicleType: vehicleType })
-    const existingCount = vehicleCountMap.get(route)?.get(vehicleType)
-    if (existingCount !== undefined) {
-      vehicleCountMap.get(route)!.set(vehicleType, existingCount + 1)
-    } else {
-      vehicleCountMap.get(route)?.set(vehicleType, 1)
+// Fetch vehicle counts from API
+export async function fetchVehicleCounts(): Promise<void> {
+  try {
+    const response = await fetch(`${vehicles_url}/vehicles/counts`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
-  }
-}
 
-export function decrementMapItem(id: string): void {
-  const { route, vehicleType } = markerIdInfo.get(id) || {
-    route: '',
-    vehicleType: ''
+    const data: VehiclesCountResponse = await response.json()
+    if (data.success) {
+      currentCounts = data
+    } else {
+      console.error('API returned success: false')
+    }
+  } catch (error) {
+    console.error('Failed to fetch vehicle counts:', error)
   }
-  const existing = vehicleCountMap.get(route)?.get(vehicleType)
-  if (existing !== undefined) {
-    vehicleCountMap.get(route)!.set(vehicleType, existing - 1)
-  }
-  markerIdInfo.delete(id)
 }
 
 export function calculateTotal(dimension: string): number {
-  let total = 0
-  if (lines.includes(dimension)) {
-    for (const vehicleType of vehicleTypes) {
-      total += vehicleCountMap.get(dimension)?.get(vehicleType) || 0
-    }
-    return total
-  } else if (vehicleTypes.includes(dimension)) {
-    for (const line of lines) {
-      total += vehicleCountMap.get(line)?.get(dimension) || 0
-    }
-    return total
-  } else if (dimension === 'all') {
-    for (const line of lines) {
-      for (const vehicleType of vehicleTypes) {
-        total += vehicleCountMap.get(line)?.get(vehicleType) || 0
-      }
-    }
-    return total
+  if (!currentCounts) {
+    return 0
   }
-  return total
+
+  if (dimension === 'all') {
+    return currentCounts.totals_by_line.total
+  }
+
+  // Check if it's a line
+  const apiLine = INTERNAL_TO_API_LINE[dimension]
+  if (apiLine) {
+    return currentCounts.totals_by_line[
+      apiLine as keyof VehicleLineTotals
+    ] as number
+  }
+
+  // Check if it's a vehicle type
+  const apiVehicleType = Object.keys(VEHICLE_TYPE_MAPPING).find(
+    (key) =>
+      VEHICLE_TYPE_MAPPING[key as keyof VehicleCountsByType] === dimension
+  )
+  if (apiVehicleType) {
+    const vehicleData =
+      currentCounts.counts[apiVehicleType as keyof VehicleCountsByType]
+    return vehicleData.total
+  }
+
+  return 0
 }
+
+// Get count for specific line and vehicle type combination
+export function getCount(line: string, vehicleType: string): number {
+  if (!currentCounts) {
+    return 0
+  }
+
+  const apiLine = INTERNAL_TO_API_LINE[line]
+  const apiVehicleType = Object.keys(VEHICLE_TYPE_MAPPING).find(
+    (key) =>
+      VEHICLE_TYPE_MAPPING[key as keyof VehicleCountsByType] === vehicleType
+  )
+
+  if (apiLine && apiVehicleType) {
+    const vehicleData =
+      currentCounts.counts[apiVehicleType as keyof VehicleCountsByType]
+    return vehicleData[apiLine as keyof VehicleLineTotals] as number
+  }
+
+  return 0
+}
+
+// Initialize by fetching counts
+fetchVehicleCounts()
+
+// Refresh counts every 30 seconds
+setInterval(fetchVehicleCounts, 30000)

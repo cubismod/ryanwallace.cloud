@@ -1,7 +1,7 @@
 import * as L from 'leaflet'
 import { VehicleFeature } from './types'
 import { niceStatus } from './utils'
-import { incrementMapItem } from './vehicle-counter'
+
 import { getShapesFromLayerGroup, snapVehicleToRoute } from './geometry-utils'
 import { getShapesLayerGroupForRoute } from './layer-groups'
 // Elf score utilities are lazy-loaded in marker-manager popups
@@ -56,27 +56,21 @@ export function pointToLayer(
     }
     if (feature.properties['marker-color'] === '#008150') {
       icon = 'rail-light'
-      incrementMapItem(feature.id as string, 'gl', 'light')
     }
     if (feature.properties['marker-color'] === '#2F5DA6') {
       icon = 'rail-metro-blue'
-      incrementMapItem(feature.id as string, 'bl', 'heavy')
     }
     if (feature.properties['marker-color'] === '#FA2D27') {
       icon = 'rail-metro-red'
       if (feature.properties['route'] === 'Mattapan') {
-        incrementMapItem(feature.id as string, 'rl', 'light')
       } else {
-        incrementMapItem(feature.id as string, 'rl', 'heavy')
       }
     }
     if (feature.properties['marker-color'] === '#FD8A03') {
       icon = 'rail-metro-orange'
-      incrementMapItem(feature.id as string, 'ol', 'heavy')
     }
     if (feature.properties['marker-color'] === '#7B388C') {
       icon = 'rail'
-      incrementMapItem(feature.id as string, 'cr', 'regional')
     }
     if (
       feature.properties.route &&
@@ -85,10 +79,8 @@ export function pointToLayer(
         feature.properties.route.includes('Northeast Regional'))
     ) {
       icon = 'rail-amtrak'
-      incrementMapItem(feature.id as string, 'amtrak', 'regional')
     }
     if (feature.properties.route && feature.properties.route.startsWith('SL')) {
-      incrementMapItem(feature.id as string, 'sl', 'bus')
       icon = 'bus-silver'
       opacity = 0.9
     }

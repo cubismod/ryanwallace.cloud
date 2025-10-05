@@ -3,7 +3,7 @@ import { VehicleFeature } from './types'
 import { niceStatus } from './utils'
 import { pointToLayer, onEachFeature, createIconForFeature } from './markers'
 import { getLayerGroupForRoute, layerGroups } from './layer-groups'
-import { decrementMapItem } from './vehicle-counter'
+
 // Elf score utilities are loaded on demand
 
 async function loadElfModule() {
@@ -283,7 +283,6 @@ export function updateMarkers(features: VehicleFeature[]): void {
         }
       })
       currentMarkers.delete(markerKey)
-      decrementMapItem(String(markerKey))
     }
   }
 }
