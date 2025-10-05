@@ -85,7 +85,7 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
       vite:
-        specifier: ^5.4.11
+        specifier: 5.4.20
         version: 5.4.20(@types/node@24.6.2)(terser@5.44.0)
 
 packages:
