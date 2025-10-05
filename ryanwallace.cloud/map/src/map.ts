@@ -197,7 +197,7 @@ map.on('exitFullscreen', () => {
 // Tracking overlays: keep minimal halo only (no extra panes)
 
 const vehicles_url: string =
-  process.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
+  import.meta.env.VEHICLES_URL || 'https://imt.ryanwallace.cloud'
 
 // Helper function to convert features object to array
 function getFeaturesArray(features: any): any[] {
@@ -208,7 +208,8 @@ function getFeaturesArray(features: any): any[] {
   }
   return []
 }
-const bos_url: string = 'https://bos.ryanwallace.cloud'
+const bos_url: string =
+  import.meta.env.BOS_URL || 'https://bos.ryanwallace.cloud'
 
 let baseLayerLoaded: boolean = false
 let buildingMarkers: L.GeoJSON | null = null
@@ -560,18 +561,19 @@ let mapInitialized = false
 // Check if MapTiler key is available and use MapTiler if possible, otherwise fall back to OpenStreetMap
 const effectiveType = (navigator as any).connection?.effectiveType || ''
 const slowConnection = ['slow-2g', '2g', '3g'].includes(effectiveType)
-const hasMapTilerKey = process.env.MT_KEY && process.env.MT_KEY.trim() !== ''
+const hasMapTilerKey =
+  import.meta.env.MT_KEY && import.meta.env.MT_KEY.trim() !== ''
 
 if (
   hasMapTilerKey &&
-  process.env.NODE_ENV === 'production' &&
+  import.meta.env.MODE === 'production' &&
   !slowConnection
 ) {
   // Use MapTiler when key is available
   import('@maptiler/leaflet-maptilersdk')
     .then(({ MaptilerLayer }) => {
       new MaptilerLayer({
-        apiKey: process.env.MT_KEY || '',
+        apiKey: import.meta.env.MT_KEY || '',
         style: 'streets-v2'
       }).addTo(map)
       // Fallback hide if tiles don't trigger load quickly
@@ -912,7 +914,7 @@ annotate_map()
 
 // Register service worker only in production (dev often runs http://localhost)
 if ('serviceWorker' in navigator) {
-  const isProd = process.env.NODE_ENV === 'production'
+  const isProd = import.meta.env.MODE === 'production'
   if (isProd) {
     window.addEventListener('load', () => {
       navigator.serviceWorker

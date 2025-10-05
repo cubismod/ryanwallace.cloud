@@ -28,3 +28,9 @@ jobs:
         with:
           context: .
           push: false
+          build-args: |
+            MT_KEY=${{ secrets.MT_KEY }}
+            VEHICLES_URL=https://imt.ryanwallace.cloud
+            MBTA_API_BASE=
+            TRACK_PREDICTION_API=https://imt.ryanwallace.cloud
+            BOS_URL=https://bos.ryanwallace.cloud

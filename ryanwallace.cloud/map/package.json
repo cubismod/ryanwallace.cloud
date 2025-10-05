@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "private": true,
+  "type": "module",
   "author": "Ryan Wallace",
   "license": "Apache-2.0",
   "dependencies": {
@@ -17,12 +18,10 @@
     "@types/leaflet.markercluster": "^1.5.5",
     "datatables.net": "^2.3.3",
     "datatables.net-dt": "^2.3.3",
-    "datatables.net-jqui": "^2.3.3",
     "datatables.net-responsive": "^3.0.4",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.0.0",
     "dompurify": "^3.2.5",
-    "jquery": "^3.7.1",
     "leaflet": "^1.9.4",
     "leaflet-easybutton": "^2.4.0",
     "leaflet.fullscreen": "^4.0.0",
@@ -34,30 +33,20 @@
     "*.css"
   ],
   "devDependencies": {
-    "@types/jquery": "3.5.33",
     "@types/leaflet": "1.9.20",
     "@types/node": "24.6.2",
-    "buffer": "6.0.3",
-    "css-loader": "7.1.2",
-    "css-minimizer-webpack-plugin": "7.0.2",
-    "events": "3.3.0",
-    "html-webpack-plugin": "5.6.4",
-    "mini-css-extract-plugin": "2.9.4",
     "prettier": "3.6.2",
     "prettier-config-standard": "7.0.0",
-    "style-loader": "4.0.0",
-    "terser-webpack-plugin": "5.3.14",
-    "ts-loader": "9.5.4",
     "typescript": "5.9.3",
-    "webpack": "5.102.0",
-    "webpack-bundle-analyzer": "4.10.2",
-    "webpack-cli": "6.0.1"
+    "vite": "^5.4.11"
   },
   "packageManager": "pnpm@10.18.0+sha512.e804f889f1cecc40d572db084eec3e4881739f8dec69c0ff10d2d1beff9a4e309383ba27b5b750059d7f4c149535b6cd0d2cb1ed3aeb739239a4284a68f40cfa",
   "scripts": {
-    "build": "webpack --config webpack.config.js",
-    "build:dev": "webpack --config webpack.config.js --mode development",
-    "build:nocache": "webpack --config webpack.config.js --mode production --no-cache",
+    "build": "vite build",
+    "build:dev": "vite build --mode development",
+    "build:nocache": "rm -rf node_modules/.vite && vite build",
+    "dev": "vite",
+    "preview": "vite preview",
     "move": "mkdir -p ../static/map; mkdir -p ../content/map; mkdir -p ../content/alerts; mkdir -p ../content/track; if [ -f dist/alerts.html ]; then mv dist/alerts.html ../content/alerts/index.html; fi; if [ -f dist/track.html ]; then mv dist/track.html ../content/track/index.html; fi; mv dist/* ../content/map/",
     "title": "cat head.md ../content/map/index.html >  temp; mv temp ../content/map/index.html",
     "title:alerts": "cat head-alerts.md ../content/alerts/index.html > temp; mv temp ../content/alerts/index.html",
@@ -65,7 +54,6 @@
     "clean": "rm -f ../content/map/*; rm -f ../static/map/*",
     "format": "prettier --write \"src/**/*.{ts,js,json,html,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json,html,css}\"",
-    "typecheck": "tsc --noEmit",
-    "analyze": "webpack --config webpack.config.js --profile --json=dist/stats.json && webpack-bundle-analyzer dist/stats.json"
+    "typecheck": "tsc --noEmit"
   }
 }
