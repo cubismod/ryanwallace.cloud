@@ -31,7 +31,7 @@ RUN corepack enable && corepack prepare pnpm@10.18.0 --activate && pnpm install 
 RUN pnpm build && pnpm move && pnpm title && pnpm title:alerts && pnpm title:track
 
 # hugo build
-FROM hugomods/hugo:0.152.0@sha256:0e55aa027dfa4d5fc202b46e95a52c2b27c603240f15d73163588f39df6ebcd2 AS builder
+FROM hugomods/hugo:0.152.1@sha256:7407fcffec7e59e5730990d7c39b471aea116279b5476236b60bb2e5d18357c4 AS builder
 WORKDIR /build
 
 COPY --from=node /build .
