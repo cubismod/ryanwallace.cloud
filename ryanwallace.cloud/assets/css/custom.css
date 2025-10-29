@@ -2783,6 +2783,46 @@ h6 {
   overflow-x: hidden;
 }
 
+/* Styled scrollbar for sidebar - applies to all screen sizes */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .sidebar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-theme .sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Firefox scrollbar */
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme .sidebar {
+  scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255, 255, 255, 0.05);
+}
+
 .bl::after,
 .gl::after,
 .rl::after,
@@ -3782,5 +3822,117 @@ body.dark-theme .mobile-menu {
 
   .mobile-menu-toggle {
     display: none !important;
+  }
+}
+
+/* 
+ * Medium-width screen optimizations (48em-64em / 768px-1024px)
+ * Minimize sidebar to maximize map content space
+ */
+@media (min-width: 48em) and (max-width: 64em) {
+  /* Reduce sidebar width to 16rem (from 18rem) - still fits text properly */
+  .sidebar {
+    width: 16rem !important;
+    padding: 1.75rem 1rem !important;
+  }
+
+  /* Style scrollbar to blend better in dark mode */
+  .sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  /* Slightly reduce sidebar heading size */
+  .sidebar-about h1 {
+    font-size: 1.3em !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Make profile image slightly smaller */
+  .sidebar-about img {
+    width: 100px !important;
+    height: 100px !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Slightly reduce lead text size */
+  .sidebar-about p,
+  .lead {
+    font-size: 0.9em !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Compact navigation items */
+  .sidebar-nav {
+    margin-top: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .sidebar-nav-item {
+    font-size: 0.95em !important;
+    padding: 0.4rem 0 !important;
+  }
+
+  /* Hide recent posts section on medium screens to save space */
+  .sidebar-nav .posts-section,
+  .posts-section,
+  .sidebar-nav .sub-heading,
+  .sidebar-nav li.sub-heading,
+  .sidebar-nav li.bullet {
+    display: none !important;
+  }
+
+  /* Slightly reduce social icon size */
+  .social {
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+    margin: 0 0.4rem !important;
+  }
+
+  /* Compact footer/copyright */
+  .sidebar .footnote,
+  .sidebar .copyright {
+    font-size: 0.65em !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Adjust content margin to accommodate smaller sidebar */
+  .content {
+    margin-left: 1.5rem !important;
+    max-width: calc(100% - 17.5rem) !important;
+  }
+
+  /* Make map take more space */
+  #map {
+    height: 600px !important;
+  }
+
+  /* Slightly reduce theme toggle button size */
+  .btn-light-dark {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+    font-size: 1em !important;
+  }
+}
+
+/* 
+ * Hide sidebar on map page to maximize map view
+ * Uses :has() to detect the specific heading on the map page
+ */
+@media (min-width: 48em) {
+  body:has(h1 a[href$="/map/"]) .sidebar {
+    display: none !important;
+  }
+
+  /* Make content full width on map page when sidebar is hidden */
+  body:has(h1 a[href$="/map/"]) .content {
+    margin-left: 2rem !important;
+    margin-right: 2rem !important;
+    max-width: none !important;
+    width: auto !important;
+  }
+
+  /* Ensure wrapper takes full width */
+  body:has(h1 a[href$="/map/"]) .wrapper {
+    max-width: 100% !important;
   }
 }

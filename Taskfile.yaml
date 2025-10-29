@@ -30,6 +30,10 @@ tasks:
       - pnpm title
       - pnpm title:alerts
       - pnpm title:track
+  watch:
+    dir: ryanwallace.cloud/map
+    cmds:
+      - pnpm watch
   clean:
     dir: ryanwallace.cloud/map
     cmds:
@@ -58,3 +62,8 @@ tasks:
       - pnpm title
       - pnpm title:alerts
       - pnpm title:track
+  pnpm_setup:
+    dir: ryanwallace.cloud/map
+    cmds:
+      - npm install --global corepack@latest
+      - corepack enable pnpm

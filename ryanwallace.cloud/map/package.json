@@ -54,6 +54,7 @@
     "clean": "rm -f ../content/map/*; rm -f ../static/map/*",
     "format": "prettier --write \"src/**/*.{ts,js,json,html,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json,html,css}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "watch": "vite build --watch --mode development"
   }
 }
