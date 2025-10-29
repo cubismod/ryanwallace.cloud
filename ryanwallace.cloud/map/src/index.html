@@ -3,6 +3,61 @@
 <link rel="preconnect" href="https://bos.ryanwallace.cloud" crossorigin />
 
 <style>
+  /* Back to Home button for map page */
+  .back-to-home-btn {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(255, 255, 255, 0.95);
+    color: #1f2937;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+  }
+
+  .back-to-home-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+    color: #0ea5e9;
+  }
+
+  .back-to-home-btn::before {
+    content: '←';
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+
+  body.dark-theme .back-to-home-btn {
+    background: rgba(31, 41, 55, 0.95);
+    color: #f9fafb;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  body.dark-theme .back-to-home-btn:hover {
+    background: rgba(31, 41, 55, 1);
+    color: #38bdf8;
+  }
+
+  @media (max-width: 768px) {
+    .back-to-home-btn {
+      top: 0.5rem;
+      left: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+  }
+
   /* Tracking stop icon button */
   .controls-section #tracking-stop-btn.tracking-stop-btn {
     /* hidden by JS until tracking starts; JS toggles to inline-block */
@@ -179,6 +234,7 @@
 <div id="map" class="noselect"></div>
 <div class="controls-section">
   <div class="control-group">
+    <a href="/" class="back-to-home-btn">Home</a>
     <label for="refresh-rate">Refresh rate:</label>
     <select name="refresh-rate" id="refresh-rate">
       <option value="5">5 seconds</option>
