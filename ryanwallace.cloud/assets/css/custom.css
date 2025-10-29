@@ -3841,31 +3841,6 @@ body.dark-theme .mobile-menu {
     width: 6px;
   }
 
-  .sidebar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .sidebar::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-  }
-
-  .sidebar::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.3);
-  }
-
-  body.dark-theme .sidebar::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-  }
-
-  body.dark-theme .sidebar::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.15);
-  }
-
-  body.dark-theme .sidebar::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.25);
-  }
-
   /* Slightly reduce sidebar heading size */
   .sidebar-about h1 {
     font-size: 1.3em !important;
