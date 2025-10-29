@@ -30,6 +30,10 @@ tasks:
       - pnpm title
       - pnpm title:alerts
       - pnpm title:track
+  watch:
+    dir: ryanwallace.cloud/map
+    cmds:
+      - pnpm watch
   clean:
     dir: ryanwallace.cloud/map
     cmds:
