@@ -1,4 +1,4 @@
-ARG caddy_version=2.11@sha256:31cac30871bed873ab95ba89b3c9b4440224c8dafeec1a527ef8c7eafc07a1a3
+ARG caddy_version=2.11@sha256:80ebbf75eed465e30dc532cf359df21465ae5f6ab827a2218435e36a030d1bc7
 ARG caddy_builder_version=2.11-builder@sha256:79fb68a64999c771efa3254d8affc85427ee25810844cab341cca6636d9d657d
 
 
