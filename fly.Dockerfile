@@ -29,7 +29,7 @@ RUN --mount=type=secret,id=MT_KEY \
     MT_KEY="$(cat /run/secrets/MT_KEY)" pnpm build && pnpm move && pnpm title && pnpm title:alerts && pnpm title:track
 
 # hugo build
-FROM hugomods/hugo:0.153.5@sha256:c75b721b87b20586d4e1db1768a2dbae638b35eaf0e618e97f9195f57b5e1d82 AS builder
+FROM hugomods/hugo:0.154.0@sha256:2dd615243fd359beab6490782d21ea3540dd0814c54f752be6f7b1f63d7fe9e5 AS builder
 WORKDIR /build
 
 COPY --from=node /build .
