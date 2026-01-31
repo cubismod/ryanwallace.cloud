@@ -26,7 +26,7 @@ ENV TRACK_PREDICTION_API=${TRACK_PREDICTION_API}
 ENV BOS_URL=${BOS_URL}
 
 # Enable pnpm via corepack and install deps
-RUN corepack enable && corepack prepare pnpm@10.18.0 --activate && pnpm install --frozen-lockfile=false --force
+RUN corepack enable && corepack prepare pnpm@10.28.2 --activate && pnpm install --frozen-lockfile=false --force
 # https://fly.io/docs/apps/build-secrets/
 RUN pnpm build && pnpm move && pnpm title && pnpm title:alerts && pnpm title:track
 
