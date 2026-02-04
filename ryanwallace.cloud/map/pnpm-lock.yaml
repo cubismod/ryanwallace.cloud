@@ -61,7 +61,7 @@ importers:
         version: 2.4.0
       leaflet.fullscreen:
         specifier: ^5.0.0
-        version: 5.2.1(leaflet@1.9.4)
+        version: 5.3.0(leaflet@1.9.4)
       leaflet.markercluster:
         specifier: ^1.5.3
         version: 1.5.3(leaflet@1.9.4)
@@ -553,8 +553,8 @@ packages:
   leaflet-easybutton@2.4.0:
     resolution: {integrity: sha512-O+qsQq4zTF6ds8VClnytobTH/MKalctlPpiA8L+bNKHP14J3lgJpvEd/jSpq9mHTI6qOzRAvbQX6wS6qNwThvg==}
 
-  leaflet.fullscreen@5.2.1:
-    resolution: {integrity: sha512-+3eYdmzi9+d3DgEbEEwdpVGX5PW0oG9UYFcpne1xl1MOaUuNyWfjcW9UCJQ+bzKptphvsG0sFTgNCBZfSrqNlQ==}
+  leaflet.fullscreen@5.3.0:
+    resolution: {integrity: sha512-ZWlu30qf9qNysYtJtI8d1Akw9tpQcELBHvizhlE2vNKlnn0dt7vgg5xM81oalqd5QRf/JyJ1M9fu+I9NjJsS6Q==}
     peerDependencies:
       leaflet: ^1.7.0 || >=2.0.0-alpha.1
 
@@ -1134,7 +1134,7 @@ snapshots:
     dependencies:
       leaflet: 1.9.4
 
-  leaflet.fullscreen@5.2.1(leaflet@1.9.4):
+  leaflet.fullscreen@5.3.0(leaflet@1.9.4):
     dependencies:
       leaflet: 1.9.4
 
