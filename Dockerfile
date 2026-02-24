@@ -1,5 +1,5 @@
-ARG caddy_version=2.11@sha256:25da65f8637ef995bb7febf549b48b87e631e491f06dd20fe11f8f75924ae619
-ARG caddy_builder_version=2.11-builder@sha256:9908dbf7ef6cd7ffdd16d33cf1965445b500ea8ef1ab037e66479c05422acff2
+ARG caddy_version=2.11@sha256:0a3c7c0412199a8810067f6d3374314582f76cec0bf0940508b5ed4dacffdaa1
+ARG caddy_builder_version=2.11-builder@sha256:8ef2ba6b5aed621caa68bad09e8b2009c7a76dcb5ed78be9f981f66ef87a68ee
 
 
 # node bundling
@@ -31,7 +31,7 @@ RUN corepack enable && corepack prepare pnpm@10.28.2 --activate && pnpm install 
 RUN pnpm build && pnpm move && pnpm title && pnpm title:alerts && pnpm title:track
 
 # hugo build
-FROM hugomods/hugo:0.156.0@sha256:a8ffe425cb80738de9c81754ad826adbdaf8ce2905b7a948ed5c8460c546a697 AS builder
+FROM hugomods/hugo:0.156.0@sha256:1362679b7c53bf19fd72720b9fe3e514aaccc41ebf44f8e9dc342deda1ca54ed AS builder
 WORKDIR /build
 
 COPY --from=node /build .
