@@ -1,5 +1,5 @@
-ARG caddy_version=2.11@sha256:0a3c7c0412199a8810067f6d3374314582f76cec0bf0940508b5ed4dacffdaa1
-ARG caddy_builder_version=2.11-builder@sha256:8ef2ba6b5aed621caa68bad09e8b2009c7a76dcb5ed78be9f981f66ef87a68ee
+ARG caddy_version=2.11@sha256:9068f76202c0a03545036d32bf2d424d3b46c1174f254070f605002a2dbc9657
+ARG caddy_builder_version=2.11-builder@sha256:9780b126deae015b2c262fa9f4f1f951577e1f6a5fe4d88c0573aeb622071b2d
 
 
 # node bundling
