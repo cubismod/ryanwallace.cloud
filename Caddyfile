@@ -10,8 +10,8 @@
     root * /var/www/html
     respond /status "ok"
 
-    redir /map https://bostontraintracker.com 302
-    redir /alerts https://bostontraintracker.com 302
+    redir /map* https://bostontraintracker.com
+    redir /alerts* https://bostontraintracker.com
 
     metrics /metrics
 
@@ -31,4 +31,3 @@
 
     file_server
 }
-
