@@ -10,8 +10,8 @@
     root * /var/www/html
     respond /status "ok"
 
-    redir /map* https://bostontraintracker.com
-    redir /alerts* https://bostontraintracker.com
+    redir /map* https://bostontraintracker.com 301
+    redir /alerts* https://bostontraintracker.com 301
 
     metrics /metrics
 
