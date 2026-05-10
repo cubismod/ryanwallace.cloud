@@ -37,7 +37,7 @@ jobs:
       #     key: ryanwallace-cloud-preview-${{ github.event.number }}
       - uses: pnpm/action-setup@91ab88e2619ed1f46221f0ba42d1492c02baf788 # v6
         with:
-          version: 11.0.5
+          version: 11.0.6
 
       - name: Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
@@ -47,7 +47,7 @@ jobs:
           cache-dependency-path: "ryanwallace.cloud/map/pnpm-lock.yaml"
 
       - name: Setup Hugo
-        uses: peaceiris/actions-hugo@32c7754570a8edd0ae33352fae4a8448f23858e9 # v3
+        uses: peaceiris/actions-hugo@2752ce1d29631191ea3f27c23495fa06139a5b78 # v3
         with:
           hugo-version: "0.151.0"
           extended: true
