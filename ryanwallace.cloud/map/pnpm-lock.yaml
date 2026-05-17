@@ -37,10 +37,10 @@ importers:
         version: 1.5.6
       datatables.net:
         specifier: ^2.3.3
-        version: 2.3.7
+        version: 2.3.8
       datatables.net-dt:
         specifier: ^2.3.3
-        version: 2.3.7
+        version: 2.3.8
       datatables.net-responsive:
         specifier: ^3.0.4
         version: 3.0.8
@@ -482,14 +482,14 @@ packages:
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
 
-  datatables.net-dt@2.3.7:
-    resolution: {integrity: sha512-OXXIliY5MXnI+284Gt73F+fEdnW2u5y9jiptlvjDDb3YlyqXU4E/YZUB262a068sM/+qakb6RixN1SWn18uF2g==}
+  datatables.net-dt@2.3.8:
+    resolution: {integrity: sha512-GD4on0YvNlUS/l+mrXeA1OC2JDzF2/GGbehVv4AacwtiFaoTwqxZseiR0cED6w59u/lgpVrZRC2RwuubUX996Q==}
 
   datatables.net-responsive@3.0.8:
     resolution: {integrity: sha512-htslaX9g/9HFrJeyFQKEe/XJWpawPxpvy+M6vc/NkKQIrKhbxSoPc3phPqmlnZth6b9hgawqWDT0e0lwf5p+KA==}
 
-  datatables.net@2.3.7:
-    resolution: {integrity: sha512-AvsjG/Nkp6OxeyBKYZauemuzQCPogE1kOtKwG4sYjvdqGCSLiGaJagQwXv4YxG+ts5vaJr6qKGG9ec3g6vTo3w==}
+  datatables.net@2.3.8:
+    resolution: {integrity: sha512-uhViowhlDlheAuo5a8TrkQqADsjrtGeOyvrigvr4t0+K3MyAWqClORXWAYIcN9VLX6iIX0C8O9gwJNd01hITRg==}
 
   date-fns-tz@3.2.0:
     resolution: {integrity: sha512-sg8HqoTEulcbbbVXeg84u5UnlsQa8GS5QXMqjjYIhS4abEVVKIUwe0/l/UhrZdKaL/W5eWZNlbTeEIiOXTcsBQ==}
@@ -1054,17 +1054,17 @@ snapshots:
   commander@2.20.3:
     optional: true
 
-  datatables.net-dt@2.3.7:
+  datatables.net-dt@2.3.8:
     dependencies:
-      datatables.net: 2.3.7
+      datatables.net: 2.3.8
       jquery: 4.0.0
 
   datatables.net-responsive@3.0.8:
     dependencies:
-      datatables.net: 2.3.7
+      datatables.net: 2.3.8
       jquery: 4.0.0
 
-  datatables.net@2.3.7:
+  datatables.net@2.3.8:
     dependencies:
       jquery: 4.0.0
 
