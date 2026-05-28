@@ -46,10 +46,10 @@ importers:
         version: 3.0.8
       date-fns:
         specifier: ^4.1.0
-        version: 4.1.0
+        version: 4.3.0
       date-fns-tz:
         specifier: ^3.0.0
-        version: 3.2.0(date-fns@4.1.0)
+        version: 3.2.0(date-fns@4.3.0)
       dompurify:
         specifier: ^3.2.5
         version: 3.3.2
@@ -496,8 +496,8 @@ packages:
     peerDependencies:
       date-fns: ^3.0.0 || ^4.0.0
 
-  date-fns@4.1.0:
-    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
+  date-fns@4.3.0:
+    resolution: {integrity: sha512-OYcL+3N/jyWbYdFGqoMAhytDgxP9pbYPUUiRCOgn4Fewaadk9l/Wam4Avciiyp2BgkpfQyBV9B+ehnVJych+eQ==}
 
   dompurify@3.3.2:
     resolution: {integrity: sha512-6obghkliLdmKa56xdbLOpUZ43pAR6xFy1uOrxBaIDjT+yaRuuybLjGS9eVBoSR/UPU5fq3OXClEHLJNGvbxKpQ==}
@@ -1068,11 +1068,11 @@ snapshots:
     dependencies:
       jquery: 4.0.0
 
-  date-fns-tz@3.2.0(date-fns@4.1.0):
+  date-fns-tz@3.2.0(date-fns@4.3.0):
     dependencies:
-      date-fns: 4.1.0
+      date-fns: 4.3.0
 
-  date-fns@4.1.0: {}
+  date-fns@4.3.0: {}
 
   dompurify@3.3.2:
     optionalDependencies:
