@@ -30,42 +30,11 @@ jobs:
           fetch-depth: 0
           submodules: true
 
-      # - name: Restore cache
-      #   uses: actions/cache/restore@v4
-      #   with:
-      #     path: ryanwallace.cloud/
-      #     key: ryanwallace-cloud-preview-${{ github.event.number }}
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
-        with:
-          version: 11.15.1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: "24"
-          cache: "pnpm"
-          cache-dependency-path: "ryanwallace.cloud/map/pnpm-lock.yaml"
-
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@2752ce1d29631191ea3f27c23495fa06139a5b78 # v3
         with:
           hugo-version: "0.151.0"
           extended: true
-
-      - name: Install dependencies
-        working-directory: ryanwallace.cloud/map
-        run: pnpm install --frozen-lockfile=false
-
-      - name: Build map assets
-        working-directory: ryanwallace.cloud/map
-        run: pnpm clean && pnpm build:dev && pnpm move && pnpm title && pnpm title:alerts && pnpm title:track
-        env:
-          MT_KEY: ${{ secrets.MT_KEY }}
-          NODE_ENV: development
-          VEHICLES_URL: https://imt.ryanwallace.cloud
-          MBTA_API_BASE: ""
-          TRACK_PREDICTION_API: https://imt.ryanwallace.cloud
-          BOS_URL: https://bos.ryanwallace.cloud
 
       - name: Build Hugo site
         working-directory: ryanwallace.cloud
@@ -74,17 +43,6 @@ jobs:
         env:
           HUGO_ENVIRONMENT: preview
           HUGO_ENV: preview
-          MT_KEY: ${{ secrets.MT_KEY }}
-          VEHICLES_URL: https://imt.ryanwallace.cloud
-          MBTA_API_BASE: ""
-          TRACK_PREDICTION_API: https://imt.ryanwallace.cloud
-          BOS_URL: https://bos.ryanwallace.cloud
-
-      # - name: Save cache
-      #   uses: actions/cache/save@v4
-      #   with:
-      #     path: ryanwallace.cloud/
-      #     key: ryanwallace-cloud-preview-${{ github.event.number }}
 
       - name: Setup Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6

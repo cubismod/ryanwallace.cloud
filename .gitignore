@@ -27,13 +27,3 @@ go.work.sum
 public/
 node_modules/
 .parcel-cache/
-
-ryanwallace.cloud/content/map/
-dist/
-**/assets/css/map/*
-**/assets/js/map/*
-**/static/map/*
-
-# these are generated during the build process
-ryanwallace.cloud/content/track/index.html
-ryanwallace.cloud/content/alerts/index.html

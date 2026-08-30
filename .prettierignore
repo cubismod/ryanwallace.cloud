@@ -1,9 +1,7 @@
 node_modules
 public
-dist
 .parcel-cache
 **/*.map.js
 themes
 resources
-static/map
 pnpm-lock.yaml
