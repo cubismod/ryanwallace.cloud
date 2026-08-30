@@ -1,40 +1,11 @@
 ARG caddy_version=2.11@sha256:844f60b64e4724a5aa8245e019dace0d3f199f7433ce6c57676cb30a920dbad9
 ARG caddy_builder_version=2.11-builder@sha256:198d47eaee306d4d0c38a9960c89ff2c959aa29ad51d3e2dafa3e93ac961782a
 
-
-# node bundling
-FROM node:24.20.0@sha256:be23f54a88d34e8824c741b19b91064094f92c1c97b194144bfc8b50d67258e2 as node
-
-WORKDIR /build
-ADD ryanwallace.cloud .
-WORKDIR /build/map
-
-ENV DISABLE_OVERPASS=true
-ENV NODE_ENV=production
-
-# Build-time environment variables for Vite
-ARG MT_KEY=""
-ARG VEHICLES_URL="https://imt.ryanwallace.cloud"
-ARG MBTA_API_BASE=""
-ARG TRACK_PREDICTION_API="https://imt.ryanwallace.cloud"
-ARG BOS_URL="https://bos.ryanwallace.cloud"
-
-ENV MT_KEY=${MT_KEY}
-ENV VEHICLES_URL=${VEHICLES_URL}
-ENV MBTA_API_BASE=${MBTA_API_BASE}
-ENV TRACK_PREDICTION_API=${TRACK_PREDICTION_API}
-ENV BOS_URL=${BOS_URL}
-
-# Enable pnpm via corepack and install deps
-RUN corepack enable && corepack prepare pnpm@10.28.2 --activate && pnpm install --frozen-lockfile=false --force
-# https://fly.io/docs/apps/build-secrets/
-RUN pnpm build && pnpm move && pnpm title && pnpm title:alerts && pnpm title:track
-
 # hugo build
 FROM hugomods/hugo:0.157.0@sha256:b3120a7fb2a29fca732193ec1273d21bae2353c81a432fa5f64902aaebc1e547 AS builder
 WORKDIR /build
 
-COPY --from=node /build .
+ADD ryanwallace.cloud .
 
 RUN hugo build --cleanDestinationDir --minify --gc
 
