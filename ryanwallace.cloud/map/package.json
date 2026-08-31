@@ -33,7 +33,7 @@
     "*.css"
   ],
   "devDependencies": {
-    "@types/leaflet": "1.9.21",
+    "@types/leaflet": "1.9.22",
     "@types/node": "24.13.3",
     "prettier": "3.8.4",
     "prettier-config-standard": "7.0.0",
