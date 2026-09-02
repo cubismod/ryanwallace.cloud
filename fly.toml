@@ -4,7 +4,7 @@
 #
 
 app = 'ryanwallace-cloud'
-primary_region = 'bos'
+primary_region = 'ewr'
 
 [build]
 
