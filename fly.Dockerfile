@@ -2,7 +2,7 @@ ARG caddy_version=2.11@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4
 ARG caddy_builder_version=2.11-builder@sha256:369218c81ca6d6af249981221b3a5c764d886dd5b058f51d144066de13f2418d
 
 # hugo build
-FROM hugomods/hugo:0.157.0@sha256:b3120a7fb2a29fca732193ec1273d21bae2353c81a432fa5f64902aaebc1e547 AS builder
+FROM hugomods/hugo:0.165.0@sha256:cf1a2009a1edf807d0880af344c4dd13b40b308c340501128fb54e5aab17b009 AS builder
 WORKDIR /build
 
 ADD ryanwallace.cloud .
